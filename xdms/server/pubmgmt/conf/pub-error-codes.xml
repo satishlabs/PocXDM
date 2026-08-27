@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright Motorola Solutions, Inc. and/or Kodiak Networks, Inc.
+All Rights Reserved
+Motorola Solutions Confidential Restricted
+-->
+
+<error-codes>
+    <!-- Generic Errors -->
+    <error code="KNEC-PM14200">
+        <label>PUB_INIT_FAILED</label>
+        <msg>Initialization Error occured. Please contact Administrator</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Initializer</originators>
+        <error-context>PUBLib-Initializer-Error</error-context>
+    </error>
+
+<!--    BO Errors-->
+    <error code="KNEC-PM14000">
+        <label>CONTACT_ALREADY_EXISTS</label>
+        <msg>Contact already exists</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PUBLib-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-PM14001">
+        <label>CONTACT_DOES_NOT_EXISTS</label>
+        <msg>Contact does not exists</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PUBLib-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-PM14002">
+        <label>CONTACT_LIST_ALREADY_EXISTS</label>
+        <msg>Contact list already exists</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PUBLib-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-PM14003">
+        <label>CONTACT_LIST_DOES_NOT_EXISTS</label>
+        <msg>Contact list does not exists</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PUBLib-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-PM14004">
+        <label>MAX_CONTACT_SIZE_REACHED</label>
+        <msg>Max Contact size reached</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>PUBLib-Validator-Error</error-context>
+    </error>
+
+    <error code="KNEC-PM14100">
+        <label>GROUP_ALREADY_EXISTS</label>
+        <msg>Group already exists</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity, Validator</originators>
+        <error-context>PUBLib-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-PM14101">
+        <label>GROUP_DOES_NOT_EXISTS</label>
+        <msg>Group does not exists</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PUBLib-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-PM14102">
+        <label>GROUP_NAME_ALREADY_EXISTS</label>
+        <msg>Group name already exists</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PUBLib-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-PM14103">
+        <label>GROUP_MEMBER_ALREADY_EXISTS</label>
+        <msg>Group member already exists</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PUBLib-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-PM14104">
+        <label>GROUP_MEMBER_DOES_NOT_EXISTS</label>
+        <msg>Group member does not exists</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PUBLib-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-PM14105">
+        <label>NO_GROUPS_FOUND</label>
+        <msg>No Groups found</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PUBLib-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-PM14106">
+        <label>MAX_GROUPS_REACHED</label>
+        <msg>Max Groups reached</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>PUBLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-PM14107">
+        <label>MAX_GROUP_SIZE_REACHED</label>
+        <msg>Max Group size reached</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>PUBLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-PM14108">
+        <label>DOC_NOT_MODIFIED</label>
+        <msg>Document not Modifed</msg>
+        <level>INFO</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PUBLib-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-PM14109">
+        <label>DOC_MODIFIED</label>
+        <msg>Document Modifed</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PUBLib-BOEntity-Error</error-context>
+    </error>
+
+    <error code="KNEC-PM14110">
+        <label>MEMBER_CLIENT_TYPE_NOT_ALLOWED</label>
+        <msg>Contact Member Client Type Not Allowed</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>PUBLib-Validator-Error</error-context>
+    </error>
+
+    <error code="KNEC-PM14111">
+        <label>MDNS_DOESNOT_BELONG_TO_SAME_CORP</label>
+        <msg>Mdns doesn't belong to same corp</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>PUBLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-PM14112">
+        <label>MDN_DOESNOT_HAVE_DISCREETE_PERM</label>
+        <msg>Mdn doesn't have discreete permission</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>PUBLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-PM14113">
+        <label>MDN_DOESNOT_HAVE_PERMISSIONS</label>
+        <msg>Mdn doesn't have permission</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>PUBLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-PM14114">
+        <label>MDN_DOESNOT_HAVE_USERENABLE_PERM</label>
+        <msg>Mdn doesn't have User enable/disable permission</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>PUBLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-PM14115">
+        <label>MDN_DOESNOT_HAVE_EMERGENCY_PERM</label>
+        <msg>Mdn doesn't have emergency permission</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>PUBLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-PM14116">
+        <label>AUTH_DOC_NOT_EXISTS</label>
+        <msg>Auth Doc does not exits</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PUBLib-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-PM14117">
+        <label>GROUP_USAGE_DOC_DOESNOT_EXITS</label>
+        <msg>Group usage doc not exits</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PUBLib-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-PM14118">
+        <label>EMERGENCY_DOC_NOT_EXISTS</label>
+        <msg>Emergency doc not exits</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PUBLib-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-PM14119">
+        <label>TGSS_DOC_NOT_EXISTS</label>
+        <msg>Talk Group Simultaneous Session doc not exits</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PUBLib-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-PM14116">
+        <label>FEATUREBIT_IS_DISABLED</label>
+        <msg>mdn doesn't have Simultaneous Session permission</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>PUBLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-PM14121">
+        <label>MCSXCAP_LOWER_PV</label>
+        <msg>Protocol version not supported</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>PUBLib-Validator-Error</error-context>
+    </error>
+	<error code="KNEC-PM14122">
+        <label>MCPTTID_NOT_MATCHED</label>
+        <msg>Invalid Token</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>PUBLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-PM14123">
+        <label>CORPID_NOT_MATCHED</label>
+        <msg>CORP ID NOT MATCHED</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>PUBLib-Validator-Error</error-context>
+    </error>
+</error-codes>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright Motorola Solutions, Inc. and/or Kodiak Networks, Inc.
+All Rights Reserved
+Motorola Solutions Confidential Restricted
+-->
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:batch="http://www.springframework.org/schema/batch"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xsi:schemaLocation="http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.2.xsd">
+
+    <import resource="data-source-context.xml"/>
+
+    <bean id="jobLauncher"
+          class="org.springframework.batch.core.launch.support.TaskExecutorJobLauncher">
+        <property name="jobRepository" ref="jobRepository"/>
+        <property name="taskExecutor">
+            <bean class="org.springframework.core.task.SimpleAsyncTaskExecutor"/>
+        </property>
+    </bean>
+
+    <!--<batch:job-repository id="jobRepository"
+                          table-prefix="DG.BTCH_"/>-->
+    <bean id="transactionManager" class="org.springframework.batch.support.transaction.ResourcelessTransactionManager"/>
+    <bean id="jobRepository"
+          class="org.springframework.batch.core.repository.support.JobRepositoryFactoryBean">
+        <property name="dataSource" ref="dataSource"/>
+        <property name="transactionManager" ref="transactionManager"/>
+        <property name="databaseType" value="Oracle"/>
+        <property name="tablePrefix" value="DG.BTCH_"/>
+    </bean>
+
+    <bean id="jobExplorer"
+          class="org.springframework.batch.core.explore.support.JobExplorerFactoryBean"
+          p:dataSource-ref="dataSource" p:tablePrefix="DG.BTCH_">
+          <property name="transactionManager" ref="transactionManager"/>
+    </bean>
+
+</beans>

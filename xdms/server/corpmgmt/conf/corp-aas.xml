@@ -1,0 +1,43 @@
+<!--
+Copyright Motorola Solutions, Inc. and/or Kodiak Networks, Inc.
+All Rights Reserved
+Motorola Solutions Confidential Restricted
+-->
+
+<aas>
+    <authentication>
+        <enabled>false</enabled>
+        <!-- Profiles configurations -->
+        <auth-profiles></auth-profiles>
+        <!-- Rules configurations -->
+        <rules-config></rules-config>
+    </authentication>
+
+    <authorization>
+        <enabled>true</enabled>
+        <auth-profiles>
+            <!-- Corporate profile -->
+            <profile id="CorpAdmin">
+                <global-rules></global-rules>
+                <operation id="getSubsGroupDetails">
+                    <rule id="GroupMembershipChecker" auth-rule-id="GroupMembershipAuthorizer" enabled="true"/>
+                    <rule id="ExternalGroupMembershipChecker" auth-rule-id="ExternalGroupMembershipAuthorizer"
+                          enabled="true"/>
+                </operation>
+                 <operation id="authenticate">
+                    <rule id="PairingIndicatorCorporateChecker" auth-rule-id="PairingIndicatorCorporateAuthorizer" enabled="false"/>
+                </operation>
+            </profile>
+        </auth-profiles>
+
+        <!-- Defining the Rules config -->
+        <rules-config>
+            <auth-rule id="GroupMembershipAuthorizer"
+                       class-name="com.kodiak.xdms.server.corpmgmt.business.aas.authorization.rules.KnGroupMembershipAuthRule"/>
+            <auth-rule id="ExternalGroupMembershipAuthorizer"
+                       class-name="com.kodiak.xdms.server.corpmgmt.business.aas.authorization.rules.KnExternalGroupMembershipAuthRule"/>
+             <auth-rule id="PairingIndicatorCorporateAuthorizer"
+                       class-name="com.kodiak.xdms.server.corpmgmt.business.aas.authorization.rules.KnPairingIndicatorCorporateAuthRule"/>          
+        </rules-config>
+    </authorization>
+</aas>

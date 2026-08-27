@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright Motorola Solutions, Inc. and/or Kodiak Networks, Inc.
+All Rights Reserved
+Motorola Solutions Confidential Restricted
+-->
+
+<project name="Common-build" default="build-all" basedir=".">
+    <property file="build-common.properties"/>
+
+    <!-- Cleaning entire build directory -->
+    <target name="clean" description="Remove all generated files.">
+        <delete dir="${build.dir}"/>
+    </target>
+    <target name="build-all" depends="clean, prepare, create-jar"/>
+
+    <target name="create-jar.nodep" depends="compile"/>
+
+    <target name="create-jar" depends="compile"/>
+
+    <target name="compile" depends=" license-zip, fetch-license-parser, build-dependent" description="Building common DTO">
+        <mkdir dir="${temp.classes}"/>
+        <javac debug="on" srcdir="${common-src.dir}" excludes="**/asn1/*,**/ems/*" destdir="${temp.classes}">
+            <classpath refid="proto.path"/>
+        </javac>
+
+        <jar jarfile="${build-lib.dir}/${pocxdm-common-jar.name}">
+            <fileset dir="${temp.classes}"/>
+        </jar>
+        <delete dir="${temp.classes}"/>
+    </target>
+
+    <!--<target name="create-ans1-jar.nodep" depends="create-ans1-jar"/>
+    <target name="create-ans1-jar">
+        <delete dir="${temp.classes}"/>
+        <mkdir dir="${temp.classes}"/>
+        <javac debug="on" srcdir="${kodiakasn-src.dir}" destdir="${temp.classes}">
+            <classpath refid="proto.path"/>
+
+        </javac>
+        <jar destfile="${build-lib.dir}/${kodiakasn-jar.name}" basedir="${temp.classes}"/>
+    </target>
+
+    <target name="create-emsbase-jar.nodep" depends="create-emsbase-jar"/>
+    <target name="create-emsbase-jar">
+        <delete dir="${temp.classes}"/>
+        <mkdir dir="${temp.classes}"/>
+        <javac debug="on" srcdir="${kodiakemsbase-src.dir}" destdir="${temp.classes}">
+            <classpath refid="proto.path"/>
+
+        </javac>
+        <jar destfile="${build-lib.dir}/${kodiakemsbase-jar.name}" basedir="${temp.classes}"/>
+    </target>-->
+
+    <path id="proto.path">
+        <pathelement location="${build-lib.dir}/${kodiakdbmgr.jar.name}"/>
+        <pathelement location="${build-lib.dir}/${logger-jar.name}"/>
+        <pathelement location="${build-lib.dir}/${license-jar.name}"/>
+        <pathelement location="${pocxdm-commonlib.dir}/${base-jar.name}"/>
+        <pathelement path="${pocxdm-commonlib.dir}/commons-codec.jar"/>
+        <pathelement path="${pocxdm-commonlib.dir}/spring-beans.jar"/>
+    	<pathelement path="${pocxdm-commonlib.dir}/spring-context.jar"/>
+    	<pathelement path="${pocxdm-commonlib.dir}/spring-core.jar"/>
+        <pathelement path="${pocxdm-commonlib.dir}${spring-web-jar.name}"/>
+        <pathelement path="${pocxdm-commonlib.dir}/${httpclient-jar.name}"/>
+        <pathelement path="${pocxdm-commonlib.dir}/${httpcore-jar.name}"/>
+        <pathelement path="${pocxdm-commonlib.dir}/${spring-vault-core.name}"/>
+        <pathelement path="${pocxdm-commonlib.dir}/${nimbus-jose-jwt-jar.name}"/>
+        <pathelement path="${pocxdm-commonlib.dir}/${json-smart-jar.name}"/>
+        <pathelement path="${pocxdm-commonlib.dir}/${accessors-smart-jar.name}"/>
+        <pathelement path="${pocxdm-commonlib.dir}/${json-simple-jar.name}"/>
+    	<pathelement location="${logger-lib.dir}/log4j-api.jar"/>
+    	<pathelement location="${logger-lib.dir}/log4j-core.jar"/>
+        <pathelement path="${pocxdm-commonlib.dir}/${jackson-annotations-jar.name}"/>
+     
+        <pathelement path="${pocxdm-commonlib.dir}/${jackson-core-jar.name}"/>
+       
+        <pathelement path="${pocxdm-commonlib.dir}/${jackson-databind-jar.name}"/>
+        <pathelement path="${pocxdm-commonlib.dir}/spring-web.jar"/>
+        <pathelement path="${pocxdm-commonlib.dir}/jakarta.xml.bind-api.jar"/>
+        <pathelement path="${pocxdm-commonlib.dir}/jaxb-runtime.jar"/>
+        <pathelement location="${pocxdm-commonlib.dir}/${c3p0-jar.name}"/>
+        <pathelement location="${pocxdm-dbmgr-lib.dir}/${jta-jar.name}"/>
+
+        <pathelement path="${pocxdm-commonlib.dir}/couchbase-core-io-jar.name"/>
+        <pathelement path="${pocxdm-commonlib.dir}/couchbase-java-client-jar.name"/>
+
+        <pathelement path="${pocxdm-commonlib.dir}/rxjava-jar.name"/>
+        <pathelement path="${pocxdm-commonlib.dir}/opentracking-api-jar.name"/>
+        <pathelement path="${pocxdm-commonlib.dir}/micrometer-observation-jar.name"/>
+        <pathelement path="${pocxdm-commonlib.dir}/jakarta-xml-bind-api.name"/>
+        <pathelement path="${build-lib.dir}/${kodiakvault.jar.name}"/>
+    </path>
+
+    <target name="license-zip" description="Fetching license zip file">
+        <copy todir="${build.dir}" file="${license-zip.home.dir}/${license-zip.name}"/>
+    </target>
+
+    <target name="fetch-license-parser" description="Fetching License Parser files">
+        <unzip src="${zip.dir}/${license-zip.name}" dest="${build-unzip.dir}"/>
+        <copy file="${build-unzip.dir}/lib/${license-jar.name}" todir="${build-lib.dir}"/>
+    </target>
+
+    <target name="prepare" depends="set-filter" unless="prepared">
+        <property name="prepared" value="true"/>
+        <echo>Preparing build directories.</echo>
+        <mkdir dir="${build.dir}"/>
+        <mkdir dir="${build-lib.dir}"/>
+    </target>
+
+    <target name="set-filter" description="Setting the filter file">
+        <filter filtersfile="build-common.properties"/>
+    </target>
+
+     <!-- Build the dependant libraries-->
+    <target name="build-dependent" depends="fetch-dependant-build-scripts" description="Compiling POCXDM dependant lib">
+        <echo>-> Compile Logger Library</echo>
+        <ant antfile="build-logger.xml" target="create-jar.nodep"/>
+        <echo>-> Compileed</echo>
+        <echo>-> Compile DB Manager Library</echo>
+        <ant antfile="build-dbmgr.xml" target="create-jar.nodep"/>
+        <echo>-> Compiled</echo>
+        <echo>-> Compile alarm util Library</echo>
+        <ant antfile="build-utilities.xml" target="create-generatealarmutil-jar.nodep"/>
+        <echo>-> Compiled</echo>
+    </target>
+
+    <!-- Fetching the dependant build scripts-->
+    <target name="fetch-dependant-build-scripts">
+         <echo>Fetching all dependent common build scripts</echo>
+         <copy todir="." overwrite="true" filtering="true">
+            <fileset dir="${pocxdm-logger-build.dir}" includes="*.*"/>
+         </copy>
+         <copy todir="." overwrite="true" filtering="true">
+           <fileset dir="${pocxdm-dbmgr-build.dir}" includes="*.*"/>
+         </copy>
+   </target>
+</project>

@@ -1,0 +1,173 @@
+<!--
+Copyright Motorola Solutions, Inc. and/or Kodiak Networks, Inc.
+All Rights Reserved
+Motorola Solutions Confidential Restricted
+-->
+
+<aas>
+    <authentication>
+        <enabled>false</enabled>
+        <!-- Profiles configurations -->
+        <auth-profiles></auth-profiles>
+        <!-- Rules configurations -->
+        <rules-config></rules-config>
+    </authentication>
+
+    <authorization>
+        <enabled>true</enabled>
+        <auth-profiles>
+            <!-- General profile -->
+            <profile id="General">
+                <global-rules></global-rules>
+            </profile>
+            <!-- Corporate profile -->
+            <profile id="CorpAdmin">
+                <global-rules></global-rules>
+            </profile>
+            <!-- Public Profile -->
+            <profile id="PublicAdmin">
+                <!-- Defining the global rules applicable to all the operations -->
+                <global-rules></global-rules>
+
+                <!-- Defining the operation specific rules applicable to the specific operation -->
+
+                <!-- Here starts the Public Contact Management operations -->
+                <operation id="addContact">
+                    <rule id="SubscriptionTypeCheck" auth-rule-id="SubscriptionTypeChk" enabled="true"/>
+                    <rule id="ServiceStatusCheck" auth-rule-id="ServiceStatusChk" enabled="true"/>
+                </operation>
+                <operation id="updateContact">
+                    <rule id="SubscriptionTypeCheck" auth-rule-id="SubscriptionTypeChk" enabled="true"/>
+                    <rule id="ServiceStatusCheck" auth-rule-id="ServiceStatusChk" enabled="true"/>
+                    <rule id="tokenvalidation" auth-rule-id="tokenvalidation" enabled="true"/>
+                </operation>
+                <operation id="deleteContact">
+                    <rule id="SubscriptionTypeCheck" auth-rule-id="SubscriptionTypeChk" enabled="true"/>
+                    <rule id="ServiceStatusCheck" auth-rule-id="ServiceStatusChk" enabled="true"/>
+                    <rule id="tokenvalidation" auth-rule-id="tokenvalidation" enabled="true"/>
+                </operation>
+                <operation id="getContactList">
+                    <rule id="SubscriptionTypeCheck" auth-rule-id="SubscriptionTypeChk" enabled="true"/>
+                    <rule id="ServiceStatusCheck" auth-rule-id="ServiceStatusChk" enabled="true"/>
+                    <rule id="tokenvalidation" auth-rule-id="tokenvalidation" enabled="true"/>
+                </operation>
+                <operation id="getAllContactLists">
+                    <rule id="SubscriptionTypeCheck" auth-rule-id="SubscriptionTypeChk" enabled="true"/>
+<!--                    <rule id="ServiceStatusCheck" auth-rule-id="ServiceStatusChk" enabled="true"/>-->
+                </operation>
+                <operation id="getDirectory">
+<!--                    <rule id="SubscriptionTypeCheck" auth-rule-id="SubscriptionTypeChk" enabled="true"/>-->
+                    <rule id="ServiceStatusCheck" auth-rule-id="ServiceStatusChk" enabled="true"/>
+                    <rule id="tokenvalidation" auth-rule-id="tokenvalidation" enabled="true"/>
+                </operation>
+                <!-- Here ends the Public Contact Management operations -->
+                <operation id="forceSync">
+<!--                    <rule id="SubscriptionTypeCheck" auth-rule-id="SubscriptionTypeChk" enabled="true"/>-->
+                   <!-- <rule id="ServiceStatusCheck" auth-rule-id="ServiceStatusChk" enabled="true"/>-->
+                </operation>
+
+                <!-- Here starts the Public Group Management operations -->
+                <operation id="createGroup">
+                    <rule id="SubscriptionTypeCheck" auth-rule-id="SubscriptionTypeChk" enabled="true"/>
+                    <rule id="ServiceStatusCheck" auth-rule-id="ServiceStatusChk" enabled="true"/>
+                    <rule id="tokenvalidation" auth-rule-id="tokenvalidation" enabled="true"/>
+                </operation>
+                <operation id="modifyGroup">
+                    <rule id="SubscriptionTypeCheck" auth-rule-id="SubscriptionTypeChk" enabled="true"/>
+                    <rule id="ServiceStatusCheck" auth-rule-id="ServiceStatusChk" enabled="true"/>
+                </operation>
+                <operation id="deleteGroup">
+                    <rule id="SubscriptionTypeCheck" auth-rule-id="SubscriptionTypeChk" enabled="true"/>
+                    <rule id="ServiceStatusCheck" auth-rule-id="ServiceStatusChk" enabled="true"/>
+                    <rule id="tokenvalidation" auth-rule-id="tokenvalidation" enabled="true"/>
+                </operation>
+                <operation id="getGroupList">
+                    <rule id="SubscriptionTypeCheck" auth-rule-id="SubscriptionTypeChk" enabled="true"/>
+<!--                    <rule id="ServiceStatusCheck" auth-rule-id="ServiceStatusChk" enabled="true"/>-->
+                </operation>
+                <operation id="getGroupDocDetails">
+                    <rule id="SubscriptionTypeCheck" auth-rule-id="SubscriptionTypeChk" enabled="true"/>
+                    <rule id="ServiceStatusCheck" auth-rule-id="ServiceStatusChk" enabled="true"/>
+                    <rule id="tokenvalidation" auth-rule-id="tokenvalidation" enabled="true"/>
+                </operation>
+                <operation id="getGroupDetails">
+                    <rule id="SubscriptionTypeCheck" auth-rule-id="SubscriptionTypeChk" enabled="true"/>
+<!--                    <rule id="ServiceStatusCheck" auth-rule-id="ServiceStatusChk" enabled="true"/>-->
+                </operation>
+                <operation id="updateGroupName">
+                    <rule id="SubscriptionTypeCheck" auth-rule-id="SubscriptionTypeChk" enabled="true"/>
+                    <rule id="ServiceStatusCheck" auth-rule-id="ServiceStatusChk" enabled="true"/>
+                    <rule id="tokenvalidation" auth-rule-id="tokenvalidation" enabled="true"/>
+                </operation>
+                <operation id="deleteGroupMember">
+                    <rule id="SubscriptionTypeCheck" auth-rule-id="SubscriptionTypeChk" enabled="true"/>
+                    <rule id="ServiceStatusCheck" auth-rule-id="ServiceStatusChk" enabled="true"/>
+                    <rule id="tokenvalidation" auth-rule-id="tokenvalidation" enabled="true"/>
+                </operation>
+                <operation id="updateGroupMember">
+                    <rule id="SubscriptionTypeCheck" auth-rule-id="SubscriptionTypeChk" enabled="true"/>
+                    <rule id="ServiceStatusCheck" auth-rule-id="ServiceStatusChk" enabled="true"/>
+                    <rule id="tokenvalidation" auth-rule-id="tokenvalidation" enabled="true"/>
+                </operation>
+                <operation id="addGroupMember">
+                    <rule id="SubscriptionTypeCheck" auth-rule-id="SubscriptionTypeChk" enabled="true"/>
+                    <rule id="ServiceStatusCheck" auth-rule-id="ServiceStatusChk" enabled="true"/>
+                    <rule id="tokenvalidation" auth-rule-id="tokenvalidation" enabled="true"/>
+                </operation>
+                <operation id="getAuthList">
+                    <rule id="ServiceStatusCheck" auth-rule-id="ServiceStatusChk" enabled="true"/>
+                     <rule id="tokenvalidation" auth-rule-id="tokenvalidation" enabled="true"/>
+                </operation>
+                <operation id="updateAuthList">
+                    <rule id="ServiceStatusCheck" auth-rule-id="ServiceStatusChk" enabled="true"/>
+                     <rule id="tokenvalidation" auth-rule-id="tokenvalidation" enabled="true"/>
+                </operation>
+                <operation id="getEmergencyConfig">
+                    <rule id="ServiceStatusCheck" auth-rule-id="ServiceStatusChk" enabled="true"/>
+                    <rule id="tokenvalidation" auth-rule-id="tokenvalidation" enabled="true"/>
+                </operation>
+                <operation id="getTGSSList">
+                    <rule id="ServiceStatusCheck" auth-rule-id="ServiceStatusChk"	 enabled="true"/>
+                    <rule id="tokenvalidation" auth-rule-id="tokenvalidation" enabled="true"/>
+                </operation>
+
+                <operation id="updateTGSSList">
+                    <rule id="ServiceStatusCheck" auth-rule-id="ServiceStatusChk" enabled="true"/>
+                    <rule id="tokenvalidation" auth-rule-id="tokenvalidation" enabled="true"/>
+                </operation>
+
+                <operation id="deleteTGSSList">
+                    <rule id="ServiceStatusCheck" auth-rule-id="ServiceStatusChk" enabled="true"/>
+                    <rule id="tokenvalidation" auth-rule-id="tokenvalidation" enabled="true"/>
+                </operation>
+                
+                
+
+                <!--<operation id="updateAuthList">
+                    <rule id="SubscriptionTypeCheck" auth-rule-id="SubscriptionTypeChk" enabled="true"/>
+                    <rule id="ServiceStatusCheck" auth-rule-id="ServiceStatusChk" enabled="true"/>
+                </operation>-->
+            </profile>
+        </auth-profiles>
+
+        <!-- Defining the Rules config -->
+        <rules-config>
+            <auth-rule id="ServiceStatusChk" class-name="com.kodiak.xdms.server.pubmgmt.business.aas.authorization.rules.KnPubServiceStatusAuthRule">
+                <parameters><!-- Default - Only Activated subscr -->
+                    <param id="allowedServiceStatus">2</param>
+                </parameters>
+            </auth-rule>
+            <auth-rule id="SubscriptionTypeChk" class-name="com.kodiak.xdms.server.pubmgmt.business.aas.authorization.rules.KnPubSubscriptionTypeCheckAuthRule">
+                <parameters><!-- Default - Only Public Subscription Type -->
+                    <param id="allowedSubscriptionTypes">1</param>
+                </parameters>
+            </auth-rule>
+            <auth-rule id="tokenvalidation" 
+                       class-name="com.kodiak.xdms.server.pubmgmt.business.aas.authorization.rules.KnXcapTokenValidation"
+                       dto-type="com.kodiak.xdms.server.common.dto.persistdat.KnSubscriberPersistDTO">
+                
+            </auth-rule>
+
+        </rules-config>
+    </authorization>
+</aas>

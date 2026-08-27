@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+Copyright Motorola Solutions, Inc. and/or Kodiak Networks, Inc.
+All Rights Reserved
+Motorola Solutions Confidential Restricted
+-->
+
+<project name="XcapNotificationMgr Buildfile" default="build-all" basedir=".">
+    <!-- Loading and over riding build properties-->
+    <property file="build-xcapnotifymgr.properties"/>
+    <!-- Cleaning entire build directory -->
+    <target name="clean" description="Remove all generated files.">
+        <delete dir="${build.dir}"/>
+    </target>
+    <!-- default target to build the xcapnotifymgr Jar-->
+    <target name="build-all" depends="create-jar"/>
+    <!-- no dep target which will be used in the master build script-->
+    <target name="create-jar.nodep" depends="compile"/>
+    <!-- actual target which calls all dependant target and gives the complete component build-->
+    <target name="create-jar" depends="clean,prepare,build-dependencies,compile"
+            description="Creating the Xcap Notification manager Jar"/>
+    <!-- target to call the nodep targets from the dependant targets in other build scripts-->
+    <target name="build-dependencies">
+        <ant antfile="build-common.xml" target="create-jar.nodep"/>
+        <ant antfile="build-utilities.xml" target="create-idgen-jar.nodep"/>
+        <ant antfile="build-utilities.xml" target="create-statusmgr-jar.nodep"/>
+        <ant antfile="build-server-common.xml" target="create-jar.nodep"/>
+        <ant antfile="build-jobscheduler.xml" target="create-jar.nodep"/>
+    	<ant antfile="build-mcsnotifymgr.xml" target="create-jar.nodep"/>
+    </target>
+    <!-- Compiling Xcap Notification manager -->
+    <target name="compile" description="Compiling XcapNotificationMgr">
+        <mkdir dir="${temp.classes}"/>
+        <javac debug="on" srcdir="${xcapnotifymgr-src-dir}" destdir="${temp.classes}">
+            <classpath refid="proto.path"/>
+            <classpath location="${build-lib.dir}/${xdms-server-common-jar.name}"/>
+            <classpath location="${build-lib.dir}/${pocxdm-common-jar.name}"/>
+            <classpath location="${build-lib.dir}/${pocxdm-scheduler-jar.name}"/>
+        	<classpath location="${build-lib.dir}/${mcsnotifymgr-jar.name}"/>
+            <classpath location="${pocxdm-lib.dir}/${common-jar.name}"/>
+            <classpath location="${build-lib.dir}/${statusmgr-jar.name}"/>
+			<classpath location="${build-lib.dir}/${messaging-jar.name}"/>
+            <classpath location="${pocxdm.dir}/lib/kodiakcommon.jar"/>
+			<classpath location="${pocxdm.dir}/lib/annotations.jar"/>
+			<classpath location="${pocxdm.dir}/lib/cache-api.jar"/>
+			<classpath location="${pocxdm.dir}/lib/gridgain-core.jar"/>
+			<classpath location="${pocxdm.dir}/lib/h2.jar"/>
+			<classpath location="${pocxdm.dir}/lib/ignite-core.jar"/>
+			<classpath location="${pocxdm.dir}/lib/ignite-indexing.jar"/>
+            <classpath location="${build-lib.dir}/kodiakstatisticalmgrfw.jar"/>
+        </javac>
+        <jar jarfile="${build-lib.dir}/${xcapnotifymgr-jar.name}"
+             basedir="${temp.classes}"
+             includes="**/*.class"/>
+
+        <delete dir="${temp.classes}"/>
+    </target>
+    <!-- setting the EMSWebappsCommon lib Jars-->
+    <path id="proto.path">
+        <pathelement path="${build-lib.dir}/kodiakpoclogger.jar"/>
+        <pathelement path="${build-lib.dir}/${kodiak-tlv-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${kodiak-dbmgr-jar.name}"/>
+    	<pathelement location="${logger-lib.dir}/log4j-api.jar"/>
+    	<pathelement location="${logger-lib.dir}/log4j-core.jar"/>
+         <pathelement path="${build-lib.dir}/${jaxbparser-jar.name}"/>
+    	 <pathelement path="PoCXDM/lib/jackson-annotations.jar"/>
+    	 <pathelement path="PoCXDM/lib/jackson-core.jar"/>
+    	 <pathelement path="PoCXDM/lib/jackson-databind.jar"/>
+    	<pathelement path="PoCXDM/lib/json-smart.jar"/>
+        <pathelement path="PoCXDM/lib/accessors-smart.jar"/>
+        <pathelement path="${build-lib.dir}/${kodiak-statisticalmgrfw-jar.name}"/>
+    </path>
+    <!-- prepare the environment for the build -->
+    <target name="prepare" depends="set-filter" unless="prepared">
+        <property name="prepared" value="true"/>
+        <echo>Preparing build directories.</echo>
+
+        <mkdir dir="${build.dir}"/>
+        <mkdir dir="${build-lib.dir}"/>
+    </target>
+
+    <target name="set-filter" description="Setting the filter file">
+        <filter filtersfile="build-xcapnotifymgr.properties"/>
+    </target>
+
+</project>

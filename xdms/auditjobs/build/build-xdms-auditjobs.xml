@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright Motorola Solutions, Inc. and/or Kodiak Networks, Inc.
+All Rights Reserved
+Motorola Solutions Confidential Restricted
+-->
+
+<project name="Build Xdms Audit jobs" default="build-all" basedir=".">
+	<property file="build-xdms-auditjobs.properties" />
+
+	<!-- Cleaning entire build directory -->
+	<target name="clean" description="Remove all generated files.">
+		<delete dir="${build.dir}" />
+	</target>
+
+	<target name="build-all" depends="clean, prepare, compile-dependent, create-jar" description="builds XDMS Audit jobs" />
+
+	<target name="compile-dependent" description="Compiling POCXDM Common and other dependent">
+		<echo>Compile Common Library</echo>
+		<ant antfile="build-ggcommon.xml" target="create-jar.nodep"/>
+		<ant antfile="build-common.xml" target="create-jar.nodep" />
+		<ant antfile="build-jobscheduler.xml" target="create-jar.nodep" />
+	</target>
+
+	<target name="prepare" unless="prepared">
+		<property name="prepared" value="true" />
+		<echo>Preparing build directories.</echo>
+		<mkdir dir="${build.dir}" />
+		<mkdir dir="${build-lib.dir}" />
+	</target>
+
+	<target name="create-jar.nodep" depends="create-jar" description="Creates xdms audit jobs jar with out Dep" />
+
+	<target name="create-jar" depends="compile" description="Creates Xdms audit jobs Jar" />
+
+	<!-- Compiling Bulk FW Notification manager -->
+	<target name="compile" description="Compiling XcapNotificationMgr">
+		<mkdir dir="${temp.classes}" />
+		<javac debug="on" srcdir="${auditjobs-src.dir}" destdir="${temp.classes}">
+			<classpath refid="proto.path" />
+			<classpath location="${build-lib.dir}/${kodiakpocxdmcommon-jar.name}" />
+			<classpath location="${build-lib.dir}/${xdms-server-common-jar.name}" />
+			<classpath location="${build-lib.dir}/${xdms-server-corp-jar.name}" />
+		</javac>
+		<jar jarfile="${build-lib.dir}/${xdms-auditjobs-jar.name}" basedir="${temp.classes}" includes="**/*.class" />
+		<delete dir="${temp.classes}" />
+	</target>
+
+
+	<target name="compile-test" description="Compiling XcapNotificationMgr">
+		<mkdir dir="${temp.classes}" />
+		<javac debug="on" srcdir="${auditjobs-test.dir}" destdir="${temp.classes}">
+			<classpath refid="proto.path" />
+			<classpath location="${build-lib.dir}/${kodiakpocxdmcommon-jar.name}" />
+			<classpath location="${build-lib.dir}/${xdms-auditjobs-jar.name}" />
+			<classpath location="${build-lib.dir}/${xdms-server-corp-jar.name}" />
+		</javac>
+
+		<jar jarfile="${build-lib.dir}/${xdms-auditjobs-test-jar.name}" basedir="${temp.classes}" includes="**/*.class" />
+		<delete dir="${temp.classes}" />
+	</target>
+
+
+	<path id="proto.path">
+	    <pathelement path="${build-lib.dir}/kodiakpoclogger.jar"/>
+		<pathelement location="${pocxdm.dir}/lib/kodiakcommon.jar"/>
+		<pathelement path="${pocxdm-lib.dir}/jta.jar" />
+		<pathelement path="PoCXDM/lib/json-smart.jar"/>
+		<pathelement path="PoCXDM/lib/accessors-smart.jar"/>
+		<pathelement path="${build-lib.dir}/${kodiakdbmgr-jar.name}" />
+		<pathelement path="${build-lib.dir}/${kodiakpocxdmcommon-jar.name}" />
+		<pathelement path="PoCXDM/frameworks/bulkfw/lib/junit-4.8.2.jar" />
+		<pathelement path="${build-lib.dir}/${kodiak-jobscheduler-jar.name}" />
+		<pathelement path="${build-lib.dir}/kodiakstatusmgr.jar" />
+		<pathelement location="${logger-lib.dir}/log4j-api.jar"/>
+		<pathelement location="${logger-lib.dir}/log4j-core.jar"/>
+		<pathelement path="${build-lib.dir}/kodiakfsupgradeutil.jar" />
+		<pathelement location="${build-lib.dir}/${generatealarmutil-jar.name}"/>
+		<pathelement path="${pocxdm.dir}/lib/${json-simple-jar.name}"/>
+		<pathelement path="${build-lib.dir}/${xdms-server-common-jar.name}" />
+		<pathelement path="${build-lib.dir}/${xdms-server-corp-jar.name}" />
+		<pathelement path="${build-lib.dir}/${xdms-server-ggcommon-jar.name}"/>
+		<pathelement path="${pocxdmlib}/${couchbase-core-io-jar.name}"/>
+		<pathelement path="${pocxdmlib}/${couchbase-java-client-jar.name}"/>
+	</path>
+
+</project>

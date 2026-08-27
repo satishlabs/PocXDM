@@ -1,0 +1,142 @@
+<!--
+Copyright Motorola Solutions, Inc. and/or Kodiak Networks, Inc.
+All Rights Reserved
+Motorola Solutions Confidential Restricted
+-->
+
+<error-codes>
+    <!-- Generic Errors -->
+    <error code="KNEC-CA10001">
+        <label>CA_INIT_FAILED</label>
+        <msg>Initialization Error occured. Please contact Administrator</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Initializer</originators>
+        <error-context>CALib-Initializer-Error</error-context>
+    </error>
+
+    <!-- Authorization Errors -->
+    <error code="KNEC-CA13001">
+        <label>INVALID_ACTIVATION_KEY</label>
+        <msg>Invalid Activation Key</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Authorizer</originators>
+        <error-context>Authorizer-error</error-context>
+    </error>
+
+    <!-- BOEntity Errors -->
+    <error code="KNEC-CA12000">
+        <label>RTX_RESPONSE_400</label>
+        <msg>Operation Failure/Bad Request</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CA12001">
+        <label>RTX_RESPONSE_402</label>
+        <msg>Subscriber not Authorized to use this Operation</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CA12002">
+        <label>RTX_RESPONSE_500</label>
+        <msg>Server Failure</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CA12003">
+        <label>RTX_RESPONSE_501</label>
+        <msg>DB Access Failure</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CA12004">
+        <label>RTX_RESPONSE_502</label>
+        <msg>ENUM Server Not Configured</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CA12005">
+        <label>RTX_RESPONSE_503</label>
+        <msg>ENUM Service Unavailable</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CA12006">
+        <label>RTX_RESPONSE_504</label>
+        <msg>Server doesn’t support this functionality/ENUM Server Timeout</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CA12007">
+        <label>RTX_RESPONSE_206</label>
+        <msg>Partial Success from ENUM server</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-SP12101">
+        <label>UNSUPPORTED_APN</label>
+        <msg>APN is not supported</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-SP12102">
+        <label>BLACKLISTED_DEVICE</label>
+        <msg>Device is black listed</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-SP12083">
+        <label>UNAUTHORIZED_SUBS_CLIENT_TYPE</label>
+        <msg>Unauthorized client used for activate</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-SP12086">
+        <label>SUPPORTED_DEVICES_NOT_FOUND</label>
+        <msg>Device is not supported</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-SP12124">
+        <label>FORBIDDEN</label>
+        <msg>Forbidden</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-SP12125">
+        <label>FORBIDDEN</label>
+        <msg>Forbidden</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-Layer-error</error-context>
+    </error>
+</error-codes>
+

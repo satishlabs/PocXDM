@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright Motorola Solutions, Inc. and/or Kodiak Networks, Inc.
+All Rights Reserved
+Motorola Solutions Confidential Restricted
+-->
+
+<project name="Activation Library" default="build-all" basedir=".">
+    <!-- Loading and over riding build properties-->
+    <property file="build-activation.properties"/>
+
+    <target name="build-all" depends="clean, prepare, compile-dependent, create-activationlib-jar"/>
+
+    <!-- Cleaning entire build directory -->
+    <target name="clean" description="Remove all generated files.">
+        <delete dir="${build.dir}"/>
+    </target>
+    
+    <target name="create-jar.nodep" depends="create-activationlib-jar"/>
+    <target name="create-activationlib-jar" depends="compile-activation">
+        <echo>Preparing Activation Library</echo>
+    </target>
+
+    <target name="compile-dependent" description="Common, Utilities">
+        <echo>Compile Common Library</echo>
+        <ant antfile="build-common.xml" target="create-jar.nodep"/>
+        <ant antfile="build-utilities.xml" target="create-idgen-jar.nodep"/>
+        <ant antfile="build-normalizationfw.xml" target="create-jar.nodep"/>
+        <ant antfile="build-messaging.xml" target="create-jar.nodep"/>
+        <ant antfile="build-server-common.xml" target="create-jar.nodep"/>
+        <ant antfile="build-ggcommon.xml" target="create-jar.nodep"/>
+    </target>
+
+    <target name="compile-activation" description="Compiling the Activation Library">
+        <mkdir dir="${temp.classes}"/>
+        <javac debug="on" srcdir="${activation-src.dir}" destdir="${temp.classes}">
+            <classpath refid="proto.path"/>
+        </javac>
+
+        <java classname="com.kodiak.xdms.server.common.util.KnErrorCodeGenerator"
+              dir="${temp.classes}">
+            <arg path="${build.dir}/tmp"/>
+            <arg value="${sp-error-codes.name}"/>
+            <arg value="com.kodiak.xdms.server.activation.resources"/>
+            <arg value="${cm-errorcodes.class.name}"/>
+            <arg value="${activation-lib.name}"/>
+            <classpath refid="proto.path"/>
+            <classpath path="${activation-conf.dir}"/>
+            <classpath path="${temp.classes}"/>
+            <classpath path="${build-lib.dir}/${xdms-server-common-jar.name}"/>
+        </java>
+        <delete dir="${temp.classes}"/>
+        <mkdir dir="${temp.classes}"/>
+        <mkdir dir="${build.dir}/tmp"/>
+        <javac debug="on" destdir="${temp.classes}" srcdir="${build.dir}/tmp">
+            <classpath location="${build-lib.dir}/${xdms-server-common-jar.name}"/>
+        </javac>
+
+        <javac debug="on" srcdir="${activation-src.dir}" destdir="${temp.classes}"
+               excludes="KnErrorCodeGenerator.java">
+            <classpath refid="proto.path"/>
+            <classpath path="${temp.classes}"/>
+        </javac>
+        <copy todir="${temp.classes}" overwrite="true" filtering="true">
+            <fileset dir="${activation-conf.dir}" includes="*.xml"/>
+            <fileset dir="${server-common-conf.dir}" includes="*.xml"/>
+        </copy>
+
+        <jar jarfile="${build-lib.dir}/${activation-jar.name}" basedir="${temp.classes}"/>
+        <delete dir="${temp.classes}"/>
+        <delete dir="${build.dir}/tmp"/>
+    </target>
+
+    <target name="prepare" depends="set-filter" unless="prepared">
+        <property name="prepared" value="true"/>
+        <echo>Preparing build directories.</echo>
+        <mkdir dir="${build.dir}"/>
+        <mkdir dir="${build-lib.dir}"/>
+    </target>
+
+    <target name="set-filter" description="Setting the filter file">
+        <filter filtersfile="build-common.properties"/>
+    </target>
+
+    <path id="proto.path">
+        <pathelement location="${build-lib.dir}/kodiakpoclogger.jar"/>
+        <pathelement location="${build-lib.dir}/${kodiakdbmgr.jar.name}"/>
+        <pathelement location="${build-lib.dir}/${normalizationfw-jar.name}"/>
+        <pathelement location="${build-lib.dir}/${pocxdm-common-jar.name}"/>
+        <pathelement location="${build-lib.dir}/${pocxdm-common-jar.name}"/>
+        <pathelement location="${build-lib.dir}/${idgen-jar.name}"/>
+        <pathelement location="${pocxdm.dir}/lib/kodiakbase.jar"/>
+        <pathelement location="${build-lib.dir}/${xdms-server-common-jar.name}"/>
+        <pathelement location="${build-lib.dir}/${pocxdm-common-jar.name}"/>
+        <pathelement location="${build-lib.dir}/kodiakmessaging.jar"/>
+        <pathelement location="${build-lib.dir}/${pocxdm-common-jar.name}"/>
+		<pathelement location="${logger-lib.dir}/${log4j-api-jar.name}"/>
+        <pathelement location="${logger-lib.dir}/${log4j-core-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${xdms-server-ggcommon-jar.name}"/>
+    </path>
+</project>

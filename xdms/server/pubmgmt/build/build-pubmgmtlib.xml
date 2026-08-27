@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+Copyright Motorola Solutions, Inc. and/or Kodiak Networks, Inc.
+All Rights Reserved
+Motorola Solutions Confidential Restricted
+-->
+
+<project name="PubMgmt Lib Buildfile" default="build-all" basedir=".">
+
+    <!-- Loading and over riding build properties-->
+    <property file="build-pubmgmtlib.properties"/>
+
+    <target name="build-all" depends="clean, prepare, compile-dependent, create-jar"/>
+    <target name="create-jar.nodep" depends="create-jar"/> 
+
+    <target name="compile-dependent" description="Compiling POCXDM Common">
+        <echo>Compile ggCommon Library</echo>
+        <ant antfile="build-ggcommon.xml" target="create-jar.nodep"/>
+        <echo>Compile Common Library</echo>
+        <ant antfile="build-common.xml" target="create-jar.nodep"/>
+        <echo>Compile XMLModifier Utility</echo>
+        <ant antfile="build-utilities.xml" target="create-xmlmodifier-jar.nodep"/>
+        <echo>Compile IDGEN Utility</echo>
+        <ant antfile="build-utilities.xml" target="create-idgen-jar.nodep"/>
+        <echo>Compile LI Utility</echo>
+        <ant antfile="build-utilities.xml" target="create-lievent-jar.nodep"/>
+        <echo>Compile Server Common Library</echo>
+        <ant antfile="build-server-common.xml" target="create-jar.nodep"/>
+    </target>
+
+    <target name="create-jar" description="Build PUBMGMT library" depends="prepare">
+        <mkdir dir="${temp.classes}"/>
+        <javac debug="on" srcdir="${pubmgmt-lib.dir}/source" destdir="${temp.classes}">
+            <classpath refid="proto.path"/>
+<!--            <classpath location="${build-lib.dir}/${commonlib.lib-name}"/>-->
+        </javac>
+        <java classname="com.kodiak.xdms.server.common.util.KnErrorCodeGenerator"
+            dir="${temp.classes}">
+            <arg path="${build.dir}/tmp"/>
+            <arg value="${pubmgmt-error-codes.name}"/>
+            <arg value="com.kodiak.xdms.server.pubmgmt.resources"/>
+            <arg value="${cm-errorcodes.class.name}"/>
+            <arg value="${pubmgmt-library.name}"/>
+            <classpath refid="proto.path"/>
+            <classpath path="${pubmgmt-lib.dir}/conf"/>
+            <classpath path="${temp.classes}"/>
+            <classpath path="${build-lib.dir}/${xdms-server-common-jar.name}"/>
+        </java>
+        <delete dir="${temp.classes}"/>
+        <mkdir dir="${temp.classes}"/>
+        <mkdir dir="${build.dir}/tmp"/>
+        <javac debug="on" destdir="${temp.classes}" srcdir="${build.dir}/tmp">
+            <classpath location="${build-lib.dir}/${xdms-server-common-jar.name}"/>
+            <classpath path="${build-lib.dir}/${xdms-server-ggcommon-jar.name}"/>
+        </javac>
+
+        <javac debug="on" srcdir="${pubmgmt-lib.dir}/source" destdir="${temp.classes}"
+            excludes="KnErrorCodeGenerator.java">
+            <classpath refid="proto.path"/>
+            <classpath path="${temp.classes}"/>
+        </javac>
+        <copy todir="${temp.classes}" overwrite="true" filtering="true">
+            <fileset dir="${pubmgmt-lib.dir}/conf" includes="*.xml"/>
+            <fileset dir="${xdms-server-common.dir}/conf" includes="*.xml" excludes="sql-map.xml"/>
+        </copy>
+        <jar destfile="${build-lib.dir}/${pubmgmt-lib.lib-name}" basedir="${temp.classes}"/>
+        <delete dir="${temp.classes}"/>
+        <delete dir="${build.dir}/tmp"/>
+    </target>
+
+    <path id="proto.path">
+        <pathelement path="${build-lib.dir}/${logger-jar.name}"/>
+        <pathelement path="${pocxdm-lib.dir}/jta.jar"/>
+        <pathelement path="${pocxdm-lib.dir}/kodiakbase.jar"/>
+        <pathelement path="${pocxdm-lib.dir}/c3p0.jar"/>
+    	<pathelement path="${pocxdm-lib.dir}/mchange-commons-java.jar"/>
+        <pathelement path="${build-lib.dir}/${weblogger-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${pocxdm-common-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${xdms-server-common-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${xml-modifier-jar.name}"/>
+        <pathelement location="${build-lib.dir}/${dbmgr-jar.name}"/>
+        <pathelement location="${build-lib.dir}/${kodiaklievent.jar.name}"/>
+    	<pathelement location="${logger-lib.dir}/log4j-api.jar"/>
+    	<pathelement location="${logger-lib.dir}/log4j-core.jar"/>
+        <pathelement path="${pocxdm.dir}/lib/${jackson-annotations-jar.name}"/>
+
+        <pathelement path="${pocxdm.dir}/lib/${jackson-core-jar.name}"/>
+ 
+        <pathelement path="${pocxdm.dir}/lib/${jackson-databind-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${kodiakjaxbparser-jar.name}"/>
+        <pathelement location="${pocxdm.dir}/lib/jdom.jar"/>
+        <pathelement path="${build-lib.dir}/${xdms-server-ggcommon-jar.name}"/>
+
+    </path>
+
+
+    <target name="prepare" depends="set-filter" unless="prepared">
+        <property name="prepared" value="true"/>
+        <echo>Preparing build directories.</echo>
+
+        <mkdir dir="${build.dir}"/>
+        <mkdir dir="${build-lib.dir}"/>
+    </target>
+
+    <target name="clean" description="Remove all generated files.">
+        <delete dir="${build.dir}"/>
+    </target>
+
+    <target name="set-filter" description="Setting the filter file">
+        <filter filtersfile="build-pubmgmtlib.properties"/>
+    </target>
+
+</project>

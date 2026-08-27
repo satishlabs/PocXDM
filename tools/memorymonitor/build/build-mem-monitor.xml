@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright Motorola Solutions, Inc. and/or Kodiak Networks, Inc.
+All Rights Reserved
+Motorola Solutions Confidential Restricted
+-->
+
+<project name="Memomry monitor tool build" default="build-all" basedir=".">
+    <property file="build-mem-monitor.properties"/>
+    <!-- Cleaning entire build directory -->
+    <target name="clean" description="Remove all generated files.">
+        <delete dir="${build.dir}"/>
+    </target>
+    <target name="build-all" depends="clean, prepare,create-jar, create-mem-monitor-zip"/>
+    <target name="create-zip.nodep" depends="create-mem-monitor-zip"/>
+
+    <target name="compile" description="Building memory monitor tool ">
+        <mkdir dir="${temp.classes}"/>
+        <javac debug="on" srcdir="${mem-mon-tool-src.dir}" destdir="${temp.classes}"/>
+    </target>
+
+    <target name="create-jar" depends="prepare, compile">
+        <echo>Preparing jar directories.</echo>
+        <jar jarfile="${mem-mon.dir}/${mem-monitor-jar.name}">
+            <fileset dir="${temp.classes}"/>
+        </jar>
+
+        <delete dir="${temp.classes}"/>
+    </target>
+
+    <target name="build-all-zip" depends="build-all"/>
+
+    <target name="create-mem-monitor-zip" depends="create-jar">
+
+        <copy todir="${mem-mon.dir}">
+            <fileset dir="${mem-mon-tool-script.dir}"/>
+        </copy>
+
+        <zip zipfile="${build.dir}/${tools-zip.name}" basedir="${build.dir}"/>
+        <copy todir="${mem-mon.dir}">
+            <fileset dir="${mem-mon-tool-script.dir}" includes="*.sh"/>
+        </copy>
+        <delete dir="${web-tool.dir}"/>
+        </target>
+
+    <!--<target name="prepare" depends="set-filter" unless="prepared">-->
+    <target name="prepare" depends="set-filter">
+        <property name="prepared" value="true"/>
+        <echo>Preparing build directories.</echo>
+        <mkdir dir="${build.dir}"/>
+        <mkdir dir="${web-tool.dir}"/>
+        <mkdir dir="${mem-mon.dir}"/>
+    </target>
+
+
+    <target name="set-filter" description="Setting the filter file">
+        <filter filtersfile="build-mem-monitor.properties"/>
+    </target>
+</project>

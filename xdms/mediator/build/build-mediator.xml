@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+Copyright Motorola Solutions, Inc. and/or Kodiak Networks, Inc.
+All Rights Reserved
+Motorola Solutions Confidential Restricted
+-->
+
+<project name="Mediator Layer Interface" default="build-all" basedir=".">
+
+    <property file="build-mediator.properties"/>
+
+    <target name="build-all" depends="clean, prepare, compile-dependent, create-jar"/>
+    <target name="create-jar.nodep" depends="create-jar"/>
+
+    <target name="clean" description="Remove all generated files.">
+        <delete dir="${build.dir}"/>
+    </target>
+
+    <target name="compile-dependent" description="Compiling dependent jars">
+        <echo>Compiling Common Dependents</echo>
+        <echo>Compiling Common Lib</echo>
+        <ant antfile="build-common.xml" target="create-jar.nodep"/>
+        <echo>Compiling IDGEN Utililty</echo>
+        <ant antfile="build-utilities.xml" target="create-idgen-jar.nodep"/>
+        <echo>Compiling XMLModifier Utility</echo>
+        <ant antfile="build-utilities.xml" target="create-xmlmodifier-jar.nodep"/>
+        <echo>Compile Process Invoker</echo>
+        <ant antfile="build-utilities.xml" target="create-processinvoker-jar.nodep"/>
+        <echo>Compile the spring container</echo>
+        <ant antfile="build-utilities.xml" target="create-spring-container-jar"/>
+        <echo>Compile LiEvent Handler</echo>
+        <ant antfile="build-utilities.xml" target="create-lievent.jar.nodep"/>
+        <echo>Compiling Messaging FW</echo>
+        <ant antfile="build-messaging.xml" target="create-jar.nodep"/>
+        <echo>Compiling Stastistical Manager</echo>
+        <ant antfile="build-statisticalmgrfw.xml" target="create-jar.nodep"/>
+        <echo>Compiling Server Common Lib</echo>
+        <ant antfile="build-server-common.xml" target="create-jar.nodep"/>
+        <echo>Compiling Server Pubmgmt Lib</echo>
+        <ant antfile="build-pubmgmtlib.xml" target="create-jar.nodep"/>
+        <echo>Compiling Server Pubmgmt Lib</echo>
+        <ant antfile="build-corpmgmtlib.xml" target="create-jar.nodep"/>
+        <echo>Compiling Server activation Lib</echo>
+        <ant antfile="build-activation.xml" target="create-jar.nodep"/>
+        <echo>Compiling Server SubsProv Lib</echo>
+        <ant antfile="build-subsmgmt.xml" target="create-jar.nodep"/>
+        <echo>Compiling Server Xcap Notify Mgr</echo>
+        <ant antfile="build-xcapnotifymgr.xml" target="create-jar.nodep"/>
+        <echo>Compiling Scheduler</echo>
+        <ant antfile="build-jobscheduler.xml" target="create-jar.nodep"/>
+         <echo>Compile Bulk FW</echo>
+        <ant antfile="build-bulkfw.xml" target="create-jar.nodep"/>
+        <echo>Compile NNICG Library</echo>
+        <ant antfile="build-cgmgmtlib.xml" target="create-jar.nodep"/>
+        <echo>Compile NNICA Library</echo>
+        <ant antfile="build-camgmtlib.xml" target="create-jar.nodep"/>
+        <echo>Compile XDM Interface Library</echo>
+        <ant antfile="build-xdmintf.xml" target="create-jar.nodep"/>
+        <echo>Compiling Server Mcs Notify Mgr</echo>
+        <ant antfile="build-mcsnotifymgr.xml" target="create-jar.nodep"/>
+        <echo>Compiling BulkOps Lib</echo>
+        <ant antfile="build-bulkops.xml" target="create-jar.nodep"/>
+    </target>
+
+    <target name="create-jar" depends="compile" description="Building Mediator jar">
+        <echo>Creating Mediator jar</echo>
+        <copy todir="${temp.classes}">
+            <fileset dir="${mediator-conf.dir}" includes="*.properties,*.xml" />
+        </copy>
+        <jar jarfile="${build-lib.dir}/${xdms-mediator-jar.name}" basedir="${temp.classes}"/>
+        <delete dir="${temp.classes}"/>
+    </target>
+
+    <target name="compile" description="Compiling the Mediator jar">
+        <echo>Compiling Mediator</echo>
+        <mkdir dir="${temp.classes}"/>
+        <javac debug="on" srcdir="${mediator-src.dir}" excludes="test/**" destdir="${temp.classes}">
+            <classpath refid="proto.path"/>
+        </javac>
+    </target>
+
+    <target name="prepare" unless="prepared">
+        <property name="prepared" value="true"/>
+        <echo>Preparing build directories.</echo>
+        <mkdir dir="${build.dir}"/>
+        <mkdir dir="${build-lib.dir}"/>
+    </target>
+
+    <path id="proto.path">
+        <pathelement path="${build-lib.dir}/kodiakpoclogger.jar"/>
+        <pathelement path="${build-lib.dir}/${kodiakdbmgr.jar.name}"/>
+        <pathelement location="${pocxdm.dir}/lib/kodiakbase.jar"/>
+        <pathelement location="${pocxdm.dir}/lib/kodiakcommon.jar"/>
+        <pathelement path="${build-lib.dir}/kodiakpoctlv.jar"/>
+        <pathelement path="${build-lib.dir}/${pocxdm-common-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${xdms-server-common-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${xdms-server-subsmgmt-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${xdms-server-pubmgmt-lib-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${xdms-server-corpmgmt-lib-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${xml-modifier-jar.name}"/>
+        <pathelement path="${build-lib.dir}/kodiakmessaging.jar"/>
+        <pathelement path="${build-lib.dir}/${xcapnotifymgr-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${kodiak-statisticalmgrfw-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${kodiak-jobscheduler-jar.name}"/>
+        <pathelement location="${build-lib.dir}/kodiakprocessinvoker.jar"/>
+        <pathelement location="${build-lib.dir}/${kodiakxdmintf-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${kodiak-bulkfw-jar.name}"/>
+		<pathelement path="${build-lib.dir}/${kodiak-kuid-gen-jar.name}"/>
+        <pathelement path="${build-lib.dir}/kodiakstatusmgr.jar"/>
+        <pathelement path="${build-lib.dir}/${kodiak-lievent-jar.name}"/>
+    	<pathelement path="${build-lib.dir}/${pocxlaclient-jar.name}"/>
+        <pathelement location="${build-lib.dir}/${xdms-nnicgmgmt-jar.name}"/>
+        <pathelement location="${build-lib.dir}/${xdms-nnicamgmt-jar.name}"/>
+        <pathelement location="${build-lib.dir}/${spring-container-jar.name}"/>
+        <pathelement location="${pocxdm.dir}/lib/spring-beans.jar"/>
+        <pathelement location="${pocxdm.dir}/lib/spring-context.jar"/>
+        <pathelement location="${pocxdm.dir}/lib/spring-core.jar"/>
+        <pathelement location="${pocxdm.dir}/lib/spring-tx.jar"/>
+        <pathelement location="${pocxdm.dir}/lib/spring-web.jar"/>
+        <pathelement location="${pocxdm.dir}/lib/spring-security-core.jar"/>
+        <pathelement location="${logger-lib.dir}/${log4j-api-jar.name}"/>
+        <pathelement location="${logger-lib.dir}/${log4j-core-jar.name}"/>
+    	<pathelement path="${build-lib.dir}/${generatealarmutil-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${kodiaksyncprofile-jar.name}"/>
+        <pathelement path="${pocxdm.dir}/lib/${jackson-annotations-jar.name}"/>
+
+        <pathelement path="${pocxdm.dir}/lib/${jackson-core-jar.name}"/>
+
+        <pathelement path="${pocxdm.dir}/lib/${jackson-databind-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${kodiakjaxbparser-jar.name}"/>
+        <pathelement path="${build-lib.dir}/kodiakactivationlib.jar"/>
+        <pathelement path="${pocxdm.dir}/lib/annotations.jar"/>
+        <pathelement path="${pocxdm.dir}/lib/cache-api.jar"/>
+        <pathelement path="${pocxdm.dir}/lib/gridgain-core.jar"/>
+        <pathelement path="${pocxdm.dir}/lib/h2.jar"/>
+        <pathelement path="${pocxdm.dir}/lib/ignite-core.jar"/>
+        <pathelement path="${pocxdm.dir}/lib/ignite-indexing.jar"/>
+        <pathelement location="${build-lib.dir}/kodiakjaxbparser.jar"/>
+        <pathelement location="${pocxdm.dir}/lib/${json-simple-jar.name}"/>
+        <pathelement location="${pocxdm.dir}/lib/${jackson-annotations-jar.name}"/>
+
+        <pathelement location="${pocxdm.dir}/lib//${jackson-core-jar.name}"/>
+
+        <pathelement location="${pocxdm.dir}/lib//${jackson-databind-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${mcsnotifymgr-jar.name}"/>
+    	 <pathelement path="${build-lib.dir}/${kodiakfsupgradeutil-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${xdms-server-ggcommon-jar.name}"/>
+        <pathelement path="${build-lib.dir}/kodiakconfignotifier.jar"/>
+        <pathelement path="${build-lib.dir}/kodiakfeatureset.jar"/>
+        <pathelement path="${build-lib.dir}/${xdms-server-bulkops-jar.name}"/>
+    </path>
+</project>

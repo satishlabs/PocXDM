@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright Motorola Solutions, Inc. and/or Kodiak Networks, Inc.
+All Rights Reserved
+Motorola Solutions Confidential Restricted
+-->
+
+<error-mapping-configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="..\schema.xsd">
+	<error-config error-code="KNEC-WPT-PAM-SUCCESS">
+		<major-code>0</major-code>
+		<description>Success</description>
+		<service-error-code>0</service-error-code>
+		<message>Successfully executed the operation.</message>
+		<http-status-code>200</http-status-code>
+	</error-config>
+	
+	<error-config error-code="KNEC-WPT-PAM-ALREADY-EXIST">
+		<major-code>0</major-code>
+		<description>Success</description>
+		<service-error-code>0</service-error-code>
+		<message>Successfully executed the operation.</message>
+		<http-status-code>200</http-status-code>
+	</error-config>
+
+	<!-- Wrapper Error Codes -->
+	<error-config error-code="KNEC-WPT-IDS-INVALID-DATA">
+		<major-code>60000</major-code>
+		<description>Fatal Data Error</description>
+		<service-error-code>60010</service-error-code>
+		<message>Invalid Data received.</message>
+		<http-status-code>409</http-status-code>
+	</error-config>
+	
+	<error-config error-code="KNEC-WPT-PAM-MAX-SUBS-LIMIT-CORP">
+		<major-code>60000</major-code>
+		<description>Fatal Data Error</description>
+		<service-error-code>60030</service-error-code>
+		<message>Max Subscribers limit has reached for the Corporation.
+		</message>
+		<http-status-code>409</http-status-code>
+	</error-config>
+	<error-config error-code="KNEC-WPT-PAM-MAX-SUBS-LIMIT-LICENSE">
+		<major-code>60000</major-code>
+		<description>Fatal Data Error</description>
+		<service-error-code>60040</service-error-code>
+		<message>Max subscriber limit reached for license.</message>
+		<http-status-code>409</http-status-code>
+	</error-config>
+	<error-config error-code="KNEC-WPT-PAM-INVALID-MDN-PREFIX">
+		<major-code>60000</major-code>
+		<description>Fatal Data Error</description>
+		<service-error-code>60050</service-error-code>
+		<message>Invalid MDN prefix.</message>
+		<http-status-code>409</http-status-code>
+	</error-config>
+	
+	<error-config error-code="KNEC-WPT-PAM-INVALID-HIERARCHY-DATA">
+		<major-code>60000</major-code>
+		<description>Fatal Data Error</description>
+		<service-error-code>60070</service-error-code>
+		<message>Received invalid ContractID/FANID/BANID.</message>
+		<http-status-code>409</http-status-code>
+	</error-config>
+	
+	<error-config error-code="KNEC-WPT-PAM-INTERNAL-SERVER-ERROR">
+		<major-code>70000</major-code>
+		<description>Fatal Technical Error</description>
+		<service-error-code>70020</service-error-code>
+		<message>Internal Server Error.</message>
+		<http-status-code>500</http-status-code>
+	</error-config>
+	<error-config error-code="KNEC-WPT-PAM-DELETE-IN-PROGRESS">
+		<major-code>60000</major-code>
+		<description>Fatal Data Error</description>
+		<service-error-code>61120</service-error-code>
+		<message>Subscriber is in Delete-in-Progress.</message>
+		<http-status-code>409</http-status-code>
+	</error-config>
+	
+	<error-config error-code="KNEC-WPT-PAM-MAX-SUBS-LIMIT-ACCOUNT">
+		<major-code>60000</major-code>
+		<description>Fatal Data Error</description>
+		<service-error-code>61100</service-error-code>
+		<message>Max Subscribers limit has reached for the Account.</message>
+		<http-status-code>409</http-status-code>
+	</error-config>
+	
+	<error-config error-code="KNEC-WPT-IDS-INVALID_REQUEST">
+		<major-code>60000</major-code>
+		<description>Fatal Data Error</description>
+		<service-error-code>61110</service-error-code>
+		<message>Invalid Request</message>
+		<http-status-code>409</http-status-code>
+	</error-config>
+    
+    <!-- WCSR Rest Webservice error code-->
+    <error-config error-code="KNEC-PAM-IDS-INVALID-SERVER-CONFIG">
+        <major-code>70000</major-code>
+        <description>Fatal Technical Error</description>
+        <service-error-code>70010</service-error-code>
+        <message>Invalid server configuration.</message>
+        <http-status-code>409</http-status-code>
+    </error-config>
+    
+    <error-config error-code="KNEC-WPT-PAM-INSUFFICIENT-PSUEDO-MDNS">
+       <major-code>60000</major-code>
+       <description>Fatal Data Error</description>
+       <service-error-code>61060</service-error-code>
+       <message>Pseudo numbers are exhausted</message>
+       <http-status-code>409</http-status-code>
+    </error-config>
+    <error-config error-code="KNEC-WPT-PAM-CANNOT-DOWNGRADE-OPERATION">
+       <major-code>60000</major-code>
+       <description>Fatal Data Error</description>
+       <service-error-code>61070</service-error-code>
+       <message>Cannot perform downgrade operation</message>
+       <http-status-code>409</http-status-code>
+    </error-config>
+	<error-config error-code="KNEC-WPT-IDS-BANID-DOESNOT-EXIST">
+		<major-code>60000</major-code>
+		<description>Fatal Data  Error</description>
+		<service-error-code>60110</service-error-code>
+		<message>BANID Doesn't Exists</message>
+		<http-status-code>500</http-status-code>
+	</error-config>
+	<error-config error-code="KNEC-WPT-IDS-BANID-MOVEMENT-IN-PROGRESS">
+		<major-code>60000</major-code>
+		<description>Fatal Data  Error</description>
+		<service-error-code>60120</service-error-code>
+		<message>BANID movement in-progress</message>
+		<http-status-code>500</http-status-code>
+	</error-config>
+	<error-config error-code="KNEC-WPT-IDS-BANID-THROTTLE-REACHED">
+		<major-code>60000</major-code>
+		<description>Fatal Data  Error</description>
+		<service-error-code>60130</service-error-code>
+		<message>Reached throttling value of the update BAN API </message>
+		<http-status-code>500</http-status-code>
+	</error-config>
+	<error-config error-code="KNEC-WPT-PAM-TIER-CODE-ALREADY-ASSIGNED">
+        <major-code>60000</major-code>
+        <description>Fatal Data Error</description>
+        <service-error-code>60150</service-error-code>
+        <message>Tier package already assigned</message>
+        <http-status-code>409</http-status-code>
+    </error-config>
+    <error-config error-code="KNEC-WPT-PAM-MULTIPLE-TIER-CODE">
+        <major-code>60000</major-code>
+        <description>Fatal Data Error</description>
+        <service-error-code>60160</service-error-code>
+        <message>Multiple Tier package not allowed</message>
+        <http-status-code>409</http-status-code>
+    </error-config>
+    <error-config error-code="KNEC-WPT-WS-MULTIPLE-QPPPKG-EXIST">
+        <major-code>60000</major-code>
+        <description>Fatal Data Error</description>
+        <service-error-code>60170</service-error-code>
+        <message>Multiple QPP addOn package not allowed</message>
+        <http-status-code>409</http-status-code>
+    </error-config>
+     <error-config error-code="KNEC-WPT-WS-QPPPKG-EXIST">
+        <major-code>60000</major-code>
+        <description>Fatal Data Error</description>
+        <service-error-code>60180</service-error-code>
+        <message>QPP addon package already assigned</message>
+        <http-status-code>409</http-status-code>
+    </error-config>
+     <error-config error-code="KNEC-WPT-WS-INVALID-CLIENT-TYPE-FOR-PKG-TYPE">
+        <major-code>60000</major-code>
+        <description>Fatal Data Error</description>
+        <service-error-code>60190</service-error-code>
+        <message>Tier/Addon package(s) not allowed for client type or subscription type</message>
+        <http-status-code>409</http-status-code>
+    </error-config>
+     <error-config error-code="KNEC-WPT-IDS-FIRSTNETINDICATOR">
+        <major-code>60000</major-code>
+        <description>Fatal Data Error</description>
+        <service-error-code>60200</service-error-code>
+        <message>Invalid FirstNetIndicator</message>
+        <http-status-code>409</http-status-code>
+    </error-config>
+    
+    <error-config error-code="KNEC-WPT-IDS-ALIAS-MDN-PRESENT">
+        <major-code>60000</major-code>
+        <description>Fatal Data Error</description>
+        <service-error-code>60201</service-error-code>
+        <message>MDN is present as alias mdn.</message>
+        <http-status-code>409</http-status-code>
+    </error-config>
+
+	<error-config error-code="KNEC-WPT-MDN-PRESENT-IN-PAMACCINFO">
+		<major-code>60000</major-code>
+		<description>Fatal Data Error</description>
+		<service-error-code>60202</service-error-code>
+		<message>Mdn is present in pseudoMdnpool/pamaccinfo"</message>
+		<http-status-code>409</http-status-code>
+	</error-config>
+	<error-config error-code="KNEC-WPT-ACCOUNT_ID_CHANGE_NOT_ALLOWED">
+		<major-code>60000</major-code>
+		<description>Fatal Data Error</description>
+		<service-error-code>60203</service-error-code>
+		<message>Account Id Change not Allowed"</message>
+		<http-status-code>409</http-status-code>
+	</error-config>
+</error-mapping-configuration>

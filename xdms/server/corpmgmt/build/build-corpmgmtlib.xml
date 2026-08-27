@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+Copyright Motorola Solutions, Inc. and/or Kodiak Networks, Inc.
+All Rights Reserved
+Motorola Solutions Confidential Restricted
+-->
+
+<project name="CorpMgmt Lib Buildfile" default="build-all" basedir=".">
+
+    <!-- Loading and over riding build properties-->
+    <property file="build-corpmgmtlib.properties"/>
+
+    <target name="build-all" depends="clean, prepare, compile-dependent, create-jar"/>
+    <target name="create-jar.nodep" depends="create-jar"/>
+
+    <target name="compile-dependent" description="Compiling POCXDM Common">
+        <echo>Compile ggCommon Library</echo>
+        <ant antfile="build-ggcommon.xml" target="create-jar.nodep"/>
+        <echo>Compile Common Library</echo>
+        <ant antfile="build-common.xml" target="create-jar.nodep"/>
+        <echo>Compile XMLModifier Utility</echo>
+        <ant antfile="build-utilities.xml" target="create-xmlmodifier-jar.nodep"/>
+        <echo>Compile statusmgr Utility</echo>
+        <ant antfile="build-utilities.xml" target="create-statusmgr-jar.nodep"/>
+        <echo>Compile IDGEN Utility</echo>
+        <ant antfile="build-utilities.xml" target="create-idgen-jar.nodep"/>
+	    <echo>Compile Couch user profile management Utility</echo>
+        <ant antfile="build-utilities.xml" target="create-syncprofileutil-jar.nodep"/>
+	    <echo>Compile PROCESSINVOKER</echo>
+        <ant antfile="build-utilities.xml" target="create-processinvoker-jar.nodep"/>
+        <echo>Compile Server Common Library</echo>
+        <ant antfile="build-server-common.xml" target="create-jar.nodep"/>
+        <echo>Compile Normalization framework</echo>
+        <ant antfile="build-normalizationfw.xml" target="create-jar.nodep"/>
+    </target>
+
+    <target name="create-jar" description="Build CORPMGMT library" depends="prepare">
+        <mkdir dir="${temp.classes}"/>
+        <javac debug="on" srcdir="${corpmgmt-lib.dir}/source" destdir="${temp.classes}">
+            <classpath refid="proto.path"/>
+            <!--            <classpath location="${build-lib.dir}/${commonlib.lib-name}"/>-->
+        </javac>
+        <java classname="com.kodiak.xdms.server.common.util.KnErrorCodeGenerator"
+              dir="${temp.classes}">
+            <arg path="${build.dir}/tmp"/>
+            <arg value="${corpmgmt-error-codes.name}"/>
+            <arg value="com.kodiak.xdms.server.corpmgmt.resources"/>
+            <arg value="${cm-errorcodes.class.name}"/>
+            <arg value="${corpmgmt-library.name}"/>
+            <classpath refid="proto.path"/>
+            <classpath path="${corpmgmt-lib.dir}/conf"/>
+            <classpath path="${temp.classes}"/>
+            <classpath path="${build-lib.dir}/${xdms-server-common-jar.name}"/>
+        </java>
+        <delete dir="${temp.classes}"/>
+        <mkdir dir="${temp.classes}"/>
+        <delete dir="${build.dir}/tmp"/>
+        <mkdir dir="${build.dir}/tmp"/>
+        <javac debug="on" destdir="${temp.classes}" srcdir="${build.dir}/tmp">
+            <classpath location="${build-lib.dir}/${xdms-server-common-jar.name}"/>
+            <classpath path="${build-lib.dir}/${xdms-server-ggcommon-jar.name}"/>
+        </javac>
+
+        <javac debug="on" srcdir="${corpmgmt-lib.dir}/source" destdir="${temp.classes}"
+               excludes="KnErrorCodeGenerator.java">
+            <classpath refid="proto.path"/>
+            <classpath path="${temp.classes}"/>
+        </javac>
+        <copy todir="${temp.classes}" overwrite="true" filtering="true">
+            <fileset dir="${corpmgmt-lib.dir}/conf" includes="*.xml"/>
+            <fileset dir="${xdms-server-common.dir}/conf" includes="*.xml"/>
+        </copy>
+        <jar destfile="${build-lib.dir}/${corpmgmt-lib.lib-name}" basedir="${temp.classes}"/>
+        <delete dir="${temp.classes}"/>
+        <delete dir="${build.dir}/tmp"/>
+    </target>
+
+    <path id="proto.path">
+        <pathelement path="${pocxdm.dir}/lib/jta.jar"/>
+        <pathelement path="${pocxdm.dir}/lib/ttjdbc11.jar"/>
+        <pathelement path="${build-lib.dir}/${logger-jar.name}"/>
+        <pathelement path="${pocxdm-lib.dir}/kodiakbase.jar"/>
+        <pathelement path="${build-lib.dir}/${weblogger-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${pocxdm-common-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${xdms-server-common-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${xml-modifier-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${dbmgr-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${idgen-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${statusmgr-jar.name}"/>
+        <pathelement path="${build-lib.dir}/kodiakfeatureset.jar"/>
+	    <pathelement path="${build-lib.dir}/kodiakprocessinvoker.jar"/>
+        <pathelement location="${build-lib.dir}/${normalization-jar.name}"/>
+        <pathelement location="${build-lib.dir}/${kodiaklievent-jar.name}"/>
+		<pathelement location="${build-lib.dir}/${dbconcurrfw-jar.name}"/>
+    	<pathelement location="${logger-lib.dir}/log4j-api.jar"/>
+    	<pathelement location="${logger-lib.dir}/log4j-core.jar"/>
+       
+        <pathelement path="${pocxdmlib}/${jackson-annotations-jar.name}"/>
+       
+        <pathelement path="${pocxdmlib}/${jackson-core-jar.name}"/>
+       
+        <pathelement path="${pocxdmlib}/${jackson-databind-jar.name}"/>
+
+        <pathelement path="${pocxdmlib}/${couchbase-core-io-jar.name}"/>
+        <pathelement path="${pocxdmlib}/${couchbase-java-client-jar.name}"/>
+
+        <pathelement path="${pocxdmlib}/${rxjava-jar.name}"/>
+        <pathelement path="${pocxdmlib}/${opentracking-api-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${kodiaksyncprofile-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${xdms-server-ggcommon-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${xdms-server-subsmgmt-jar.name}"/>
+        <pathelement location="PoCXDM/lib/spring-context.jar"/>
+        <pathelement location="PoCXDM/lib/spring-beans.jar"/>
+        <pathelement location="PoCXDM/lib/spring-web.jar"/>
+    </path>
+
+
+    <target name="prepare" depends="set-filter" unless="prepared">
+        <property name="prepared" value="true"/>
+        <echo>Preparing build directories.</echo>
+
+        <mkdir dir="${build.dir}"/>
+        <mkdir dir="${build-lib.dir}"/>
+    </target>
+
+    <target name="clean" description="Remove all generated files.">
+        <delete dir="${build.dir}"/>
+    </target>
+
+    <target name="set-filter" description="Setting the filter file">
+        <filter filtersfile="build-corpmgmtlib.properties"/>
+    </target>
+
+</project>

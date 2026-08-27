@@ -1,0 +1,60 @@
+<!--
+Copyright Motorola Solutions, Inc. and/or Kodiak Networks, Inc.
+All Rights Reserved
+Motorola Solutions Confidential Restricted
+-->
+
+<aas>
+    <authentication>
+        <enabled>false</enabled>
+        <!-- Profiles configurations -->
+        <auth-profiles></auth-profiles>
+        <!-- Rules configurations -->
+        <rules-config></rules-config>
+    </authentication>
+
+    <authorization>
+        <enabled>true</enabled>
+        <auth-profiles>
+            <!-- General profile -->
+            <profile id="General">
+                <global-rules></global-rules>
+            </profile>
+            <!-- CSR profile -->
+            <!--<profile id="CSR">
+                <global-rules></global-rules>
+                <operation id="forceDataSync">
+                </operation>
+            </profile>-->
+            <!-- WebServices Profile -->
+            <profile id="WEBSERVICE">
+                <!-- Defining the global rules applicable to all the operations -->
+                <global-rules></global-rules>
+
+                <!-- Defining the operation specific rules applicable to the specific operation -->
+                <!-- Here starts the Client Management operations -->
+                <operation id="retrieveMDN">
+                    <rule id="ActivationKeyCheck" auth-rule-id="ActivationKeyChk" enabled="true"/>
+                </operation>
+
+                <operation id="deviceActivation">
+                    <rule id="DeviceActivationKeyChk" auth-rule-id="DeviceActivationKeyChk" enabled="true"/>
+                </operation>
+                <!--<operation id="fetchConfigData">
+                    <rule id="ClientFeatureCheck" auth-rule-id="AddlConnSubscFeatureChk" enabled="true">
+                        <parameters>
+                            <param id="addlFeatureBits">58</param>
+                        </parameters>
+                    </rule>
+                </operation>-->
+               <!-- Here ends the Client Management operations -->
+            </profile>
+        </auth-profiles>
+
+        <!-- Defining the Rules config -->
+        <rules-config>
+            <auth-rule id="ActivationKeyChk" class-name="com.kodiak.library.activation.business.aas.authorization.rules.KnActivationKeyAuthRule"/>
+            <auth-rule id="DeviceActivationKeyChk" class-name="com.kodiak.library.activation.business.aas.authorization.rules.KnDeviceActivationKeyAuthRule"/>
+        </rules-config>
+    </authorization>
+</aas>

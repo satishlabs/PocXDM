@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright Motorola Solutions, Inc. and/or Kodiak Networks, Inc.
+All Rights Reserved
+Motorola Solutions Confidential Restricted
+-->
+
+<project name="Provisioning Library" default="build-all" basedir=".">
+
+    <property file="build-server-common.properties"/>
+
+    <target name="build-all" depends="clean, prepare, compile-dependent, create-jar"/>
+
+    <target name="clean" description="Remove all generated files.">
+        <delete dir="${build.dir}"/>
+    </target>
+
+    <target name="create-jar.nodep" depends="create-jar"/>
+
+    <target name="compile-dependent" description="compiling dependent jars">
+        <echo>Compile Common Library</echo>
+        <ant antfile="build-ggcommon.xml" target="create-jar.nodep"/>
+        <ant antfile="build-common.xml" target="create-jar.nodep"/>
+        <ant antfile="build-utilities.xml" target="create-idgen-jar.nodep"/>
+        <ant antfile="build-utilities.xml" target="create-statusmgr-jar.nodep"/>
+        <ant antfile="build-utilities.xml" target="create-spring-container-jar"/>
+        <ant antfile="build-utilities.xml" target="create-generatealarmutil-jar.nodep"/>
+        <ant antfile="build-utilities.xml" target="create-tlv-jar.nodep"/>
+        <ant antfile="build-utilities.xml" target="create-featureset-jar.nodep"/>
+    </target>
+
+
+    <target name="create-jar" depends="compile" description="Create Server common library">
+        <jar jarfile="${build-lib.dir}/${xdms-server-common-jar.name}">
+            <fileset dir="${temp.classes}" includes="**/*.class"/>
+        </jar>
+        <delete dir="${temp.classes}"/>
+    </target>
+
+
+    <target name="compile" description="Compiling the Server Common Library">
+        <echo>Compiling Server common library</echo>
+        <mkdir dir="${temp.classes}"/>
+
+        <javac debug="on" srcdir="${server-common-src.dir}" destdir="${temp.classes}">
+            <classpath refid="proto.path"/>
+        </javac>
+        <java classname="com.kodiak.xdms.server.common.util.KnErrorCodeGenerator"
+              dir="${temp.classes}">
+            <arg path="${build.dir}/tmp"/>
+            <arg value="${cm-error-codes.name}"/>
+            <arg value="com.kodiak.xdms.server.common.resources"/>
+            <classpath refid="proto.path"/>
+            <classpath path="${server-common.dir}/conf"/>
+            <classpath path="${temp.classes}"/>
+        </java>
+        <delete dir="${temp.classes}"/>
+        <mkdir dir="${temp.classes}"/>
+        <mkdir dir="${build.dir}/tmp"/>
+        <javac debug="on" destdir="${temp.classes}" srcdir="${build.dir}/tmp"/>
+        <javac debug="on" srcdir="${server-common.dir}/source" destdir="${temp.classes}"
+               excludes="KnErrorCodeGenerator.java">
+            <classpath refid="proto.path"/>
+            <classpath path="${temp.classes}"/>
+        </javac>
+        <copy todir="${temp.classes}" overwrite="true" filtering="true">
+            <fileset dir="${server-common.dir}/conf" includes="*.xml"/>
+        </copy>
+
+
+    </target>
+
+
+
+
+    <target name="prepare" unless="prepared">
+        <property name="prepared" value="true"/>
+        <echo>Preparing build directories.</echo>
+        <mkdir dir="${build.dir}"/>
+        <mkdir dir="${build-lib.dir}"/>
+    </target>
+
+
+    <path id="proto.path">
+
+        <pathelement location="${build-lib.dir}/${pocxdm-common-jar.name}"/>
+        <pathelement location="${build-lib.dir}/${idgen-jar.name}"/>
+        <pathelement path="${build-lib.dir}/kodiakpoclogger.jar"/>
+        <pathelement location="${build-lib.dir}/${kodiakdbmgr.jar.name}"/>
+        <pathelement location="${build-lib.dir}/${kodiak-confignotifier-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${statusmgr-jar.name}"/>
+        <pathelement location="${pocxdmlib}/spring-beans.jar"/>
+        <pathelement location="${pocxdmlib}/spring-data-jpa.jar"/>
+        <pathelement location="${pocxdmlib}/hibernate-jpa-api.jar"/>
+        <pathelement location="${pocxdmlib}/spring-data-commons.jar"/>
+        <pathelement location="${pocxdmlib}/spring-tx.jar"/>
+        <pathelement location="${pocxdm.dir}/lib/spring-context.jar"/>
+        <pathelement location="${pocxdm.dir}/lib/spring-core.jar"/>
+        <pathelement path="${pocxdm.dir}/lib/kodiakbase.jar"/>
+        <pathelement path="${pocxdm.dir}/lib/kodiakcommon.jar"/>
+        <pathelement location="${logger-lib.dir}/log4j-api.jar"/>
+        <pathelement location="${logger-lib.dir}/log4j-core.jar"/>
+        <pathelement path="${pocxdm.dir}/lib/c3p0.jar"/>
+    	<pathelement path="{pocxdm.dir}/lib/mchange-commons-java.jar"/>
+        <pathelement path="${build-lib.dir}/${spring-container-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${kodiak-messaging-jar.name}"/>
+        <pathelement location="${build-lib.dir}/${generatealarmutil-jar.name}"/>
+        <pathelement location="${build-lib.dir}/kodiakpoctlv.jar"/>
+        <pathelement path="${pocxdmlib}/${jackson-core-jar.name}"/>
+        <pathelement path="${pocxdmlib}/${jackson-annotations-jar.name}"/>
+        
+        <pathelement path="${pocxdmlib}/${jackson-databind-jar.name}"/>
+		<pathelement path="${pocxdm.dir}/lib/annotations.jar"/>
+		<pathelement path="${pocxdm.dir}/lib/cache-api.jar"/>
+		<pathelement path="${pocxdm.dir}/lib/gridgain-core.jar"/>
+		<pathelement path="${pocxdm.dir}/lib/h2.jar"/>
+		<pathelement path="${pocxdm.dir}/lib/ignite-core.jar"/>
+		<pathelement path="${pocxdm.dir}/lib/ignite-indexing.jar"/>
+        <pathelement path="${pocxdm.dir}/lib/${couchbase-core-io-jar.name}"/>
+        <pathelement path="${pocxdm.dir}/lib/${couchbase-java-client-jar.name}"/>
+        <pathelement path="${pocxdm.dir}/lib/${rxjava-jar.name}"/>
+        <pathelement path="${pocxdm.dir}/lib/${opentracking-api-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${featureset-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${xdms-server-ggcommon-jar.name}"/>
+
+        <pathelement path="${build-lib.dir}/${kodiakvault.jar.name}"/>
+    </path>
+
+</project>

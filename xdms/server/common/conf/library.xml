@@ -1,0 +1,92 @@
+<!--
+Copyright Motorola Solutions, Inc. and/or Kodiak Networks, Inc.
+All Rights Reserved
+Motorola Solutions Confidential Restricted
+-->
+
+<library>
+
+    <cache>
+        <manager-class>com.kodiak.xdms.server.common.configuration.cache.impl.KnCacheManager</manager-class>
+        <manager-config-class>com.kodiak.xdms.server.common.configuration.cache.impl.KnCacheManagerInitConfigData</manager-config-class>
+        <manager-config-data>
+            <key-generator-config>
+                <delimiter>.</delimiter>
+            </key-generator-config>
+        </manager-config-data>
+    </cache>
+
+    <modules>
+        <!--<module>-->
+        <!--<name>INITIALIZER</name>-->
+        <!--<loader-class>com.kodiak.xdms.server.common.configuration.loader.KnInitializer</loader-class>-->
+        <!--<loader-config-data>-->
+        <!--<db-init>-->
+        <!--<db-file-path>@xdms-activerelease.path@/emsdb.props</db-file-path>-->
+        <!--<license-parser-path>@xdms-activerelease.path@/licenseparser.properties</license-parser-path>-->
+        <!--<active-release-dir>@xdms-activerelease.path@</active-release-dir>-->
+        <!--<card-type>2</card-type>-->
+        <!--<client-id>Library</client-id>-->
+        <!--<rmi-port>3999</rmi-port>-->
+        <!--<config-path>@xdms-config.path@/ApplicationConfig.properties</config-path>-->
+        <!--<intf-mon-file-path>@xdms-activerelease.path@/notify.properties</intf-mon-file-path>-->
+        <!--</db-init>-->
+        <!--</loader-config-data>-->
+        <!--</module>-->
+
+        <module>
+            <name>ERRORCODES</name>
+            <loader-class>com.kodiak.xdms.server.common.configuration.loader.xml.KnXmlLoader</loader-class>
+            <loader-config-data>
+                <xml>
+                    <xml-file>error-codes.xml</xml-file>
+                    <unique-identifer-label>code</unique-identifer-label>
+                </xml>
+            </loader-config-data>
+            <cache-datastucture-class>com.kodiak.xdms.server.common.configuration.cache.datastructure.KnCacheElement</cache-datastucture-class>
+        </module>
+    </modules>
+
+    <libraries>
+        <library>
+            <name>PROVLIB</name>
+            <library-config-class>com.kodiak.xdms.server.common.configuration.manager.KnConfigurationsManager</library-config-class>
+            <library-config-data>
+                <library-init>
+                    <xml-file>/prov-library.xml</xml-file>
+                </library-init>
+            </library-config-data>
+        </library>
+
+        <library>
+            <name>PUBLIB</name>
+            <library-config-class>com.kodiak.xdms.server.common.configuration.manager.KnConfigurationsManager</library-config-class>
+            <library-config-data>
+                <library-init>
+                    <xml-file>/pub-library.xml</xml-file>
+                </library-init>
+            </library-config-data>
+        </library>
+
+        <library>
+            <name>CORPLIB</name>
+            <library-config-class>com.kodiak.xdms.server.common.configuration.manager.KnConfigurationsManager</library-config-class>
+            <library-config-data>
+                <library-init>
+                    <xml-file>/corpmgmt-library.xml</xml-file>
+                </library-init>
+            </library-config-data>
+        </library>
+
+        <library>
+            <name>ACTLIB</name>
+            <library-config-class>com.kodiak.xdms.server.common.configuration.manager.KnConfigurationsManager</library-config-class>
+            <library-config-data>
+                <library-init>
+                    <xml-file>/activation-library.xml</xml-file>
+                </library-init>
+            </library-config-data>
+        </library>
+      
+    </libraries>
+</library>

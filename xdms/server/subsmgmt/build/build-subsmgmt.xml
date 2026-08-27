@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright Motorola Solutions, Inc. and/or Kodiak Networks, Inc.
+All Rights Reserved
+Motorola Solutions Confidential Restricted
+-->
+
+<project name="Provisioning Library" default="build-all" basedir=".">
+    <!-- Loading and over riding build properties-->
+    <property file="build-subsmgmt.properties"/>
+
+    <target name="build-all" depends="clean, prepare, compile-dependent, create-jar"/>
+
+    <target name="clean" description="Remove all generated files.">
+        <delete dir="${build.dir}"/>
+    </target>
+
+    <target name="prepare" unless="prepared">
+        <property name="prepared" value="true"/>
+        <echo>Preparing build directories.</echo>
+        <mkdir dir="${build.dir}"/>
+        <mkdir dir="${build-lib.dir}"/>
+    </target>
+
+    <target name="compile-dependent" description="compiling dependent jars">
+        <echo>Compile ggCommon Library</echo>
+        <ant antfile="build-ggcommon.xml" target="create-jar.nodep"/>
+        <echo>Compile Common Library</echo>
+        <ant antfile="build-common.xml" target="create-jar.nodep"/>
+        <ant antfile="build-utilities.xml" target="create-idgen-jar.nodep"/>
+        <ant antfile="build-utilities.xml" target="create-tlv-jar.nodep"/>
+        <ant antfile="build-utilities.xml" target="create-processinvoker-jar.nodep"/>
+        <ant antfile="build-utilities.xml" target="create-featureset-jar.nodep"/>
+        <ant antfile="build-utilities.xml" target="create-generatealarmutil-jar.nodep"/>
+        <ant antfile="build-utilities.xml" target="create-kodiakfsupgradeutil-jar.nodep"/>
+        <ant antfile="build-server-common.xml" target="create-jar.nodep"/>
+        <ant antfile="build-normalizationfw.xml" target="create-jar.nodep"/>
+        <ant antfile="build-statisticalmgrfw.xml" target="create-jar.nodep"/>
+        <ant antfile="build-confignotifier.xml" target="create-jar.nodep"/>
+        <ant antfile="build-configfw.xml" target="create-jar.nodep"/>
+		<echo>Compile DataSync module</echo>
+        <ant antfile="build-datasync.xml" target="create-jar.nodep"/>
+    </target>
+
+
+    <target name="create-jar.nodep" depends="create-jar"
+            description="Creates Subscriber Provisioning jar with out Dep"/>
+
+    <target name="create-jar" depends="compile" description="Creates Subscriber Prov Jar">
+        <echo>Creating Provisioning Library Jar</echo>
+        <jar jarfile="${build-lib.dir}/${xdms-server-subsmgmt-jar.name}" basedir="${temp.classes}"/>
+        <delete dir="${temp.classes}"/>
+        <delete dir="${build.dir}/tmp"/>
+    </target>
+
+
+    <target name="compile" description="Compiles Subscriber Prov Library">
+        <echo>Compiling Provisioning Library</echo>
+        <mkdir dir="${temp.classes}"/>
+        <javac debug="on" srcdir="${subsmgmt-src.dir}" excludes="test/**" destdir="${temp.classes}">
+            <classpath refid="proto.path"/>
+        </javac>
+
+        <java classname="com.kodiak.xdms.server.common.util.KnErrorCodeGenerator"
+              dir="${temp.classes}">
+            <arg path="${build.dir}/tmp"/>
+            <arg value="${sp-error-codes.name}"/>
+            <arg value="com.kodiak.xdms.server.subsmgmt.resources"/>
+            <arg value="${cm-errorcodes.class.name}"/>
+            <arg value="${subsmgmt-lib.name}"/>
+            <classpath refid="proto.path"/>
+            <classpath path="${subsmgmt-conf.dir}"/>
+            <classpath path="${temp.classes}"/>
+            <classpath path="${build-lib.dir}/${xdms-server-common-jar.name}"/>
+            <classpath path="${build-lib.dir}/${xdms-server-ggcommon-jar.name}"/>
+        </java>
+        <delete dir="${temp.classes}"/>
+        <mkdir dir="${temp.classes}"/>
+        <mkdir dir="${build.dir}/tmp"/>
+        <javac debug="on" destdir="${temp.classes}" srcdir="${build.dir}/tmp">
+            <classpath location="${build-lib.dir}/${xdms-server-common-jar.name}"/>
+            <classpath path="${build-lib.dir}/${xdms-server-ggcommon-jar.name}"/>
+        </javac>
+
+        <javac debug="on" srcdir="${subsmgmt-src.dir}"  destdir="${temp.classes}"
+               excludes="test/**, KnErrorCodeGenerator.java">
+            <classpath refid="proto.path"/>
+            <classpath path="${temp.classes}"/>
+        </javac>
+        <copy todir="${temp.classes}" overwrite="true" filtering="true">
+            <fileset dir="${subsmgmt-conf.dir}" includes="*.xml"/>
+            <fileset dir="${server-common-conf.dir}" includes="*.xml" excludes="sql-map.xml"/>
+        </copy>
+    </target>
+
+    <path id="proto.path">
+        <pathelement path="${build-lib.dir}/kodiakpoclogger.jar"/>
+        <pathelement location="${build-lib.dir}/${kodiakdbmgr.jar.name}"/>
+        <pathelement location="${pocxdm.dir}/lib/kodiakbase.jar"/>
+        <pathelement location="${build-lib.dir}/${pocxdm-common-jar.name}"/>
+        <pathelement location="${build-lib.dir}/${idgen-jar.name}"/>
+        <pathelement location="${build-lib.dir}/${featureset-jar.name}"/>
+        <pathelement location="${build-lib.dir}/${xdms-server-common-jar.name}"/>
+        <pathelement location="${build-lib.dir}/${kodiak-tlv-jar.name}"/>
+        <pathelement location="${build-lib.dir}/${kodiak-statisticalmgrfw-jar.name}"/>
+        <pathelement location="${build-lib.dir}/${normalization-jar.name}"/>
+        <pathelement location="${build-lib.dir}/${kodiak-processinvoker-jar.name}"/>
+        <pathelement location="${build-lib.dir}/${generatealarmutil-jar.name}"/>
+        <pathelement location="${build-lib.dir}/${kodiak-confignotifier-jar.name}"/>
+        <pathelement location="${build-lib.dir}/${configfw-jar.name}"/>
+    	<pathelement location="${build-lib.dir}/${dbconcurrfw-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${kodiaksyncprofile-jar.name}"/>
+        <pathelement location="PoCXDM/lib/spring-context.jar"/>
+        <pathelement location="PoCXDM/lib/spring-beans.jar"/>
+        <pathelement location="PoCXDM/lib/spring-web.jar"/>
+        <pathelement location="${logger-lib.dir}/log4j-api.jar"/>
+    	<pathelement location="${logger-lib.dir}/log4j-core.jar"/>
+		<pathelement location="${build-lib.dir}/kodiaknnidatasync.jar"/>
+		<pathelement location="PoCXDM/lib/jackson-databind.jar"/>
+        <pathelement path="${build-lib.dir}/${kodiakjaxbparser-jar.name}"/>
+        <pathelement path="${pocxdm.dir}/lib/annotations.jar"/>
+        <pathelement path="${pocxdm.dir}/lib/cache-api.jar"/>
+        <pathelement path="${pocxdm.dir}/lib/gridgain-core.jar"/>
+        <pathelement path="${pocxdm.dir}/lib/h2.jar"/>
+        <pathelement path="${pocxdm.dir}/lib/ignite-core.jar"/>
+        <pathelement path="${pocxdm.dir}/lib/ignite-indexing.jar"/>
+        <pathelement path="${build-lib.dir}/kodiakkuidgenerator.jar"/>
+    	<pathelement path="${pocxdmlib}/${couchbase-core-io-jar.name}"/>
+    	<pathelement path="${pocxdmlib}/${couchbase-java-client-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${kodiakfsupgradeutil-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${xdms-server-ggcommon-jar.name}"/>
+        <pathelement path="${build-lib.dir}/${kodiakvault.jar.name}"/>
+    </path>
+</project>

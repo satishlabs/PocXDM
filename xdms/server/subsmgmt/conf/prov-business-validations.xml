@@ -1,0 +1,191 @@
+<!--
+Copyright Motorola Solutions, Inc. and/or Kodiak Networks, Inc.
+All Rights Reserved
+Motorola Solutions Confidential Restricted
+-->
+
+<business-validations enabled="true">
+    <validation-entities>
+        <entity id="SubsProvManager">
+            <operation id="createSubscriber"
+                       dto-type="com.kodiak.xdms.server.subsmgmt.dto.persistdat.KnSubsProfilePersistDTO"
+                       consolidate-rules="false">
+                <validation-rule id="publicSubscriptionChecker" validator-id="publicSubscriptionValidator"
+                                 enabled="true"/>
+                <validation-rule id="corpSubscriptionChecker" validator-id="corpSubscriptionValidator" enabled="true"/>
+                <validation-rule id="PayTypeChecker" validator-id="PayTypeValidator" enabled="true"/>
+                <validation-rule id="MaxSubsPerCorpChecker" validator-id="MaxSubsPerCorpValidator" enabled="true"/>
+                <validation-rule id="pairingIndChecker" validator-id="pairingIndValidator" enabled="true"/>
+                <validation-rule id="roamingTypeChecker" validator-id="roamingTypeValidator" enabled="true">
+                    <parameters>
+                        <param id="checkNull">false</param>
+                    </parameters>
+                </validation-rule>
+                <validation-rule id="subsClientTypeChecker" validator-id="SubsClientTypeValidator" enabled="true"/>
+                <validation-rule id="licenseTypeChecker" validator-id="LicenseTypeValidator" enabled="true"/>
+                <validation-rule id="firstNetChecker" validator-id="FirstNetValidator" enabled="true"/>
+                <validation-rule id="mcsComplianceChecker" validator-id="mcsComplianceValidator" enabled="true"/>
+            </operation>
+
+            <operation id="createPAMAccount"
+                       dto-type="com.kodiak.xdms.server.subsmgmt.dto.persistdat.KnPAMAccPersistDTO.java"
+                       consolidate-rules="false">
+                <validation-rule id="corpSubscriptionChecker" validator-id="corpSubscriptionValidatorPam" enabled="false"/>
+                <validation-rule id="subsClientTypeChecker" validator-id="SubsClientTypeValidatorPam" enabled="false"/>
+            </operation>
+
+            <operation id="activateSubscriber"
+                       dto-type="com.kodiak.xdms.server.subsmgmt.dto.persistdat.KnSubsProfilePersistDTO"
+                       consolidate-rules="false">
+                <validation-rule id="authMdnValidator" validator-id="authMdnValidator" enabled="true"/>
+            </operation>
+
+            <operation id="updateSubscriber"
+                       dto-type="com.kodiak.xdms.server.subsmgmt.dto.persistdat.KnSubsProfilePersistDTO"
+                       consolidate-rules="false">
+                <validation-rule id="publicSubscriptionChecker" validator-id="updateSubscriptionValidator"
+                                 enabled="true">
+                    <parameters>
+                        <param id="subscriptionType">0,1</param>
+                    </parameters>
+                </validation-rule>
+                <validation-rule id="corpSubscriptionChecker" validator-id="updateSubscriptionValidator"
+                                 enabled="true">
+                    <parameters>
+                        <param id="subscriptionType">0,1</param>
+                    </parameters>
+                </validation-rule>
+                <validation-rule id="PayTypeChecker" validator-id="PayTypeValidator" enabled="true"/>
+                <validation-rule id="roamingTypeChecker" validator-id="roamingTypeValidator" enabled="true">
+                    <parameters>
+                        <param id="checkNull">false</param>
+                    </parameters>
+                </validation-rule>
+                <!--<validation-rule id="updateExtCorpIdChecker" validator-id="updateExtCorpIdValidator" enabled="true"/>-->
+                <!--<validation-rule id="mdnStatusChecker" validator-id="mdnStatusValidator" enabled="true"/>-->
+                <validation-rule id="subsClientTypeChecker" validator-id="SubsClientTypeValidator" enabled="true"/>
+                <validation-rule id="firstNetChecker" validator-id="FirstNetValidator" enabled="true"/>
+            </operation>
+
+            <operation id="changeServiceAuthStatus"
+                       dto-type="com.kodiak.xdms.server.subsmgmt.dto.persistdat.KnSubsProfilePersistDTO"
+                       consolidate-rules="false">
+                <validation-rule id="serviceAuthStatusChecker" validator-id="serviceAuthStatusValidator"
+                                 enabled="true"/>
+            </operation>
+
+            <operation id="forceSync"
+                       dto-type="com.kodiak.xdms.server.subsmgmt.dto.persistdat.KnSubsProfilePersistDTO"
+                       consolidate-rules="false">
+                <!--<validation-rule id="mdnStatusChecker" validator-id="mdnStatusValidator" enabled="true"/>-->
+            </operation>
+
+            <operation id="selectProfileMdn"
+                       dto-type="com.kodiak.xdms.server.subsmgmt.dto.persistdat.KnSubsProfilePersistDTO"
+                       consolidate-rules="false">
+                <validation-rule id="invalidTokenMcpttId" validator-id="invalidTokenMcpttId" enabled="true"/>
+            </operation>
+
+        </entity>
+    </validation-entities>
+
+    <operation id="changeMdn"
+               dto-type="com.kodiak.xdms.server.subsmgmt.dto.persistdat.KnSubsProfilePersistDTO"
+               consolidate-rules="true">
+        <validation-rule id="newMdnChecker" validator-id="mdnExistsValidator" enabled="true"/>
+        <!--<validation-rule id="mdnStatusChecker" validator-id="mdnStatusValidator" enabled="true"/>-->
+    </operation>
+
+    <rules-config>
+        <validator id="publicSubscriptionValidator"
+                   class-name="com.kodiak.xdms.server.subsmgmt.business.validator.rules.KnPublicSubscriptionValidationRule"
+                   dto-type="com.kodiak.xdms.server.subsmgmt.dto.persistdat.KnSubsProfilePersistDTO">
+        </validator>
+
+        <validator id="corpSubscriptionValidator"
+                   class-name="com.kodiak.xdms.server.subsmgmt.business.validator.rules.KnCorpSubscriptionValidationRule"
+                   dto-type="com.kodiak.xdms.server.subsmgmt.dto.persistdat.KnSubsProfilePersistDTO">
+        </validator>
+
+        <validator id="corpSubscriptionValidatorPam"
+                   class-name="com.kodiak.xdms.server.subsmgmt.business.validator.rules.KnCorpSubscriptionValidationRule"
+                   dto-type="com.kodiak.xdms.server.subsmgmt.dto.persistdat.KnPAMAccPersistDTO">
+        </validator>
+
+        <validator id="updateSubscriptionValidator"
+                   class-name="com.kodiak.xdms.server.subsmgmt.business.validator.rules.KnUpdateSubscriptionValidationRule"
+                   dto-type="com.kodiak.xdms.server.subsmgmt.dto.persistdat.KnSubsProfilePersistDTO">
+        </validator>
+
+        <validator id="PayTypeValidator"
+                   class-name="com.kodiak.xdms.server.subsmgmt.business.validator.rules.KnPayTypeValidationRule"
+                   dto-type="com.kodiak.xdms.server.subsmgmt.dto.persistdat.KnSubsProfilePersistDTO">
+        </validator>
+
+        <validator id="MaxSubsPerCorpValidator"
+                   class-name="com.kodiak.xdms.server.subsmgmt.business.validator.rules.KnCorpSubsCntValidationRule"
+                   dto-type="com.kodiak.xdms.server.subsmgmt.dto.persistdat.KnSubsProfilePersistDTO">
+        </validator>
+
+        <validator id="pairingIndValidator"
+                   class-name="com.kodiak.xdms.server.subsmgmt.business.validator.rules.KnPairingIndValidationRule"
+                   dto-type="com.kodiak.xdms.server.subsmgmt.dto.persistdat.KnSubsProfilePersistDTO">
+        </validator>
+
+        <validator id="authMdnValidator"
+                   class-name="com.kodiak.xdms.server.subsmgmt.business.validator.rules.KnMdnAuthValidationRule"
+                   dto-type="com.kodiak.xdms.server.subsmgmt.dto.persistdat.KnSubsProfilePersistDTO">
+        </validator>
+
+        <validator id="roamingTypeValidator"
+                   class-name="com.kodiak.xdms.server.subsmgmt.business.validator.rules.KnRoamingIdValidationRule"
+                   dto-type="com.kodiak.xdms.server.subsmgmt.dto.persistdat.KnSubsProfilePersistDTO">
+        </validator>
+
+        <validator id="mdnStatusValidator"
+                   class-name="com.kodiak.xdms.server.subsmgmt.business.validator.rules.KnMdnStatusValidationRule"
+                   dto-type="com.kodiak.xdms.server.subsmgmt.dto.persistdat.KnSubsProfilePersistDTO">
+        </validator>
+
+        <validator id="serviceAuthStatusValidator"
+                   class-name="com.kodiak.xdms.server.subsmgmt.business.validator.rules.KnAuthStatusValidationRule"
+                   dto-type="com.kodiak.xdms.server.subsmgmt.dto.persistdat.KnSubsProfilePersistDTO">
+        </validator>
+
+        <validator id="mdnExistsValidator"
+                   class-name="com.kodiak.xdms.server.subsmgmt.business.validator.rules.KnMdnValidationRule"
+                   dto-type="com.kodiak.xdms.server.subsmgmt.dto.persistdat.KnSubsProfilePersistDTO">
+        </validator>
+
+        <!--<validator id="updateExtCorpIdValidator"-->
+                   <!--class-name="com.kodiak.xdms.server.subsmgmt.business.validator.rules.KnExtCorpIdValidationRule"-->
+                   <!--dto-type="com.kodiak.xdms.server.subsmgmt.dto.persistdat.KnSubsProfilePersistDTO">-->
+        <!--</validator>-->
+
+        <validator id="SubsClientTypeValidator"
+                   class-name="com.kodiak.xdms.server.subsmgmt.business.validator.rules.KnSubsClientTypeValidationRule"
+                   dto-type="com.kodiak.xdms.server.subsmgmt.dto.persistdat.KnSubsProfilePersistDTO">
+        </validator>
+        <validator id="SubsClientTypeValidatorPam"
+                   class-name="com.kodiak.xdms.server.subsmgmt.business.validator.rules.KnSubsClientTypeValidationRule"
+                   dto-type="com.kodiak.xdms.server.subsmgmt.dto.persistdat.KnPAMAccPersistDTO">
+        </validator>
+		 <validator id="LicenseTypeValidator"
+                   class-name="com.kodiak.xdms.server.subsmgmt.business.validator.rules.KnLicenseTypeValidationRule"
+                   dto-type="com.kodiak.xdms.server.subsmgmt.dto.persistdat.KnSubsProfilePersistDTO">
+        </validator>
+ 		<validator id="FirstNetValidator"
+ 				   class-name="com.kodiak.xdms.server.subsmgmt.business.validator.rules.KnSubsFirstNetValidationRule"
+                   dto-type="com.kodiak.xdms.server.subsmgmt.dto.persistdat.KnSubsProfilePersistDTO">
+ 		</validator>
+ 		<validator id="mcsComplianceValidator"
+ 				   class-name="com.kodiak.xdms.server.subsmgmt.business.validator.rules.KnMCSComplianceValidationRule"
+                   dto-type="com.kodiak.xdms.server.subsmgmt.dto.persistdat.KnSubsProfilePersistDTO">
+ 		</validator>
+        <validator id="invalidTokenMcpttId"
+                   class-name="com.kodiak.xdms.server.subsmgmt.business.validator.rules.KnInvalidTokenValidationRule"
+                   dto-type="com.kodiak.xdms.server.subsmgmt.dto.persistdat.KnSubsProfilePersistDTO">
+        </validator>
+
+    </rules-config>
+</business-validations>

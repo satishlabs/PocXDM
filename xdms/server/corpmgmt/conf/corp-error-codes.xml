@@ -1,0 +1,687 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright Motorola Solutions, Inc. and/or Kodiak Networks, Inc.
+All Rights Reserved
+Motorola Solutions Confidential Restricted
+-->
+
+<error-codes>
+    <!-- Generic Errors -->
+    <error code="KNEC-CP16000">
+        <label>CORP_INIT_FAILED</label>
+        <msg>Initialization Error occured. Please contact Administrator</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Initializer</originators>
+        <error-context>CORPLib-Initializer-Error</error-context>
+    </error>
+
+    <!--    BO Errors-->
+    <error code="KNEC-CP16001">
+        <label>PROFILE_DOES_NOT_EXIST</label>
+        <msg>Corp Profile does not exist</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>CORPLib-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-CP16002">
+        <label>CONTACT_DOES_NOT_EXIST</label>
+        <msg>Contact does exist</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>CORPLib-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-CP16004">
+        <label>SUB_LIST_DOESNOT_EXIST</label>
+        <msg>Sublist does not exist</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>CORPLib-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-CP16005">
+        <label>GROUP_ALREADY_EXIST</label>
+        <msg>Group already exist</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity,Validator</originators>
+        <error-context>CORPLib-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-CP16006">
+        <label>GROUP_DOES_NOT_EXIST</label>
+        <msg>Group does not exist</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+
+    <error code="KNEC-CP16007">
+        <label>GROUP_NAME_ALREADY_EXIST</label>
+        <msg>Group name already exist</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity, Validator</originators>
+        <error-context>CORPLib-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-CP16008">
+        <label>GROUP_MEMBER_ALREADY_EXIST</label>
+        <msg>Group member already exist</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>CORPLib-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-CP16009">
+        <label>GROUP_MEMBER_DOES_NOT_EXIST</label>
+        <msg>Group member does not exists</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>CORPLib-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-CP16010">
+        <label>NO_GROUP_EXISTS</label>
+        <msg>No Group found</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>CORPLib-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-CP16011">
+        <label>MAX_GROUPS_REACHED</label>
+        <msg>Max Groups reached</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16012">
+        <label>MAX_GROUP_SIZE_REACHED</label>
+        <msg>Max Group Size reached</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16013">
+        <label>MAX_CONTACT_SIZE_REACHED</label>
+        <msg>Max ContactSize reached</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16021">
+        <label>INVALID_SUBSCRIBER_CONTACTS</label>
+        <msg>Invalid Subscriber contacts</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16022">
+        <label>SUBLIST_COUNT_EXCEEDED</label>
+        <msg>Max Sublist size reached</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16023">
+        <label>INVALID_SUBSCRIBER_SUBLISTS</label>
+        <msg>Invalid Subscriber Sublists</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16024">
+        <label>INVALID_EXT_SUBSCRIBERS</label>
+        <msg>Invalid ext Subscribers</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16025">
+        <label>MAX_SUBSCRIBER_CONTACTS_EXCEEDED</label>
+        <msg>Max Subscriber contacts limit reached</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16026">
+        <label>SUBLIST_NOT_MAPPED_TO_SUBSCRIBER</label>
+        <msg>Sublist not mapped to Subscriber</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16027">
+        <label>INVALID_POC_SUBSCRIBER</label>
+        <msg>Invalid PoC Subscriber</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity,Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16028">
+        <label>SUBLIST_CONTACT_LIMIT_EXCEEDED</label>
+        <msg>Max Sublist size reached</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16029">
+        <label>SUBLISTS_LIST_DOES_NOT_EXIST</label>
+        <msg>No Sublist exists for the Corporate</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>CORPLib-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-CP16030">
+        <label>SUBLIST_ALREADY_EXISTS</label>
+        <msg>Sublist already exists</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16031">
+        <label>SUBLIST_ALREADY_MAPPED</label>
+        <msg>Sublist already mapped</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16032">
+        <label>DOCUMENT_DOES_NOT_MATCH</label>
+        <msg>Document etag mismatch</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16033">
+        <label>NO_CHANGE_IN_DOCUMENT_SINCE_LAST_FETCH</label>
+        <msg>Document not modified</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16300">
+        <label>SOURCE_TARGET_MDN_DOES_NOT_BELONG_TO_SAME_CORPORATE_ID</label>
+        <msg>SOURCE_TARGET_MDN_DOES_NOT_BELONG_TO_SAME_CORPORATE_ID</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16301">
+        <label>SOURCE_TARGET_MDN_DOES_NOT_BELONG_TO_SAME_TIER_PACKAGE</label>
+        <msg>SOURCE_TARGET_MDN_DOES_NOT_BELONG_TO_SAME_TIER_PACKAGE</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16302">
+        <label>SOURCE_TARGET_MDN_DOES_NOT_HAVE_COMPATIBLE_CLIENT_TYPE</label>
+        <msg>SOURCE_TARGET_MDN_DOES_NOT_HAVE_COMPATIBLE_CLIENT_TYPE</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16034">
+        <label>SUBSCRIBER_DOES_NOT_BELONG_TO_CORP</label>
+        <msg>Subscriber does not belong to Corporate</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>CORPLib-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-CP16036">
+        <label>NO_SUBLIST_DISTRIBUTION_FOUND</label>
+        <msg>No distribution found for the Sublist</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>CORPLib-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-CP16037">
+        <label>INVALID_SUBLISTS_SUBSCRIBER_CONTACT</label>
+        <msg>Invalid Sublist Subscriber contact</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16038">
+        <label>INVALID_SUBLIST</label>
+        <msg>Invalid Sublist(s)</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator,BOEntity</originators>
+        <error-context>CORPLib-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-CP16039">
+        <label>MDN_DOESNOT_BELONG_TO_GROUP</label>
+        <msg>Invalid MDN</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Authorizer</originators>
+        <error-context>CORPLib-Authorizer-Error</error-context>
+    </error>
+    <error code="KNEC-CP16014">
+        <label>GROUP_MEMBERS_LIST_DOES_NOT_EXIST</label>
+        <msg>No members found for Group</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>CORPLib-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-CP16040">
+        <label>MDN_DOESNOT_BELONG_TO_CORP</label>
+        <msg>External Member cannot view group details</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Authorizer</originators>
+        <error-context>CORPLib-Authorizer-Error</error-context>
+    </error>
+    <error code="KNEC-CP16041">
+        <label>SAME_CORPORATE_MEMBERS_FOUND</label>
+        <msg>Contact(s) can't belong to the same Corporation</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16042">
+        <label>EXTERNAL_MEMBER_EXISTS_FOR_CORPORATION</label>
+        <msg>External Contact(s) already exists for corporation</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16043">
+        <label>ETXRENAL_CONTACT_NOT_FOUND_FOR_CORPORATE</label>
+        <msg>External Contact(s) is not part of the Corporation</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>CORPLib-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-CP16044">
+        <label>INVALID_SUBSCRIPTION_TYPE</label>
+        <msg>Invalid Subscription Type</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity,Validator</originators>
+        <error-context>CORPLib-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-CP16045">
+        <label>EXTERNAL_CONTACT_COUNT_EXCEEDED</label>
+        <msg>External Contact Count Exceeded</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16016">
+        <label>GROUP_ALREADY_EXISTS</label>
+        <msg>Group name already exists for the Corporation</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16017">
+        <label>MIN_GROUP_MEMBER_LIMIT_ERROR</label>
+        <msg>Minimum number of group member should be 2</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16018">
+        <label>MAX_GROUPS_PER_MEM_REACHED</label>
+        <msg>Max groups per subscriber limit exceeded</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16019">
+        <label>GROUP_MEMBER_DOES_NOT_EXIST</label>
+        <msg>Removed member(s) does not exist in Group</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16015">
+        <label>NO_GROUP_EXISTS_FOR_SUBSCRIBER</label>
+        <msg>No Group exists for the Subscriber</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>CORPLib-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-CP16020">
+        <label>SUBSCRIBER_NOT_PART_CORP_NOR_EXTERNAL</label>
+        <msg>Subscriber(s) is neither part of Corporation nor External contact</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16003">
+        <label>SUBLIST_DOES_NOT_BELONG_TO_CORP</label>
+        <msg>Removed Sublist(s) is not part of the Group</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16046">
+        <label>UNAUTHORISED_CORPORATE</label>
+        <msg>Corporate cannot view the CAT details</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Authorizer</originators>
+        <error-context>CORPLib-Authorizer-Error</error-context>
+    </error>
+    <error code="KNEC-CP16047">
+        <label>MINIMUM_SUBLIST_MEM_LIMIT_NOT_STATISFIED</label>
+        <msg>Minimum sublist member limit not statisfied</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16048">
+        <label>EXTERNAL_CONTACT_CANNOT_BE_SUPERVISOR</label>
+        <msg>External Subscriber cannot be supervisor</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16049">
+        <label>SUPERVISOR_DOES_NOT_EXIST_FOR_GROUP</label>
+        <msg>Supervisor does not exist for the group</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16050">
+        <label>DISPATCHER_DOES_NOT_EXIST_FOR_GROUP</label>
+        <msg>Dispatcher does not exist for the group</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16051">
+        <label>MAXIMUM_DISPATCHER_EXCEEDED_FOR_DISPATCH_GROUP</label>
+        <msg>Maximum Dispatcher Exceeded for Dispatch Group</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16052">
+        <label>DISPATCHER_NOT_A_DISPATCH_CLIENT</label>
+        <msg>Dispatcher subscriber passed in request is not a dispatcher/3rd party dispatcher type client</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16053">
+        <label>DISPATCHER_NOT_A_ALLOWED_FOR_STAND_GROUP</label>
+        <msg>Dispatch/3rd Party Dispatcher subscriber can not be part of Standard Group</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16054">
+        <label>EXTERNAL_CONTACT_CANNOT_BE_DISPATCHER</label>
+        <msg>External Contact(s) can not be a Dispatcher/3rd Part Dispatcher</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16055">
+        <label>DISPATCHER_SUBSCRIBER_CANNOT_BE_PART_OF_SUBLIST</label>
+        <msg>Dispatch subscriber can not be part of Sublist</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16058">
+        <label>MAX_CONTACT_PER_REQUEST_EXCEEDED</label>
+        <msg>Contacts/Members in the request exceeds the maximum contacts allowed per request.</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16059">
+        <label>MAX_DISPATCH_GROUP_LIMIT_EXCEEDED</label>
+        <msg>Contacts/Members in the request exceeds the maximum contacts allowed per request.</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16060">
+        <label>MAX_DISPATCH_GROUP_MEM_LIMIT_EXCEEDED</label>
+        <msg>Max members per Dispatch group limit exceeded.</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16056">
+        <label>SUBSCRIBERS_EMAIL_NOT_FOUND</label>
+        <msg>Subscriber's email Id not found</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16057">
+        <label>DEACTIVATED_SUBSCRIBERS_NOT_ALLOWED</label>
+        <msg>Subscriber is deactivated</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16062">
+        <label>DISPATCH_MEMBER_PROPERTY_CANNOT_CHANGE</label>
+        <msg>Dispatch Subscriber property cannot be changed</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16064">
+        <label>DISPATCHER_SUBSCRIBER_CANNOT_BE_ADDED_AS_EXTERNAL_CONTACT</label>
+        <msg>Dispatcher/3rd Party Dispatcher subscribers can not be added as external contact</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16066">
+        <label>INTEROP_SUBSC_NOT_A_INTEROP_CLIENT</label>
+        <msg>Subscriber is not a InterOP subscriber.</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16067">
+        <label>EXTERNAL_CONTACT_CANNOT_BE_DISPATCHER</label>
+        <msg>External Contact(s) can not be a InterOP</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16068">
+        <label>MULTIPLE_INTEROP_NOT_ALLOWED_FOR_GROUP</label>
+        <msg>Multiple InterOP not allowed.</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16069">
+        <label>INTEROP_SUBSC_CANNOT_BE_PART_OF_MULTIPLE_GRP</label>
+        <msg>InterOP subscriber can not be part of multiple groups.</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16065">
+        <label>INTEROP_SUBS_CANNOT_ADDED_IN_CONTACT</label>
+        <msg>InterOP Subscriber can not be added.</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16070">
+        <label>INTEROP_MEMBER_PROPERTY_CANNOT_CHANGE</label>
+        <msg>InterOP member property can not be changed.</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16071">
+        <label>CP16071</label>
+        <msg>Group type change not allowed.</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CM10468">
+        <label>ROW_ALREADY_EXISTS_GROUP_DOC</label>
+        <msg>ROW_ALREADY_EXISTS_GROUP_DOC</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16121">
+        <label>LOCWATCHER_DISABLED_SYSTEM_LEVEL</label>
+        <msg>System Level LocWatcher Feature is disabled</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16122">
+        <label>INVALID_CLIENT_TYPE_FOR_LOCWATCHER</label>
+        <msg>Invalid Client Type for LocWatcher</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16123">
+        <label>CORP_EXT_CONTACT_LOCWATCHER_BIT_DISABLED</label>
+        <msg>LocWatcher not allowed for one or more external contact(s).</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+
+    <!--<error code="KNEC-CP16114">
+        <label>CORPORATE_IS_BLOCKED</label>
+        <msg>CORPORATE_IS_BLOCKED</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>-->
+
+    <error code="KNEC-CP16283">
+        <label>UserProfile_del_is_not_allowed_for_shared_corp</label>
+        <msg>User Profile delete is not allowed for shared corp</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16284">
+        <label>COMMON_CONTACT_LIST_SUPPORT_FLAG_DISABLED</label>
+        <msg>Common contact list flag is disabled.</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16285">
+        <label>COMMON_CONTACT_LIST_LIMIT_EXCEEDED</label>
+        <msg>Limit existed for common contact list size</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16286">
+        <label>AUTO_PAIRING_ENABLED</label>
+        <msg>Auto pairing is enabled in request</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16295">
+        <label>MAX_BROADCAST_GROUPS_PER_MEM_REACHED</label>
+        <msg>Max broadcast groups per subscriber limit exceeded</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>CORPLib-Validator-Error</error-context>
+    </error>
+    <error code="KNEC-CP16303">
+        <label>CAT_ACCESS_CONTROL_FEATURE_NOT_ENABLED</label>
+        <msg>Cat access control feature not enabled</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>CORPLib-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-CP16304">
+        <label>CAT_ACCESS_PER_VALUE_TS_IS_NOT_VALID</label>
+        <msg>AccessPermUpdateTS is not valid</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>CORPLib-BOEntity-Error</error-context>
+    </error>
+</error-codes>

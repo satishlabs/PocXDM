@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright Motorola Solutions, Inc. and/or Kodiak Networks, Inc.
+All Rights Reserved
+Motorola Solutions Confidential Restricted
+-->
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <import resource="launch-context.xml"/>
+
+    <job id="createPAMJob" xmlns="http://www.springframework.org/schema/batch">
+        <step id="step2" xmlns="http://www.springframework.org/schema/batch">
+            <tasklet>
+                <chunk reader="PAMReader" processor="PAMProcessor" writer="createPAMWriter"
+                       commit-interval="1">
+                </chunk>
+            </tasklet>
+        </step>
+    </job>
+
+    <job id="deletePAMJob" xmlns="http://www.springframework.org/schema/batch">
+        <step id="step3" xmlns="http://www.springframework.org/schema/batch">
+            <tasklet>
+                <chunk reader="PAMReader" processor="PAMProcessor" writer="deletePAMWriter"
+                       commit-interval="1">
+                </chunk>
+            </tasklet>
+        </step>
+    </job>
+
+    <job id="changeAuthStatus" xmlns="http://www.springframework.org/schema/batch">
+        <step id="step4" xmlns="http://www.springframework.org/schema/batch">
+            <tasklet>
+                <chunk reader="PAMReader" processor="PAMProcessor" writer="changeAuthStatusWriter"
+                       commit-interval="1">
+                </chunk>
+            </tasklet>
+        </step>
+    </job>
+
+    <job id="updateBan" xmlns="http://www.springframework.org/schema/batch">
+        <step id="step5" xmlns="http://www.springframework.org/schema/batch">
+            <tasklet>
+                <chunk reader="UpdateBanReader" processor="UpdateBanProcessor" writer="UpdateBanWriter"
+                       commit-interval="1">
+                </chunk>
+            </tasklet>
+        </step>
+    </job>
+
+    <bean id="PAMReader" class="com.kodiak.xdms.bulkfw.processing.pam.KnPAMReader" scope="step">
+        <property name="jobExecutionId" value="#{jobParameters['jobExecutionId']}"/>
+    </bean>
+
+    <bean id="PAMProcessor" class="com.kodiak.xdms.bulkfw.processing.pam.KnPAMProcessor" scope="step">
+    </bean>
+
+    <bean id="createPAMWriter" class="com.kodiak.xdms.bulkfw.processing.pam.KnCreatePAMWriter"
+          scope="step">
+    </bean>
+
+    <bean id="deletePAMWriter" class="com.kodiak.xdms.bulkfw.processing.pam.KnDeletePAMWriter"
+          scope="step">
+    </bean>
+
+    <bean id="changeAuthStatusWriter" class="com.kodiak.xdms.bulkfw.processing.pam.KnChangeAuthStatusPAMWriter"
+          scope="step">
+    </bean>
+
+    <bean id="UpdateBanReader" class="com.kodiak.xdms.bulkfw.processing.updateban.KnUpdateBanReader" scope="step">
+        <property name="jobExecutionId" value="#{jobParameters['jobExecutionId']}"/>
+    </bean>
+
+    <bean id="UpdateBanProcessor" class="com.kodiak.xdms.bulkfw.processing.updateban.KnUpdateBanProcessor" scope="step">
+    </bean>
+
+    <bean id="UpdateBanWriter" class="com.kodiak.xdms.bulkfw.processing.updateban.KnUpdateBanWriter" scope="step">
+    </bean>
+</beans>

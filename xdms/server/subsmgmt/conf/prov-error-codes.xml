@@ -1,0 +1,486 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright Motorola Solutions, Inc. and/or Kodiak Networks, Inc.
+All Rights Reserved
+Motorola Solutions Confidential Restricted
+-->
+
+<error-codes>
+    <!-- Generic Errors -->
+    <error code="KNEC-SP12001">
+        <label>PROV_INIT_FAILED</label>
+        <msg>Initialization Error occured. Please contact Administrator</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Initializer</originators>
+        <error-context>PROVLIB-Initializer-Error</error-context>
+    </error>
+
+
+    <!-- Prov BO Entity Errors -->
+    <error code="KNEC-SP12051">
+        <label>SUBSCRIBER_ALREADY_EXISTS</label>
+        <msg>Subscriber already exists</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+
+    <error code="KNEC-SP12052">
+        <label>POC_SERVER_MAP_NOT_FOUND</label>
+        <msg>PoC Server map not found</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+
+    <error code="KNEC-SP12053">
+        <label>PRESENCE_SERVER_MAP_NOT_FOUND</label>
+        <msg>Presenece Server Map not found</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+
+    <error code="KNEC-SP12054">
+        <label>CORP_PROFILE_ALREADY_EXISTS</label>
+        <msg>Corporate Profile already Exists</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+
+    <error code="KNEC-SP12055">
+        <label>XDMS_PTT_ID_NOT_FOUND</label>
+        <msg>XDMS Server PttServerId is not available</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+
+    <error code="KNEC-SP12056">
+        <label>ROAMING_CLUSTER_NOT_FOUND</label>
+        <msg>Roaming cluster info is not configured</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+
+    <error code="KNEC-SP12057">
+        <label>SUBSCRIBER_INFO_NOT_FOUND</label>
+        <msg>Subscriber information does not exist</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+
+    <error code="KNEC-SP12058">
+        <label>SUBSCRIBER_ROAMING_INFO_NOT_FOUND</label>
+        <msg>Subscriber Roaming information does not exist</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+
+    <error code="KNEC-SP12059">
+        <label>INVALID_SUBSCRIPTION_TYPE</label>
+        <msg>Invalid Subscription Type</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+
+    <!--<error code="KNEC-SP12060">-->
+        <!--<label>DISABLE_CORP_TYPE_NOT_ALLOWED</label>-->
+        <!--<msg>Corporate cannot be disabled</msg>-->
+        <!--<level>ERROR</level>-->
+        <!--<cause/>-->
+        <!--<originators>BOEntity</originators>-->
+        <!--<error-context>PROVLIB-BOEntity-Error</error-context>-->
+    <!--</error>-->
+
+    <!--<error code="KNEC-SP12061">-->
+        <!--<label>PUB_TO_CORP_NOT_ALLOWED</label>-->
+        <!--<msg>Update Public to corporate not allowed</msg>-->
+        <!--<level>ERROR</level>-->
+        <!--<cause/>-->
+        <!--<originators>BOEntity</originators>-->
+        <!--<error-context>PROVLIB-BOEntity-Error</error-context>-->
+    <!--</error>-->
+
+    <!--<error code="KNEC-SP12062">-->
+        <!--<label>CORP_PUB_TO_PUB_NOT_ALLOWED</label>-->
+        <!--<msg>Update CorpPublic to Public not allowed</msg>-->
+        <!--<level>ERROR</level>-->
+        <!--<cause/>-->
+        <!--<originators>BOEntity</originators>-->
+        <!--<error-context>PROVLIB-BOEntity-Error</error-context>-->
+    <!--</error>-->
+
+    <error code="KNEC-SP12063">
+        <label>EXTCORPID_NOT_ALLOWED_FOR_PUBLIC_SUBS</label>
+        <msg>Ext Corp ID is not applicable for public subscriber</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+
+    <error code="KNEC-SP12064">
+        <label>UPDATE_PAIRING_IND_NOT_ALLOWED</label>
+        <msg>Updating of Pairing Ind is not allowed</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+
+    <error code="KNEC-SP12065">
+        <label>SUBS_ALREADY_ACTIVATED</label>
+        <msg>Subscriber is already activated</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+
+    <error code="KNEC-SP12066">
+        <label>SUBS_ALREADY_DEACTIVATED</label>
+        <msg>Subscriber is already deactivated</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+
+    <!-- Validator Error Codes -->
+    <error code="KNEC-SP12501">
+        <label>INVALID_PUBLIC_SUBSCRIPTION_TYPE</label>
+        <msg>Invalid public Subscription Type is passed</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>PROVLIB-Validator-Error</error-context>
+    </error>
+
+    <error code="KNEC-SP12502">
+        <label>INVALID_CORP_SUBSCRIPTION_TYPE</label>
+        <msg>Invalid Corporate Subscription Type is passed</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>PROVLIB-Validator-Error</error-context>
+    </error>
+
+    <error code="KNEC-SP12503">
+        <label>INVALID_PAY_TYPE</label>
+        <msg>Invalid Pay Type is passed</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>PROVLIB-Validator-Error</error-context>
+    </error>
+
+    <error code="KNEC-SP12504">
+        <label>MAX_SUBS_LIMIT_REACHED_FOR_CORP</label>
+        <msg>Max Subscribers limit has reached for the corporation</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>PROVLIB-Validator-Error</error-context>
+    </error>
+
+    <error code="KNEC-SP12505">
+        <label>PAIRING_IND_NOT_ALLOWED</label>
+        <msg>Pairing Indicator is not allowed</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>PROVLIB-Validator-Error</error-context>
+    </error>
+
+    <error code="KNEC-SP12506">
+        <label>INVALID_ROAMING_ID</label>
+        <msg>Invalid Roaming ID</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>PROVLIB-Validator-Error</error-context>
+    </error>
+
+    <error code="KNEC-SP12507">
+        <label>INVALID_SERVICE_AUTH_STATUS</label>
+        <msg>Invalid Service Auth Status</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>PROVLIB-Validator-Error</error-context>
+    </error>
+
+    <error code="KNEC-SP12508">
+        <label>SUBSCRIBER_IS_NOT_ACTIVATED</label>
+        <msg>Subscriber is not in activated state</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>PROVLIB-Validator-Error</error-context>
+    </error>
+
+    <error code="KNEC-SP12509">
+        <label>SUBSCRIBER_IS_IN_DEACTIVATED_STATE</label>
+        <msg>Susbcriber is in deactivated State</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>PROVLIB-Validator-Error</error-context>
+    </error>
+
+    <!--<error code="KNEC-SP12510">-->
+        <!--<label>UPDATE_EXTCORPID_NOT_ALLOWED</label>-->
+        <!--<msg>Updating Ext CorpID not allowed</msg>-->
+        <!--<level>ERROR</level>-->
+        <!--<cause/>-->
+        <!--<originators>Validator</originators>-->
+        <!--<error-context>PROVLIB-Validator-Error</error-context>-->
+    <!--</error>-->
+
+    <error code="KNEC-SP12513">
+        <label>INVALID_SUBSCRIPTION_TYPE_FOR_PDV</label>
+        <msg>Invalid Subscription Type is passed</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>PROVLIB-Validator-Error</error-context>
+    </error>
+
+    <error code="KNEC-SP12511">
+        <label>INVALID_SUBS_CLIENT_TYPE</label>
+        <msg>Invalid Subscriber Client Type passed</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator</originators>
+        <error-context>PROVLIB-Validator-Error</error-context>
+    </error>
+
+
+    <error code="KNEC-SP12067">
+        <label>PR_SVC_CONFIG_NOT_FOUND</label>
+        <msg>Presence Service Config is not configured</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+
+    <error code="KNEC-SP12068">
+        <label>POC_SVC_CONFIG_NOT_FOUND</label>
+        <msg>POC Service Config is not configured</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+
+    <error code="KNEC-SP12069">
+        <label>POC_REGISTRAR_SVC_CONFIG_NOT_FOUND</label>
+        <msg>PPOC Registrar Service Config is not configured</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+
+    <error code="KNEC-SP12070">
+        <label>DIAL_PLAN_INFO_NOT_FOUND</label>
+        <msg>Dial Plan info is not configured</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+
+    <error code="KNEC-SP12071">
+        <label>XDMS_DOC_SUB_PRX_CONFIG_NOT_FOUND</label>
+        <msg>XDMS Doc Subs prefix Config is not configured</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+
+    <error code="KNEC-SP12072">
+        <label>INSTA_POC_SVC_CONFIG_NOT_FOUND</label>
+        <msg>Insta Poc Service Config is not configured</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-SP12073">
+        <label>NO_CHG_IN_PROFILE</label>
+        <msg>No change in profile observed</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-SP12074">
+        <label>MAX_SUBS_LIMIT_REACHED_FOR_LICENSE</label>
+        <msg>Max subscriber limit reached for license</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-SP12075">
+        <label>MISMATCH_IN_ETAG</label>
+        <msg>Etag Mismatch</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-SP12076">
+        <label>NO_CHG_IN_ETAG</label>
+        <msg>No change in Etag</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+
+    <error code="KNEC-SP12077">
+        <label>SUBS_IS_NOT_DEACTIVATED</label>
+        <msg>Subscriber is not in deactiavted state</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+
+    <error code="KNEC-SP12078">
+        <label>SUBS_IS_NOT_ACTIVATED</label>
+        <msg>Subscriber is not in activated State</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+
+    <error code="KNEC-SP12081">
+        <label>LOCATION_SERVICE_CONFIG_NOT_FOUND</label>
+        <msg>Location Service Config info not found</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+
+    <error code="KNEC-SP12082">
+        <label>DISPATCH_CLIENT_CANT_BE_SET_FOR_PUBLIC_SUBS</label>
+        <msg>Dispatch client cannot be set for public subscriber</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+
+    <error code="KNEC-SP12083">
+        <label>UNAUTHORIZED_SUBS_CLIENT_TYPE</label>
+        <msg>Unauthorized client used for activate</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+      <error code="KNEC-SP12084">
+        <label>PAIRING_IND_NOT_ALLOWED_POC_DONOR_RADIO</label>
+        <msg>Pairing Indicator not allowed for POC donor radio client type</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+      <error code="KNEC-SP12085">
+        <label>POC_DONOR_RADIO_DISABLED</label>
+        <msg>POC donor radio disabled</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+      <error code="KNEC-SP12086">
+        <label>UNSUPPORTED_DEVICE</label>
+        <msg>Unsupported Device</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-SP12504">
+        <label>MAX_SUBS_LIMIT_REACHED_FOR_CORP</label>
+        <msg>Unsupported Device</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-SP12097">
+        <label>SUBS_PARTITION_CONFIG_NOT_FOUND</label>
+        <msg>Unsupported Device</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-SP12090">
+        <label>SIP_PROXY_SVC_CONFIG_NOT_FOUND</label>
+        <msg>Unsupported Device</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-SP12089">
+        <label>FEATURE_ACCESS_INFO_NOT_FOUND</label>
+        <msg>Unsupported Device</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-SP12088">
+        <label>SW_PKG_CONFIG_NOT_FOUND</label>
+        <msg>Unsupported Device</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-SP12093">
+        <label>PAM_SVC_CONFIG_NOT_FOUND</label>
+        <msg>Unsupported Device</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+    <!--todo  verify-->
+    <error code="KNEC-SP12514">
+        <label>INVALID_PROV_FS</label>
+        <msg>Operation not allowed for feature bit(s)</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+</error-codes>

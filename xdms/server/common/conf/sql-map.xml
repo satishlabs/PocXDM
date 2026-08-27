@@ -1,0 +1,3009 @@
+<!--
+Copyright Motorola Solutions, Inc. and/or Kodiak Networks, Inc.
+All Rights Reserved
+Motorola Solutions Confidential Restricted
+-->
+
+<sql-map-corporate>
+    <query id="3">
+        <query-string>SELECT CONTACTMDN, CONTACTNAME, CONTACTCORPID FROM DG.EXTCORPCONTACT WHERE CORPID = ?
+        </query-string>
+    </query>
+    <query id="67">
+        <query-string>SELECT SUBSC.MDN, SUBSCRNAME , SERVICEAUTHSTATUS, PUBLICSUBSCRIPTIONTYPE, CORPSUBSCRIPTIONTYPE,
+            CORPID, CONTACTCOUNT,CLIENT_TYPE, ACTIVEFS1, ACTIVEFS2, USER_ID, DISPATCH_TYPE, ALIAS_MDN, LICENSE_TYPE,
+            PAMACCID,SUBSCRIBERFS1, SUBSCRIBERFS2 FROM DG.POCSUBSCRINFO SUBSC LEFT JOIN DG.CORPCONTACTCOUNT COUNTDETAILS ON SUBSC.MDN =
+            COUNTDETAILS.MDN WHERE CORPID = ? AND (SUBSC.USERPROFILEINDEX=0 OR SUBSC.USERPROFILEINDEX IS NULL);
+        </query-string>
+    </query>
+    <query id="7">
+        <query-string>SELECT CORPLISTID, LISTTYPE, LISTDISPLAYNAME, LISTDISTRIBUTIONPOLICY FROM DG.CORPLISTINFO WHERE CORPLISTID IN( SELECT
+            CORPLISTID FROM DG.CORPLISTDISTINFO WHERE RECIPIENTMDN = ?) AND CORPLISTID != ? AND CORPID=?
+        </query-string>
+    </query>
+    <query id="8">
+        <query-string>SELECT PS.MDN, PS.SUBSCRNAME, PS.SERVICEAUTHSTATUS, PS.PUBLICSUBSCRIPTIONTYPE ,
+            PS.CORPSUBSCRIPTIONTYPE, PS.CORPID, CCC.CONTACTCOUNT, PS.CLIENT_TYPE, PS.ALIAS_MDN, PS.USER_ID,
+            PS.ACTIVEFS1, PS.ACTIVEFS2, PS.CLIENTPV_MAJORVERSION FROM DG.POCSUBSCRINFO PS LEFT JOIN DG.CORPCONTACTCOUNT
+            CCC ON PS.MDN = CCC.MDN WHERE PS.MDN IN (MDNLIST) AND ( PS.USERPROFILEINDEX=0 OR PS.USERPROFILEINDEX IS
+            NULL);
+        </query-string>
+    </query>
+    <query id="11">
+        <query-string>INSERT INTO DG.CORPLISTDISTINFO (CORPLISTID, RECIPIENTMDN) VALUES (?,?)</query-string>
+    </query>
+    <query id="62">
+        <query-string>SELECT MDN FROM DG.POCSUBSCRINFO WHERE MDN IN (MDNLIST) AND CORPID = ?</query-string>
+    </query>
+    <query id="63">
+        <query-string>SELECT CORPLISTID,RECIPIENTMDN FROM DG.CORPLISTDISTINFO WHERE RECIPIENTMDN IN (MDNLIST) AND
+            CORPLISTID IN (SUBLISTID)
+        </query-string>
+    </query>
+    <query id="64">
+        <query-string>SELECT COUNT(MEMBERMDN) FROM DG.CORPLISTMEMBER WHERE CORPLISTID IN (SUBLISTID) AND MEMBERMDN NOT
+            IN (SELECT CONTACTMDN FROM DG.CORPCONTACTLIST WHERE MDN = ?)
+        </query-string>
+    </query>
+    <query id="66">
+        <query-string>SELECT RECIPIENTMDN, COUNT(CLD.CORPLISTID) AS COUNT FROM DG.CORPLISTDISTINFO CLD LEFT JOIN
+            DG.CORPLISTINFO CLI ON CLD.CORPLISTID = CLI.CORPLISTID WHERE CLI.LISTTYPE = 1 AND CLI.LISTDISTRIBUTIONPOLICY
+            = 3 AND RECIPIENTMDN IN (MDNLIST) AND CLD.CORPLISTID IN (SUBLISTID) GROUP BY RECIPIENTMDN;
+        </query-string>
+    </query>
+    <query id="13">
+        <query-string>DELETE FROM DG.CORPLISTDISTINFO WHERE RECIPIENTMDN IN (MDNLIST) AND CORPLISTID IN (SUBLISTID)
+        </query-string>
+    </query>
+    <query id="16">
+        <query-string>INSERT INTO DG.CORPLISTMEMBER (CORPLISTID ,MEMBERMDN, MEMBERCORPID) VALUES (?, ?, ?)
+        </query-string>
+    </query>
+    <query id="18">
+        <query-string>INSERT INTO DG.EXTCORPCONTACT (CORPID,CONTACTMDN,CONTACTNAME,CONTACTCORPID, CONTACT_TYPE) VALUES
+            (?, ?, ?, ?, ?)
+        </query-string>
+    </query>
+    <query id="20">
+        <query-string>UPDATE DG.EXTCORPCONTACT SET CONTACTNAME = ? WHERE CONTACTMDN = ? AND CORPID =?</query-string>
+    </query>
+    <query id="68">
+        <query-string>SELECT CCL.MDN FROM DG.CORPCONTACTLIST CCL LEFT JOIN DG.POCSUBSCRINFO SUB ON SUB.MDN = CCL.MDN
+            WHERE CONTACTMDN = ? AND SUB.CORPID=?
+        </query-string>
+    </query>
+    <query id="21">
+        <query-string>DELETE FROM DG.EXTCORPCONTACT WHERE CONTACTMDN IN (MDNLIST) AND CORPID = ?</query-string>
+    </query>
+    <query id="44">
+        <query-string>SELECT CORPID, MDN, SUBSCRNAME, PUBLICSUBSCRIPTIONTYPE, CORPSUBSCRIPTIONTYPE, CLIENT_TYPE,
+            POCHOME, PRESENCEHOME, ACTIVEFS1, ACTIVEFS2, CLIENTPV_MAJORVERSION, USERAGENT, SERVICE_STATUS_AUTHUSER,
+            SUBSCRIBERFS1, SUBSCRIBERFS2, ALIAS_MDN, USER_ID, MCPTT_COMPLIANCE,USERPROFILEINDEX FROM DG.POCSUBSCRINFO
+            WHERE MDN IN (MDNLIST)
+        </query-string>
+    </query>
+    <query id="45">
+        <query-string>SELECT CONTACTMDN, CONTACTCORPID, CONTACTNAME, CONTACT_TYPE FROM DG.EXTCORPCONTACT WHERE
+            CONTACTMDN IN (MDNLIST) AND CORPID = ?
+        </query-string>
+    </query>
+    <query id="46">
+        <query-string>SELECT MEMBERMDN, MEMBERCORPID FROM DG.CORPLISTMEMBER WHERE CORPLISTID = ? AND MEMBERMDN IN
+            (MDNLIST)
+        </query-string>
+    </query>
+    <query id="47">
+        <query-string>SELECT CONTACTCOUNT, MDN FROM DG.CORPCONTACTCOUNT WHERE MDN IN (MDNLIST)</query-string>
+    </query>
+    <query id="48">
+        <query-string>SELECT CORPLISTID FROM DG.CORPLISTDISTINFO WHERE RECIPIENTMDN = ? AND CORPLISTID IN (SUBLISTID)
+        </query-string>
+    </query>
+    <query id="49">
+        <query-string>SELECT CORPLISTID FROM DG.CORPLISTINFO WHERE CORPLISTID IN (SUBLISTID) AND CORPID = ? AND
+            LISTDISTRIBUTIONPOLICY = ? AND LISTTYPE = ?
+        </query-string>
+    </query>
+    <query id="51">
+        <query-string>SELECT MEMBERMDN, MEMBERCORPID FROM DG.CORPLISTMEMBER WHERE CORPLISTID = ?</query-string>
+    </query>
+    <query id="53">
+        <query-string>DELETE FROM DG.CORPLISTMEMBER WHERE CORPLISTID = ? AND MEMBERMDN IN (MDNLIST)</query-string>
+    </query>
+    <query id="70">
+        <query-string>DELETE FROM DG.CORPLISTMEMBER WHERE CORPLISTID = ? AND MEMBERMDN IN (MDNLIST)</query-string>
+    </query>
+    <query id="54">
+        <query-string>INSERT INTO DG.CORPLISTINFO (CORPLISTID, CORPID, LISTDISPLAYNAME,LISTDISTRIBUTIONPOLICY, LISTTYPE,
+            ETAG,LASTUPDATETIME) VALUES (?,?,?,?,?,?,?)
+        </query-string>
+    </query>
+    <query id="55">
+        <query-string>UPDATE DG.XDM_DIRECTORY SET ETAG = ? WHERE MDN =?</query-string>
+    </query>
+    <query id="56">
+        <query-string>SELECT MDN,ETAG FROM DG.XDM_DIRECTORY WHERE MDN IN (MDNLIST)</query-string>
+    </query>
+    <query id="60">
+        <query-string>UPDATE DG.XDM_CORPRESOURCELISTINDEXDOC SET ETAG = ? WHERE MDN =?</query-string>
+    </query>
+    <query id="59">
+        <query-string>SELECT MDN,ETAG FROM DG.XDM_CORPRESOURCELISTINDEXDOC WHERE MDN IN (MDNLIST)</query-string>
+    </query>
+    <query id="61">
+        <query-string>UPDATE DG.POCSUBSCRINFO SET CORPCONTACTLISTID = ? WHERE MDN = ?</query-string>
+    </query>
+    <query id="65">
+        <query-string>SELECT MEMBERMDN AS MDN FROM DG.CORPLISTMEMBER WHERE CORPLISTID IN (SUBLISTID)</query-string>
+    </query>
+    <query id="26">
+        <query-string>SELECT COUNT(CORPLISTID) FROM DG.CORPLISTINFO WHERE CORPLISTID IN (SUBLISTID) AND CORPID = ?
+        </query-string>
+    </query>
+    <!-- get all Sublists -->
+    <query id="27">
+        <query-string>SELECT CLI.CORPLISTID,CLI.LISTDISPLAYNAME,CLI.LISTDISTRIBUTIONPOLICY,CLI.ETAG,COUNT(CLM.MEMBERMDN)
+            FROM DG.CORPLISTINFO CLI LEFT JOIN DG.CORPLISTMEMBER CLM ON CLI.CORPLISTID = CLM.CORPLISTID WHERE CORPID = ?
+            AND LISTTYPE = ? GROUP BY CLI.CORPLISTID, CLI.LISTDISPLAYNAME,CLI.LISTDISTRIBUTIONPOLICY,CLI.ETAG;
+        </query-string>
+    </query>
+    <query id="78">
+        <query-string>SELECT SUBSC.MDN, SUBSCRNAME, SERVICEAUTHSTATUS,CORPSUBSCRIPTIONTYPE, PUBLICSUBSCRIPTIONTYPE,
+            CORPID, CONTACTCOUNT,CLIENT_TYPE FROM DG.POCSUBSCRINFO SUBSC LEFT JOIN DG.CORPCONTACTCOUNT CORPCOUNT ON
+            SUBSC.MDN = CORPCOUNT.MDN WHERE SUBSC.MDN IN (MDNLIST)
+        </query-string>
+    </query>
+    <query id="79">
+        <query-string>SELECT CONTACTMDN, CONTACTNAME FROM DG.EXTCORPCONTACT WHERE CONTACTMDN IN (MDNLIST) AND CORPID
+            =?
+        </query-string>
+    </query>
+    <query id="30">
+        <query-string>SELECT MDN, SUBSCRNAME, SERVICEAUTHSTATUS, CORPSUBSCRIPTIONTYPE, PUBLICSUBSCRIPTIONTYPE, CORPID,
+            CLIENT_TYPE, ALIAS_MDN, USER_ID, ACTIVEFS1, ACTIVEFS2, USERPROFILEINDEX FROM DG.POCSUBSCRINFO WHERE MDN
+            IN(SELECT RECIPIENTMDN FROM DG.CORPLISTDISTINFO WHERE CORPLISTID = ?)
+        </query-string>
+    </query>
+    <query id="81">
+        <query-string>SELECT CORPGROUPID,GROUPDISPLAYNAME,GROUPTYPE ,AVATAR_ID, IS_LARGEGROUP FROM DG.CORPGROUPINFO
+            WHERE CORPGROUPID IN ( SELECT CORPGROUPID FROM DG.CORPGROUP_LISTREF WHERE CORPLISTID = ?);
+        </query-string>
+    </query>
+
+    <!---How get the maxConatcts count and is member of the corpList-->
+    <query id="31">
+        <query-string>SELECT CGI.CORPGROUPID,CGI.GROUPTYPE,CGI.GROUPDISPLAYNAME,CGI.GROUPMEMBERLISTID,CGI.AVATAR_ID,
+            CGI.IS_LARGEGROUP FROM DG.CORPGROUPINFO CGI RIGHT JOIN DG.CORPGROUP_LISTREF CGLR ON CGI.CORPGROUPID =
+            CGLR.CORPGROUPID WHERE CORPLISTID = ?
+        </query-string>
+    </query>
+    <!---How get the maxConatcts count for the group-->
+
+    <!--Delete SubList-->
+    <query id="32">
+        <query-string>DELETE FROM DG.CORPLISTMEMBER WHERE CORPLISTID = ?</query-string>
+    </query>
+    <query id="33">
+        <query-string>DELETE FROM DG.CORPGROUP_LISTREF WHERE CORPLISTID = ?</query-string>
+    </query>
+    <query id="34">
+        <query-string>DELETE FROM DG.CORPLISTINFO WHERE CORPLISTID = ?</query-string>
+    </query>
+    <query id="80">
+        <query-string>DELETE FROM DG.CORPLISTDISTINFO WHERE CORPLISTID = ?</query-string>
+    </query>
+
+    <!-- Modify Sublist details -->
+    <query id="35">
+        <query-string>SELECT MEMBERMDN, MEMBERCORPID, CORPLISTID FROM DG.CORPLISTMEMBER WHERE CORPLISTID IN
+            (SUBLISTID)
+        </query-string>
+    </query>
+
+    <query id="69">
+        <query-string>SELECT MEMBERMDN FROM DG.CORPLISTMEMBER WHERE CORPLISTID = ? AND MEMBERMDN IN (MDNLIST)
+        </query-string>
+    </query>
+    <query id="71">
+        <query-string>SELECT RECIPIENTMDN FROM DG.CORPLISTDISTINFO WHERE CORPLISTID = ?</query-string>
+    </query>
+    <query id="72">
+        <query-string>UPDATE DG.CORPLISTINFO SET LISTDISPLAYNAME = ? WHERE CORPLISTID = ?</query-string>
+    </query>
+    <query id="73">
+        <query-string>SELECT LISTDISPLAYNAME, LISTTYPE, LISTDISTRIBUTIONPOLICY, ETAG FROM DG.CORPLISTINFO WHERE
+            CORPLISTID = ? AND CORPID = ?
+        </query-string>
+    </query>
+    <query id="76">
+        <query-string>SELECT FIRST 1 CORPLISTID FROM DG.CORPLISTINFO WHERE LISTDISPLAYNAME = ? AND CORPID = ?
+        </query-string>
+    </query>
+    <query id="77">
+        <query-string>SELECT COUNT(CORPLISTID) FROM DG.CORPLISTINFO WHERE CORPID = ? AND LISTTYPE = ?;</query-string>
+    </query>
+    <query id="38">
+        <query-string>INSERT INTO DG.CORPGROUPDISTINFO (CORPGROUPID, RECIPIENTMDN) VALUES (?, ?)</query-string>
+    </query>
+    <query id="39">
+        <query-string>INSERT INTO DG.CORPGROUP_LISTREF (CORPGROUPID,CORPLISTID) VALUES (?, ?)</query-string>
+    </query>
+    <!--Get Group List-->
+    <query id="82">
+        <query-string>SELECT CORPLISTID, LISTDISPLAYNAME, HIERARCHY_ID FROM DG.CORPLISTINFO WHERE LISTDISTRIBUTIONPOLICY= 3 AND
+            LISTTYPE = 1 AND CORPLISTID IN (SUBLISTID)
+        </query-string>
+    </query>
+    <query id="83">
+        <query-string>SELECT CORPLISTID FROM DG.CORPGROUP_LISTREF WHERE CORPLISTID IN (SUBLISTID) AND CORPGROUPID = ?
+        </query-string>
+    </query>
+    <!--Delete Groups Sublist references -->
+    <query id="85">
+        <query-string>DELETE FROM DG.CORPGROUP_LISTREF WHERE CORPGROUPID = ?</query-string>
+    </query>
+    <query id="86">
+        <query-string>DELETE FROM DG.CORPGROUPINFO WHERE CORPGROUPID = ?</query-string>
+    </query>
+    <query id="87">
+        <query-string>SELECT EXT.CONTACTMDN, EXT.CONTACTNAME, SUBSC.SERVICEAUTHSTATUS, SUBSC.CORPSUBSCRIPTIONTYPE,
+            SUBSC.PUBLICSUBSCRIPTIONTYPE, EXT.CONTACTCORPID, SUBSC.CLIENT_TYPE, EXT.CONTACT_TYPE FROM DG.EXTCORPCONTACT
+            EXT LEFT JOIN DG.POCSUBSCRINFO SUBSC ON EXT.CONTACTMDN = SUBSC.MDN WHERE EXT.CONTACTMDN IN (MDNLIST) AND
+            EXT.CORPID = ?
+        </query-string>
+    </query>
+    <query id="91">
+        <query-string>SELECT COUNT(MDN) FROM DG.POCSUBSCRINFO WHERE MDN = ? AND CORPID = ?</query-string>
+    </query>
+    <query id="92">
+        <query-string>SELECT LASTPROFILEUPDATETIME FROM DG.POCCORPINFO WHERE CORPID = ?</query-string>
+    </query>
+    <query id="93">
+        <query-string>SELECT CORPLISTID, ETAG FROM DG.CORPLISTINFO WHERE CORPLISTID IN (SUBLISTID)</query-string>
+    </query>
+    <query id="94">
+        <query-string>UPDATE DG.CORPLISTINFO SET ETAG = ?, LASTUPDATETIME = ? WHERE CORPLISTID = ?</query-string>
+    </query>
+    <query id="95">
+        <query-string>UPDATE DG.POCCORPINFO SET LASTPROFILEUPDATETIME = ? WHERE CORPID = ?</query-string>
+    </query>
+    <query id="96">
+        <query-string>SELECT COUNT(MDN) FROM DG.POCSUBSCRINFO WHERE MDN IN (MDNLIST) AND MDN != ?</query-string>
+    </query>
+    <query id="97">
+        <query-string>SELECT CORPID FROM DG.POCCORPINFO WHERE EXTCORPID = ?</query-string>
+    </query>
+    <query id="98">
+        <query-string>SELECT MEMBERMDN, MEMBERCORPID, SUBSCRNAME FROM DG.CORPLISTMEMBER, DG.POCSUBSCRINFO WHERE
+            CORPLISTID IN (SUBLISTID) AND MEMBERMDN=MDN;
+        </query-string>
+    </query>
+    <query id="100">
+        <query-string>DELETE FROM DG.CORPGROUPDISTINFO WHERE RECIPIENTMDN = ? and CORPGROUPID = ?</query-string>
+    </query>
+    <query id="103">
+        <query-string>SELECT RECIPIENTMDN FROM DG.CORPGROUPDISTINFO WHERE CORPGROUPID IN (GROUPIDS)</query-string>
+    </query>
+    <query id="104">
+        <query-string>SELECT COUNT(CORPLISTID) FROM DG.CORPLISTINFO WHERE LISTDISPLAYNAME = ? AND CORPID = ? AND
+            CORPLISTID != ?
+        </query-string>
+    </query>
+    <query id="105">
+        <query-string>SELECT CORPGROUPID, ETAG FROM DG.CORPGROUPINFO WHERE CORPGROUPID IN (GROUPIDS)</query-string>
+    </query>
+    <query id="106">
+        <query-string>UPDATE DG.CORPGROUPINFO SET ETAG = ?, LASTUPDATETIME=? WHERE CORPGROUPID = ?</query-string>
+    </query>
+    <query id="108">
+        <query-string>SELECT CORPGROUPID, RECIPIENTMDN FROM DG.CORPGROUPDISTINFO WHERE CORPGROUPID IN (GROUPIDS)
+        </query-string>
+    </query>
+    <query id="109">
+        <query-string>SELECT CGML.CORPGROUPID FROM DG.CORPGROUPMEMBERLIST CGML , DG.CORPGROUPINFO CGI WHERE
+            CGML.CORPGROUPID = CGI.CORPGROUPID AND CGML.MEMBERMDN = ? AND CGI.CORPID=?;
+        </query-string>
+    </query>
+    <query id="110">
+        <query-string>SELECT CORPGROUPID, CORPID, GROUPDISPLAYNAME, ETAG, GROUPTYPE, OVERRIDE_PR, AVATAR_ID,
+            EMERGAUTOFLOORTIMER, EMERGHANGTIMERADDON, EMERGDNDOVERRIDE, HANGTIMEOUT, GROUP_CREATED_BY, GROUP_OWNER,
+            IS_LARGEGROUP,OSMLISTID,LMR_INTEROP_CAPABLE,POCHOME,GRP_PROFILE_ID,GROUP_SHARED,IS_PRECONFIG_GRP,UGWINTEROP,RECORDING_FS ,AUTHORIZED_LARGE_TG,VIDEO_PERMISSION
+            FROM DG.CORPGROUPINFO WHERE CORPGROUPID = ?
+        </query-string>
+    </query>
+    <query id="112">
+        <query-string>SELECT MDN FROM DG.CORPCONTACTLIST WHERE CONTACTMDN = ?</query-string>
+    </query>
+    <query id="114">
+        <query-string>UPDATE DG.POCCORPINFO SET PAIREDCONTACTLISTID = ? WHERE CORPID = ?</query-string>
+    </query>
+    <query id="115">
+        <query-string>SELECT CLM.CORPLISTID, CLM.MEMBERMDN FROM DG.CORPLISTMEMBER CLM , DG.CORPLISTINFO CLI WHERE
+            CLM.CORPLISTID = CLI.CORPLISTID AND CLM.MEMBERMDN IN (MDNLIST) AND CLI.CORPID = ?;
+        </query-string>
+    </query>
+    <query id="116">
+        <query-string>SELECT CGDI.CORPGROUPID,CGDI.MEMBERMDN,CGI.GROUPDISPLAYNAME FROM DG.CORPGROUPMEMBERLIST CGDI LEFT
+            JOIN DG.CORPGROUPINFO CGI ON CGDI.CORPGROUPID = CGI.CORPGROUPID WHERE MEMBERMDN IN (MDNLIST) AND CORPID=?
+        </query-string>
+    </query>
+    <query id="117">
+        <query-string>SELECT MDN FROM DG.CORPCONTACTLIST WHERE CONTACTMDN IN (MDNLIST)</query-string>
+    </query>
+    <query id="119">
+        <query-string>DELETE FROM DG.CORPLISTMEMBER WHERE CORPLISTID = ? AND MEMBERMDN = ?</query-string>
+    </query>
+    <query id="120">
+        <query-string>SELECT CGDI.CORPLISTID, CGDI.RECIPIENTMDN,CLI.CORPID FROM DG.CORPLISTDISTINFO CGDI,
+            DG.CORPLISTINFO CLI WHERE CGDI.CORPLISTID IN (SUBLISTID) AND CLI.CORPLISTID=CGDI.CORPLISTID;
+        </query-string>
+    </query>
+    <query id="122">
+        <query-string>SELECT COUNT(CONTACTMDN) FROM DG.EXTCORPCONTACT WHERE CORPID = ? AND CONTACT_TYPE = ?
+        </query-string>
+    </query>
+    <query id="124">
+        <query-string>DELETE FROM DG.CORPGROUP_LISTREF WHERE CORPLISTID IN (SUBLISTID) AND CORPGROUPID = ?
+        </query-string>
+    </query>
+    <query id="125">
+        <query-string>SELECT MDN, SUBSCRNAME, PUBLICSUBSCRIPTIONTYPE, CORPSUBSCRIPTIONTYPE, SERVICEAUTHSTATUS,
+            CLIENT_TYPE, ALIAS_MDN, USER_ID, ACTIVEFS1, ACTIVEFS2,CLIENTPV_MAJORVERSION FROM DG.POCSUBSCRINFO WHERE MDN
+            IN (MDNLIST) AND CORPID = ?
+        </query-string>
+    </query>
+    <query id="127">
+        <query-string>SELECT CGML.MEMBERMDN MEMBERMDN,COUNT(CGML.MEMBERMDN) FROM DG.CORPGROUPMEMBERLIST CGML,
+            DG.CORPGROUPINFO CGI WHERE CGI.CORPGROUPID=CGML.CORPGROUPID AND CGI.CORPID=? AND MEMBERMDN IN (MDNLIST)
+            GROUP BY CGML.MEMBERMDN;
+        </query-string>
+    </query>
+    <query id="128">
+        <query-string>SELECT GI.GROUPDISPLAYNAME,GI.GROUPMEMBERLISTID, GI.GROUPDISTRIBUTIONPOLICY, GMC.MEMBERCOUNT,
+            GI.ETAG, GI.GROUPTYPE, GI.OVERRIDE_PR, GI.AVATAR_ID, GI.EMERGAUTOFLOORTIMER, GI.EMERGHANGTIMERADDON,
+            GI.EMERGDNDOVERRIDE, GI.HANGTIMEOUT, GI.GROUP_CREATED_BY, GI.GROUP_OWNER, GI.IS_LARGEGROUP,
+            GI.OSMLISTID,GI.AUDIO_CUTIN,GI.GRP_SVC_TYPE,GI.GRP_PROFILE_ID,GI.POCHOME, GI.GROUP_SHARED,
+            GI.IS_PRECONFIG_GRP , GI.CLUSTERID FROM DG.CORPGROUPINFO GI LEFT JOIN DG.CORPGROUPMEMBERCOUNT GMC ON GI.CORPGROUPID =
+            GMC.CORPGROUPID WHERE GI.CORPGROUPID=? AND GI.CORPID=?;
+        </query-string>
+    </query>
+    <query id="129">
+        <query-string>INSERT INTO DG.CORPGROUPINFO(CORPGROUPID, CORPID, GROUPDISPLAYNAME, GROUPMEMBERLISTID,
+            GROUPDISTRIBUTIONPOLICY, ETAG, LASTUPDATETIME, GROUPTYPE, POCHOME, OVERRIDE_PR, AVATAR_ID,
+            LMR_INTEROP_CAPABLE, EMERGAUTOFLOORTIMER, EMERGHANGTIMERADDON, EMERGDNDOVERRIDE, HANGTIMEOUT,
+            GROUP_CREATED_BY, GROUP_OWNER,
+
+            IS_LARGEGROUP,OSMLISTID,GRP_SVC_TYPE,FEATURES_ALLOWED,GRP_PROFILE_ID,AUDIO_CUTIN,GROUP_SHARED,IS_PRECONFIG_GRP,UGWINTEROP,AUTHORIZED_LARGE_TG,CLUSTERID,HIERARCHY_ID,VIDEO_PERMISSION,HIERARCHY_ROOT)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
+        </query-string>
+    </query>
+    <query id="131">
+        <query-string>SELECT COUNT(CORPGROUPID) FROM DG.CORPGROUPINFO WHERE GROUPDISPLAYNAME = ? AND CORPID = ?
+        </query-string>
+    </query>
+    <query id="132">
+        <query-string>SELECT GROUPMEMBERLISTID FROM DG.CORPGROUPINFO WHERE CORPGROUPID = ?</query-string>
+    </query>
+    <query id="133">
+        <query-string>DELETE FROM DG.CORPGROUPMEMBERCOUNT WHERE CORPGROUPID = ?</query-string>
+    </query>
+    <query id="134">
+        <query-string>INSERT INTO DG.CORPLISTMEMBER(CORPLISTID,MEMBERMDN,MEMBERCORPID) VALUES (?,?,?);</query-string>
+    </query>
+    <query id="135">
+        <query-string>UPDATE DG.CORPGROUPINFO SET GROUPDISPLAYNAME = ? WHERE CORPGROUPID = ?</query-string>
+    </query>
+    <query id="136">
+        <query-string>SELECT COUNT(CORPGROUPID) FROM DG.CORPGROUPINFO WHERE CORPID = ?</query-string>
+    </query>
+    <query id="137">
+        <query-string>SELECT GROUPDISPLAYNAME FROM DG.CORPGROUPINFO WHERE CORPID=? AND GROUPDISPLAYNAME=?</query-string>
+    </query>
+    <query id="138">
+        <query-string>UPDATE DG.CORPGROUPINFO SET GROUPMEMBERLISTID = ? WHERE CORPGROUPID = ?</query-string>
+    </query>
+    <query id="139">
+        <query-string>DELETE FROM DG.CORPGROUPDISTINFO WHERE CORPGROUPID = ?</query-string>
+    </query>
+    <query id="140">
+        <query-string>SELECT MEMBERMDN FROM DG.CORPGROUPMEMBERLIST WHERE CORPGROUPID=?</query-string>
+    </query>
+    <query id="143">
+        <query-string>DELETE FROM DG.CORPGROUP_LISTREF WHERE CORPGROUPID IN (GROUPIDS)</query-string>
+    </query>
+    <query id="144">
+        <query-string>DELETE FROM DG.CORPGROUPDISTINFO WHERE CORPGROUPID IN (GROUPIDS)</query-string>
+    </query>
+    <query id="146">
+        <query-string>DELETE FROM DG.CORPGROUPMEMBERCOUNT WHERE CORPGROUPID IN (GROUPIDS)</query-string>
+    </query>
+    <query id="147">
+        <query-string>DELETE FROM DG.CORPGROUPINFO WHERE CORPGROUPID IN (GROUPIDS)</query-string>
+    </query>
+    <query id="148">
+        <query-string>SELECT CORPLISTID FROM DG.CORPLISTINFO WHERE CORPID = ?</query-string>
+    </query>
+    <query id="149">
+        <query-string>DELETE FROM DG.CORPLISTMEMBER WHERE CORPLISTID IN (SUBLISTID)</query-string>
+    </query>
+    <query id="150">
+        <query-string>DELETE FROM DG.CORPLISTDISTINFO WHERE CORPLISTID IN (SUBLISTID)</query-string>
+    </query>
+    <query id="151">
+        <query-string>DELETE FROM DG.CORPLISTINFO WHERE CORPLISTID IN (SUBLISTID)</query-string>
+    </query>
+    <query id="152">
+        <query-string>DELETE FROM DG.EXTCORPCONTACT WHERE CORPID = ?</query-string>
+    </query>
+    <query id="153">
+        <query-string>SELECT COUNT(MDN) FROM DG.POCSUBSCRINFO WHERE CORPID = ?</query-string>
+    </query>
+    <query id="154">
+        <query-string>UPDATE DG.EXTCORPCONTACT SET CONTACTCORPID = NULL WHERE CONTACTCORPID = ?</query-string>
+    </query>
+    <query id="156">
+        <query-string>SELECT CORPGROUPID,RECIPIENTMDN FROM DG.CORPGROUPDISTINFO WHERE CORPGROUPID IN (GROUPIDS);
+        </query-string>
+    </query>
+    <query id="157">
+        <query-string>SELECT MEMBERMDN,MEMBERCORPID FROM DG.CORPLISTMEMBER WHERE CORPLISTID = ?;</query-string>
+    </query>
+    <query id="158">
+        <query-string>SELECT MEMBERMDN,MEMBERCORPID FROM DG.CORPLISTMEMBER WHERE CORPLISTID = (SELECT GROUPMEMBERLISTID
+            FROM DG.CORPGROUPINFO WHERE CORPGROUPID = ?);
+        </query-string>
+    </query>
+    <query id="159">
+        <query-string>INSERT INTO DG.CORPCONTACTLIST (MDN,CONTACTMDN,CONTACTCORPID) VALUES (?,?,?);</query-string>
+    </query>
+    <query id="160">
+        <query-string>INSERT INTO DG.CORPGROUPMEMBERLIST (CORPGROUPID, MEMBERMDN) VALUES (?,?);</query-string>
+    </query>
+    <query id="161">
+        <query-string>DELETE FROM DG.CORPGROUPMEMBERLIST WHERE CORPGROUPID=? AND MEMBERMDN=? AND NOT EXISTS (SELECT 1
+            FROM DG.CORPLISTMEMBER A,DG.CORPGROUP_LISTREF B WHERE A.CORPLISTID=B.CORPLISTID AND B.CORPGROUPID=? AND
+            A.MEMBERMDN=?)
+        </query-string>
+    </query>
+    <query id="162">
+        <query-string>DELETE FROM DG.CORPCONTACTLIST WHERE MDN=? AND CONTACTMDN=? AND NOT EXISTS (SELECT 1 FROM
+            DG.CORPLISTMEMBER A,DG.CORPLISTDISTINFO B WHERE A.CORPLISTID=B.CORPLISTID AND B.RECIPIENTMDN=? AND
+            A.MEMBERMDN=?)
+        </query-string>
+    </query>
+    <query id="163">
+        <query-string>SELECT MDN, CONTACTMDN, CONTACTCORPID FROM DG.CORPCONTACTLIST WHERE MDN IN(MDNLIST);
+        </query-string>
+    </query>
+    <query id="164">
+        <query-string>SELECT CORPGROUPID, MEMBERMDN FROM DG.CORPGROUPMEMBERLIST WHERE CORPGROUPID IN(GROUPIDS)
+        </query-string>
+    </query>
+    <query id="165">
+        <query-string>DELETE FROM DG.CORPGROUPMEMBERLIST WHERE CORPGROUPID IN (GROUPIDS)</query-string>
+    </query>
+    <query id="166">
+        <query-string>UPDATE DG.CORPCONTACTLIST SET MDN= ? WHERE MDN =?</query-string>
+    </query>
+    <query id="167">
+        <query-string>DELETE FROM DG.CORPCONTACTLIST WHERE MDN = ?</query-string>
+    </query>
+    <query id="168">
+        <query-string>SELECT RECIPIENTMDN, COUNT(RECIPIENTMDN) FROM DG.CORPGROUPDISTINFO CGDI LEFT JOIN DG.CORPGROUPINFO CGI ON CGDI.CORPGROUPID = CGI.CORPGROUPID WHERE CGDI.RECIPIENTMDN IN (MDNLIST) AND CGI.GROUP_CREATED_BY != 2 GROUP BY CGDI.RECIPIENTMDN;</query-string>
+    </query>
+    <query id="169">
+        <query-string>DELETE FROM DG.CORPGROUPDISTINFO WHERE CORPGROUPID=? AND RECIPIENTMDN=? AND NOT EXISTS (SELECT 1
+            FROM DG.CORPLISTMEMBER A,DG.CORPGROUP_LISTREF B WHERE A.CORPLISTID=B.CORPLISTID AND B.CORPGROUPID=? AND
+            A.MEMBERMDN=?)
+        </query-string>
+    </query>
+    <query id="171">
+        <query-string>SELECT GI.GROUPDISPLAYNAME, GI.GROUPMEMBERLISTID, GI.ETAG, GI.GROUPTYPE, GI.AVATAR_ID,
+            GI.LMR_INTEROP_CAPABLE, GI.GROUP_OWNER, GI.GROUP_CREATED_BY, GI.IS_LARGEGROUP ,GI.GRP_PROFILE_ID,
+            GI.GROUP_SHARED, GI.OVERRIDE_PR,GI.IS_PRECONFIG_GRP,GI.UGWINTEROP, GI.RECORDING_FS, GI.AUTHORIZED_LARGE_TG, GI.VIDEO_PERMISSION, GI.HIERARCHY_ID FROM DG.CORPGROUPINFO GI
+            WHERE GI.CORPGROUPID=? AND GI.CORPID=?;
+        </query-string>
+    </query>
+    <query id="172">
+        <query-string>SELECT CORPLISTID FROM DG.CORPGROUP_LISTREF WHERE CORPGROUPID=?</query-string>
+    </query>
+    <query id="174">
+        <query-string>SELECT CLI.CORPLISTID, CLI.LISTDISPLAYNAME, CLI.LISTTYPE, CLI.LISTDISTRIBUTIONPOLICY FROM
+            DG.CORPLISTINFO CLI, DG.CORPLISTDISTINFO CDI WHERE CDI.RECIPIENTMDN = ? AND CLI.CORPLISTID=CDI.CORPLISTID
+        </query-string>
+    </query>
+    <query id="175">
+        <query-string>SELECT CORPLISTID, COUNT(MEMBERMDN) FROM DG.CORPLISTMEMBER WHERE CORPLISTID IN (SUBLISTID) GROUP
+            BY CORPLISTID
+        </query-string>
+    </query>
+    <query id="176">
+        <query-string>SELECT A.MEMBERMDN, A.IS_SUPERVISOR, A.IS_BROADCASTER, A.CALL_INITIATE_PERMISSION,
+            A.CALL_RECEIVE_PERMISSION, A.INCALL_PERMISSION,A.V_CALL_INITIATE_PERMISSION,A.V_CALL_RECEIVE_PERMISSION,A.V_INCALL_PERMISSION,A.IS_LOCWATCHER,A.IS_OSMAUTHORIZED, A.MEMBERMDN_CORPID, B.SERVICEAUTHSTATUS, B.HIERARCHY_ID FROM
+            DG.CORPGROUPMEMBERLIST A ,DG.POCSUBSCRINFO B WHERE (A.IS_SUPERVISOR != 0 OR A.IS_BROADCASTER != 0 OR
+            A.CALL_INITIATE_PERMISSION !=0 OR A.CALL_RECEIVE_PERMISSION !=0 OR A.INCALL_PERMISSION !=0  OR A.V_CALL_INITIATE_PERMISSION != 0 OR A.V_CALL_RECEIVE_PERMISSION != 0 OR A.V_INCALL_PERMISSION != 0 OR A.IS_LOCWATCHER != 0 OR A.IS_OSMAUTHORIZED !=0) AND A.CORPGROUPID =? AND A.MEMBERMDN=B.MDN AND (B.USERPROFILEINDEX=0 OR
+            B.USERPROFILEINDEX IS NULL) AND B.SERVICEAUTHSTATUS !=10 ;
+        </query-string>
+    </query>
+    <query id="177">
+        <query-string>INSERT INTO DG.CORPGROUPMEMBERLIST (CORPGROUPID, MEMBERMDN,IS_SUPERVISOR, IS_BROADCASTER,
+            MEMBER_TYPE, CALL_INITIATE_PERMISSION, CALL_RECEIVE_PERMISSION, INCALL_PERMISSION, IS_LOCWATCHER,
+            GRP_MODIFY_PERM,IS_OSMAUTHORIZED,V_CALL_INITIATE_PERMISSION, V_CALL_RECEIVE_PERMISSION, V_INCALL_PERMISSION,IS_AFFILIATION_ENABLED,MEMBERMDN_CORPID) VALUES
+            (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
+        </query-string>
+    </query>
+    <query id="178">
+        <query-string>UPDATE DG.CORPGROUPMEMBERLIST SET IS_SUPERVISOR = ? , CALL_INITIATE_PERMISSION = ?,
+            CALL_RECEIVE_PERMISSION = ?, INCALL_PERMISSION = ?, IS_LOCWATCHER = ?, GRP_MODIFY_PERM =
+            ?,IS_OSMAUTHORIZED=?,V_CALL_INITIATE_PERMISSION = ?,V_CALL_RECEIVE_PERMISSION = ?,V_INCALL_PERMISSION = ? WHERE MEMBERMDN = ? AND CORPGROUPID = ?;
+        </query-string>
+    </query>
+    <query id="179">
+        <query-string>SELECT CGI.CORPGROUPID, COUNT(MEMBERMDN), CGI.GROUPDISPLAYNAME, CGI.CORPID, CGI.GROUPTYPE FROM
+            DG.CORPGROUPINFO CGI LEFT JOIN DG.CORPGROUPMEMBERLIST CGML ON CGI.CORPGROUPID = CGML.CORPGROUPID WHERE
+            CGI.CORPGROUPID IN(GROUPIDS) GROUP BY CGI.CORPGROUPID, CGI.GROUPDISPLAYNAME,CGI.CORPID,CGI.GROUPTYPE;
+        </query-string>
+    </query>
+    <query id="180">
+        <query-string>SELECT CORPLISTID FROM DG.CORPLISTINFO WHERE CORPLISTID IN (SUBLISTID) AND
+            LISTDISTRIBUTIONPOLICY=3;
+        </query-string>
+    </query>
+    <query id="181">
+        <query-string>UPDATE DG.EXTCORPCONTACT SET CONTACTCORPID =? WHERE CONTACTMDN = ?;</query-string>
+    </query>
+    <query id="182">
+        <query-string>UPDATE DG.CORPLISTMEMBER SET MEMBERCORPID =? WHERE MEMBERMDN = ?;</query-string>
+    </query>
+    <query id="183">
+        <query-string>UPDATE DG.CORPCONTACTLIST SET CONTACTCORPID =? WHERE CONTACTMDN = ?;</query-string>
+    </query>
+    <query id="184">
+        <query-string>SELECT CLI.CORPLISTID, COUNT(MEMBERMDN) FROM DG.CORPLISTINFO CLI LEFT JOIN DG.CORPLISTMEMBER CLM
+            ON CLI.CORPLISTID = CLM.CORPLISTID WHERE CLI.CORPLISTID IN(SUBLISTID) GROUP BY CLI.CORPLISTID;
+        </query-string>
+    </query>
+    <query id="185">
+        <query-string>SELECT GROUPMEMBERLISTID FROM DG.CORPGROUPINFO WHERE CORPGROUPID IN(GROUPIDS);</query-string>
+    </query>
+    <query id="186">
+        <query-string>SELECT CGI.CORPGROUPID, CGI.GROUPDISPLAYNAME, GMC.MEMBERCOUNT, CGI.GROUPTYPE, CGI.AVATAR_ID,
+            CGI.GROUP_CREATED_BY, CGI.IS_LARGEGROUP,CGI.GRP_PROFILE_ID, CGI.GROUP_SHARED , CGI.POCHOME ,
+            CGI.IS_PRECONFIG_GRP, CGI.UGWINTEROP, CGI.RECORDING_FS, CGI.AUTHORIZED_LARGE_TG,CGI.VIDEO_PERMISSION, CGI.HIERARCHY_ID FROM DG.CORPGROUPINFO CGI LEFT JOIN
+            DG.CORPGROUPMEMBERCOUNT GMC ON CGI.CORPGROUPID = GMC.CORPGROUPID WHERE CORPID=?;
+        </query-string>
+    </query>
+    <query id="187">
+        <query-string>SELECT G.CORPGROUPID, G.GROUPDISPLAYNAME, GMC.MEMBERCOUNT, G.ETAG, G.GROUPTYPE, G.AVATAR_ID,
+            GROUPDIS.IS_BROADCASTER, G.GROUP_CREATED_BY, G.IS_LARGEGROUP,COALESCE(G.OSMLISTID,0)AS
+            OSMLISTID,G.GRP_PROFILE_ID,G.GROUP_SHARED,G.VIDEO_PERMISSION FROM DG.CORPGROUPMEMBERCOUNT GMC, DG.CORPGROUPINFO G
+            ,DG.CORPGROUPMEMBERLIST GROUPDIS WHERE GROUPDIS.CORPGROUPID = G.CORPGROUPID AND GMC.CORPGROUPID
+            =G.CORPGROUPID AND G.CORPID = ? AND GROUPDIS.MEMBERMDN=?
+        </query-string>
+    </query>
+    <query id="188">
+        <query-string>SELECT MDN, CORPCONTACTLISTID FROM DG.POCSUBSCRINFO WHERE MDN IN (MDNLIST)</query-string>
+    </query>
+    <query id="189">
+        <query-string>SELECT MEMBERMDN, CORPGROUPID FROM DG.CORPGROUPMEMBERLIST WHERE IS_SUPERVISOR = ? AND CORPGROUPID
+            IN (GROUPIDS)
+        </query-string>
+    </query>
+    <query id="190">
+        <query-string>UPDATE DG.CORPGROUPINFO SET GROUPTYPE = ? WHERE CORPGROUPID = ?</query-string>
+    </query>
+    <!-- added by sanjiv starts -->
+    <query id="191">
+        <query-string>SELECT CORPLISTID, MEMBERMDN FROM DG.CORPLISTMEMBER WHERE MEMBERMDN IN (MDNLIST);</query-string>
+    </query>
+    <query id="192">
+        <query-string>SELECT
+            CGML.CORPGROUPID,CGML.MEMBERMDN,CGML.IS_SUPERVISOR,CGML.IS_LOCWATCHER,CGI.CORPID,CGI.GROUPDISPLAYNAME FROM
+            DG.CORPGROUPMEMBERLIST CGML,DG.CORPGROUPINFO CGI WHERE CGML.MEMBERMDN IN (MDNLIST) AND
+            CGI.CORPGROUPID=CGML.CORPGROUPID;
+        </query-string>
+    </query>
+    <query id="193">
+        <query-string>DELETE FROM DG.EXTCORPCONTACT WHERE CONTACTMDN=?;</query-string>
+    </query>
+    <query id="194">
+        <query-string>UPDATE DG.CORPGROUPMEMBERLIST SET MEMBERMDN=? WHERE MEMBERMDN=? AND CORPGROUPID IN (GROUPIDS);
+        </query-string>
+    </query>
+    <query id="195">
+        <query-string>UPDATE DG.EXTCORPCONTACT SET CONTACTMDN=? WHERE CONTACTMDN=?;</query-string>
+    </query>
+    <query id="196">
+        <query-string>SELECT CLM.CORPLISTID, CLM.MEMBERMDN FROM DG.CORPLISTMEMBER CLM WHERE CLM.MEMBERMDN in (MDNLIST)
+            AND CLM.CORPLISTID in (select CORPLISTID from DG.CORPLISTINFO where CORPID != ?);
+        </query-string>
+    </query>
+    <query id="197">
+        <query-string>SELECT CGDI.CORPGROUPID,CGDI.MEMBERMDN FROM DG.CORPGROUPMEMBERLIST CGDI WHERE CGDI.MEMBERMDN IN
+            (MDNLIST) AND CGDI.CORPGROUPID in(select corpgroupid from dg.corpgroupinfo where corpid !=?);
+        </query-string>
+    </query>
+    <query id="198">
+        <query-string>SELECT CORPGROUPID, RECIPIENTMDN FROM DG.CORPGROUPDISTINFO WHERE CORPGROUPID IN (GROUPIDS);
+        </query-string>
+    </query>
+    <query id="199">
+        <query-string>UPDATE DG.POCSUBSCRINFO SET DISPATCH_GRP_MEMBER = ? WHERE MDN IN (MDNLIST);</query-string>
+    </query>
+    <query id="200">
+        <query-string>INSERT INTO DG.TMPVASSUBSCRIPTIONKEYINFO(MDN, SERVICENAME, SUBSCRIPTIONKEY, INSERTIONTIME,
+            EXPIRYTIME) VALUES(?,?,?,?,?);
+        </query-string>
+    </query>
+    <query id="201">
+        <query-string>SELECT SUBSCRIPTIONKEY FROM DG.TMPVASSUBSCRIPTIONKEYINFO WHERE MDN=? AND SERVICENAME=?
+        </query-string>
+    </query>
+    <query id="202">
+        <query-string>UPDATE DG.TMPVASSUBSCRIPTIONKEYINFO SET SUBSCRIPTIONKEY=?, INSERTIONTIME=?, EXPIRYTIME=? WHERE
+            MDN=? AND SERVICENAME=?;
+        </query-string>
+    </query>
+    <query id="203">
+        <query-string>UPDATE DG.POCSUBSCRINFO SET SERVICEAUTHSTATUS=? WHERE MDN=?;</query-string>
+    </query>
+    <query id="204">
+        <query-string>SELECT CGDI.CORPGROUPID,CGDI.RECIPIENTMDN FROM DG.CORPGROUPDISTINFO CGDI LEFT JOIN
+            DG.CORPGROUPINFO CGI ON CGDI.CORPGROUPID = CGI.CORPGROUPID WHERE RECIPIENTMDN IN (MDNLIST) AND CORPID=? AND
+            GROUPTYPE=?;
+        </query-string>
+    </query>
+    <query id="205">
+        <query-string>UPDATE DG.POCSUBSCRINFO SET DISPATCH_GRP_MEMBER=? where MDN=?;</query-string>
+    </query>
+    <query id="206">
+        <query-string>UPDATE DG.POCSUBSCRINFO SET CLIENT_PASSWORD=NULL WHERE MDN=?;</query-string>
+    </query>
+    <query id="207">
+        <query-string>INSERT INTO DG.EXTCORPCONTACT(CORPID, CONTACTMDN, CONTACTNAME, CONTACTCORPID, CONTACT_TYPE)
+            VALUES(?,?,?,?,?);
+        </query-string>
+    </query>
+    <query id="209">
+        <query-string>SELECT CORPID,CONTACTNAME FROM DG.EXTCORPCONTACT WHERE CONTACTMDN=?;</query-string>
+    </query>
+    <!-- added by sanjiv end -->
+    <query id="210">
+        <query-string>SELECT COUNT(CORPGROUPID) FROM DG.CORPGROUPINFO WHERE CORPID = ? AND GROUPTYPE IN (GROUPIDLIST);
+        </query-string>
+    </query>
+    <query id="212">
+        <query-string>SELECT MEMBERMDN,CORPGROUPID FROM DG.CORPGROUPMEMBERLIST WHERE CORPGROUPID = ? AND MEMBERMDN = ?
+        </query-string>
+    </query>
+    <query id="213">
+        <query-string>SELECT MEMBERMDN,IS_SUPERVISOR FROM DG.CORPGROUPMEMBERLIST WHERE CORPGROUPID = ?;</query-string>
+    </query>
+    <query id="214">
+        <query-string>SELECT CORPGROUPID,RECIPIENTMDN FROM DG.CORPGROUPDISTINFO WHERE RECIPIENTMDN IN (MDNLIST);
+        </query-string>
+    </query>
+    <query id="216">
+        <query-string>SELECT CORPGROUPID, MEMBERMDN FROM DG.CORPGROUPMEMBERLIST WHERE IS_SUPERVISOR = ? AND CORPGROUPID
+            IN (GROUPIDS)
+        </query-string>
+    </query>
+    <query id="217">
+        <query-string>SELECT CGML.CORPGROUPID, CGML.MEMBERMDN, CGML.IS_SUPERVISOR, CGML.IS_BROADCASTER,
+            CGML.MEMBER_TYPE, CGML.CALL_INITIATE_PERMISSION, CGML.CALL_RECEIVE_PERMISSION, CGML.INCALL_PERMISSION,
+            CGML.IS_LOCWATCHER,CGML.V_CALL_INITIATE_PERMISSION,CGML.V_CALL_RECEIVE_PERMISSION,CGML.V_INCALL_PERMISSION FROM DG.CORPGROUPMEMBERLIST CGML, DG.CORPGROUPINFO CGI WHERE
+            CGI.CORPGROUPID=CGML.CORPGROUPID AND CGI.CORPID = ? AND (CGML.IS_SUPERVISOR IN (SUPERVISORVALUE) OR
+            CGML.IS_BROADCASTER = 1 OR MEMBER_TYPE > 0 OR CGML.IS_LOCWATCHER = 1);
+        </query-string>
+    </query>
+    <query id="218">
+        <query-string>SELECT MDN,SUBSCRNAME FROM DG.POCSUBSCRINFO WHERE MDN IN (MDNLIST);</query-string>
+    </query>
+    <query id="219">
+        <query-string>DELETE FROM DG.CORPGROUP_LISTREF WHERE CORPLISTID IN (SUBLISTID)</query-string>
+    </query>
+    <query id="220">
+        <query-string>SELECT CORPID FROM DG.EXTCORPCONTACT WHERE CONTACTMDN=?</query-string>
+    </query>
+    <query id="221">
+        <query-string>SELECT CLM.CORPLISTID, CLM.MEMBERMDN FROM DG.CORPLISTMEMBER CLM WHERE CLM.MEMBERMDN = ? AND
+            CLM.CORPLISTID in (select CORPLISTID from DG.CORPLISTINFO where CORPID != ?);
+        </query-string>
+    </query>
+    <query id="222">
+        <query-string>SELECT CGDI.CORPGROUPID,CGDI.MEMBERMDN FROM DG.CORPGROUPMEMBERLIST CGDI WHERE CGDI.MEMBERMDN = ?
+            AND CGDI.CORPGROUPID in(select corpgroupid from dg.corpgroupinfo where corpid !=?);
+        </query-string>
+    </query>
+    <query id="223">
+        <query-string>SELECT CLM.CORPLISTID, CLM.MEMBERMDN FROM DG.CORPLISTMEMBER CLM WHERE CLM.MEMBERMDN = ? AND
+            CLM.CORPLISTID IN (select CORPLISTID from DG.CORPLISTINFO where CORPID = ?) ;
+        </query-string>
+    </query>
+    <query id="224">
+        <query-string>SELECT MEMBERMDN FROM DG.CORPGROUPMEMBERLIST WHERE CORPGROUPID=? AND MEMBERMDN NOT IN (SELECT
+            RECIPIENTMDN FROM DG.CORPGROUPDISTINFO WHERE CORPGROUPID=?) ;
+        </query-string>
+    </query>
+    <query id="225">
+        <query-string>SELECT MDN, CONTACTMDN, CONTACTCORPID FROM DG.CORPCONTACTLIST WHERE MDN IN(MDNLIST)</query-string>
+    </query>
+    <query id="226">
+        <query-string>SELECT CORPID, MDN, SUBSCRNAME, CLIENT_TYPE, USERAGENT, CLIENTPV_MAJORVERSION, ALIAS_MDN, USER_ID,
+            ACTIVEFS1, ACTIVEFS2 , MCPTT_COMPLIANCE , SUBSCRIBERFS2 , SUBSCRIBERFS1, CORPADMINFS1, CORPADMINFS2 FROM DG.POCSUBSCRINFO WHERE MDN IN
+            (MDNLIST)
+        </query-string>
+    </query>
+    <query id="227">
+        <query-string>SELECT MDN FROM DG.POCSUBSCRINFO PSI WHERE PSI.CORPID=? AND PSI.SERVICEAUTHSTATUS=0;
+        </query-string>
+    </query>
+    <query id="228">
+        <query-string>SELECT TVSKI.MDN,TVSKI.SUBSCRIPTIONKEY,TVSKI.INSERTIONTIME,TVSKI.EXPIRYTIME FROM
+            DG.TMPVASSUBSCRIPTIONKEYINFO TVSKI WHERE MDN IN (MDNLIST);
+        </query-string>
+    </query>
+    <query id="229">
+        <query-string>SELECT MDN, DISPATCH_GRP_MEMBER,POCHOME FROM DG.POCSUBSCRINFO WHERE MDN IN(MDNLIST)</query-string>
+    </query>
+    <query id="230">
+        <query-string>SELECT CORPGROUPID, RECIPIENTMDN FROM DG.CORPGROUPDISTINFO WHERE RECIPIENTMDN IN (MDNLIST)
+        </query-string>
+    </query>
+    <query id="231">
+        <query-string>SELECT CORPID, MDN FROM DG.POCSUBSCRINFO WHERE MDN IN(MDNLIST)</query-string>
+    </query>
+    <query id="232">
+        <query-string>SELECT SUBSCRIPTIONKEY FROM DG.TMPVASSUBSCRIPTIONKEYINFO WHERE SUBSCRIPTIONKEY=?;</query-string>
+    </query>
+    <query id="233">
+        <query-string>SELECT CORPID, SERVICEAUTHSTATUS, CLIENT_TYPE, EMAIL, SUBSCRNAME, PAMACCID, ACTIVEFS1,
+            DISPATCH_TYPE, LICENSE_TYPE, CLIENTPV_MAJORVERSION, ACTIVEFS2,USER_ID,MC_ID,MCPTT_COMPLIANCE FROM
+            DG.POCSUBSCRINFO WHERE MDN=?;
+        </query-string>
+    </query>
+    <query id="234">
+        <query-string>SELECT ETAG FROM DG.XDM_CORPRESOURCELISTINDEXDOC WHERE MDN = ?</query-string>
+    </query>
+    <query id="235">
+        <query-string>SELECT CORPGROUPID FROM DG.CORPGROUPDISTINFO WHERE RECIPIENTMDN = ?</query-string>
+    </query>
+    <query id="236">
+        <query-string>SELECT CORPGROUPID, ETAG, GROUPTYPE, GROUP_CREATED_BY, AVATAR_ID, IS_LARGEGROUP FROM
+            DG.CORPGROUPINFO WHERE CORPGROUPID IN (GROUPIDS) AND CORPID = ?
+        </query-string>
+    </query>
+    <query id="237">
+        <query-string>SELECT MDN, SUBSCRNAME, CLIENT_TYPE, CORPID, USERAGENT, CLIENTPV_MAJORVERSION, ACTIVEFS1,
+            ALIAS_MDN, USER_ID, ACTIVEFS2,LICENSE_TYPE FROM DG.POCSUBSCRINFO WHERE MDN IN (MDNLIST)
+        </query-string>
+    </query>
+    <query id="238">
+        <query-string>SELECT CONTACTMDN, CONTACTNAME, CONTACT_TYPE, CONTACTCORPID FROM DG.EXTCORPCONTACT WHERE
+            CONTACTMDN IN (MDNLIST) AND CORPID = ?
+        </query-string>
+    </query>
+    <query id="239">
+        <query-string>SELECT GML.MEMBERMDN, GML.IS_SUPERVISOR, GML.IS_BROADCASTER, GML.CALL_INITIATE_PERMISSION,
+            GML.CALL_RECEIVE_PERMISSION, GML.INCALL_PERMISSION, GML.IS_LOCWATCHER,
+            GML.GRP_MODIFY_PERM, GML.IS_OSMAUTHORIZED, GML.V_CALL_INITIATE_PERMISSION, GML.V_CALL_RECEIVE_PERMISSION,
+            GML.V_INCALL_PERMISSION, GML.IS_AFFILIATION_ENABLED, GML.MEMBERMDN_CORPID,
+            PSI.HIERARCHY_ID
+            FROM DG.CORPGROUPMEMBERLIST GML
+            LEFT JOIN DG.POCSUBSCRINFO PSI ON PSI.MDN = GML.MEMBERMDN
+            WHERE GML.CORPGROUPID = ?;
+        </query-string>
+    </query>
+    <query id="240">
+        <query-string>SELECT MDN, CONTACTCOUNT FROM DG.CORPCONTACTCOUNT WHERE MDN IN(SELECT RECIPIENTMDN FROM
+            DG.CORPLISTDISTINFO WHERE CORPLISTID = ? )
+        </query-string>
+    </query>
+    <query id="241">
+        <query-string>SELECT CORPGROUPID,MEMBERCOUNT from DG.CORPGROUPMEMBERCOUNT WHERE CORPGROUPID IN ( SELECT
+            CORPGROUPID FROM DG.CORPGROUP_LISTREF WHERE CORPLISTID = ?)
+        </query-string>
+    </query>
+    <query id="242">
+        <query-string>
+            SELECT cl.CORPLISTID FROM DG.CORPGROUP_LISTREF cl
+            INNER JOIN DG.CORPLISTINFO ci ON ci.CORPLISTID = cl.CORPLISTID
+            WHERE cl.CORPGROUPID = ?
+        </query-string>
+    </query>
+    <query id="243">
+        <query-string>SELECT CORPLISTID, COUNT(CORPLISTID) FROM DG.CORPLISTMEMBER WHERE CORPLISTID IN (SUBLISTID) GROUP
+            BY CORPLISTID
+        </query-string>
+    </query>
+    <query id="244">
+        <query-string>SELECT MEMBERMDN, MEMBERCORPID FROM DG.CORPLISTMEMBER WHERE CORPLISTID = ?</query-string>
+    </query>
+    <query id="245">
+        <query-string>{call DG.Kdk_POCDataRetrieval.retrieveCorpContactList(?,?,?,?,?)}</query-string>
+    </query>
+    <query id="246">
+        <query-string>{call DG.Kdk_POCDataRetrieval.retrieveCorpGrpMemList(?,?,?,?,?)}</query-string>
+    </query>
+    <query id="247">
+        <query-string>DELETE FROM DG.CAMPEDGROUPINFO</query-string>
+    </query>
+    <query id="248">
+        <query-string>DELETE FROM DG.CAMPEDGROUPINFO WHERE MDN = ?</query-string>
+    </query>
+    <query id="249">
+        <query-string>DELETE FROM DG.CAMPEDGROUPINFO WHERE MDN = ? AND GROUPID = ?</query-string>
+    </query>
+    <query id="250">
+        <query-string>INSERT INTO DG.CAMPEDGROUPINFO(MDN, GROUPURI, GROUPID, CAMPED_BY) VALUES (?, ?, ?, ?)
+        </query-string>
+    </query>
+    <query id="251">
+        <query-string>SELECT GROUPID, CAMPED_BY FROM DG.CAMPEDGROUPINFO WHERE MDN = ?</query-string>
+    </query>
+    <query id="252">
+        <query-string>DELETE FROM DG.CAMPEDGROUPINFO WHERE GROUPID = ?</query-string>
+    </query>
+    <query id="253">
+        <query-string>SELECT CORPGROUPID FROM DG.CORPGROUPDISTINFO WHERE CORPGROUPID IN (GROUPIDS) AND RECIPIENTMDN =
+            ?
+        </query-string>
+    </query>
+    <query id="254">
+        <query-string>SELECT CORPID, MDN, CLIENT_TYPE, ACTIVEFS1, POCHOME, PRESENCEHOME, CLIENTPV_MAJORVERSION,
+            ACTIVEFS2, USERPROFILEID, MCPTT_COMPLIANCE, MC_PTTID FROM DG.POCSUBSCRINFO WHERE MDN = ?
+        </query-string>
+    </query>
+    <query id="255">
+        <query-string>DELETE FROM DG.CAMPEDGROUPINFO WHERE MDN = ? AND CAMPED_BY = ?</query-string>
+    </query>
+    <query id="256">
+        <query-string>SELECT MDN FROM DG.POCSUBSCRINFO a WHERE PAMACCID = ? AND CLIENT_TYPE = ? AND SERVICEAUTHSTATUS =
+            2 AND NOT EXISTS (SELECT 1 FROM DG.CORPGROUPDISTINFO b WHERE a.MDN = b.RECIPIENTMDN)
+        </query-string>
+    </query>
+    <query id="257">
+        <query-string>SELECT MDN FROM DG.POCSUBSCRINFO a WHERE PAMACCID = ? AND CLIENT_TYPE = ? AND SERVICEAUTHSTATUS =
+            2 AND NOT EXISTS (SELECT 1 FROM DG.CORPCONTACTCOUNT b WHERE a.MDN = b.MDN)
+        </query-string>
+    </query>
+    <query id="258">
+        <query-string>SELECT MDN, CONTACTMDN FROM DG.CORPCONTACTLIST WHERE CONTACTMDN IN (MDNLIST)</query-string>
+    </query>
+    <query id="259">
+        <query-string>SELECT MEMBERMDN, CORPGROUPID, IS_SUPERVISOR FROM DG.CORPGROUPMEMBERLIST WHERE MEMBERMDN IN
+            (MDNLIST)
+        </query-string>
+    </query>
+    <query id="260">
+        <query-string>DELETE FROM DG.CORPGROUPMEMBERLIST WHERE MEMBERMDN = ?</query-string>
+    </query>
+    <query id="261">
+        <query-string>DELETE FROM DG.CORPGROUPDISTINFO WHERE RECIPIENTMDN = ?</query-string>
+    </query>
+    <query id="262">
+        <query-string>DELETE FROM DG.CORPCONTACTLIST WHERE CONTACTMDN = ? OR MDN = ?</query-string>
+    </query>
+    <query id="263">
+        <query-string>DELETE FROM DG.CORPLISTMEMBER WHERE MEMBERMDN = ?</query-string>
+    </query>
+    <query id="264">
+        <query-string>DELETE FROM DG.CORPLISTDISTINFO WHERE RECIPIENTMDN = ?</query-string>
+    </query>
+    <query id="265">
+        <query-string>SELECT CORPID FROM DG.EXTCORPCONTACT WHERE CONTACTMDN IN (MDNLIST)</query-string>
+    </query>
+    <query id="266">
+        <query-string>DELETE FROM DG.CAMPEDGROUPINFO WHERE GROUPID IN (GROUPIDS)</query-string>
+    </query>
+    <query id="267">
+        <query-string>INSERT INTO DG.CAMPEDGROUPINFO (MDN, GROUPURI, GROUPID, CAMPED_BY, PRIORITY) VALUES (?, ?, ?, ?,
+            ?)
+        </query-string>
+    </query>
+    <query id="268">
+        <query-string>INSERT INTO DG.XDMS_TGSC(MDN, TGSC_MODE,ETAG) VALUES (?,?,?)</query-string>
+    </query>
+    <query id="270">
+        <query-string>DELETE FROM DG.XDMS_TGSC WHERE MDN=?</query-string>
+    </query>
+    <query id="271">
+        <query-string>SELECT GROUPID, PRIORITY FROM DG.CAMPEDGROUPINFO WHERE MDN = ?</query-string>
+    </query>
+    <query id="272">
+        <query-string>DELETE FROM DG.CAMPEDGROUPINFO</query-string>
+    </query>
+    <query id="273">
+        <query-string>UPDATE DG.POCSUBSCRINFO SET CORPADMINFS1=?, ACTIVEFS1=?, LASTPROFILEUPDATETIME=?, CORPADMINFS2=?,
+            ACTIVEFS2=? WHERE MDN=?
+        </query-string>
+    </query>
+    <query id="274">
+        <query-string>SELECT CORPADMINFS2BITMASK FROM DG.LICENSEINFO</query-string>
+    </query>
+    <query id="275">
+        <query-string>SELECT POCHOME,PRESENCEHOME,XDMSHOME,CLIENTFS1,SUBSCRIBERFS1, OPSFS1, CORPADMINFS1, ACTIVEFS1,
+            CLIENT_TYPE , CLIENTPV_MAJORVERSION, CORPID, XDMSFS1, CLIENTFS2,SUBSCRIBERFS2, OPSFS2, CORPADMINFS2,
+            ACTIVEFS2, XDMSFS2,USERPROFILEFS2 FROM DG.POCSUBSCRINFO WHERE MDN=?
+        </query-string>
+    </query>
+    <query id="276">
+        <query-string>UPDATE DG.XDMS_TGSC SET TGSC_MODE=? WHERE MDN=?</query-string>
+    </query>
+    <query id="277">
+        <query-string>SELECT TGSC_MODE, ETAG FROM DG.XDMS_TGSC WHERE MDN=?</query-string>
+    </query>
+    <query id="278">
+        <query-string>SELECT MDN FROM DG.CAMPEDGROUPINFO WHERE GROUPID=?</query-string>
+    </query>
+    <query id="279">
+        <query-string>SELECT MDN, COUNT(MDN) FROM DG.CAMPEDGROUPINFO WHERE MDN IN(MDNLIST) GROUP BY MDN</query-string>
+    </query>
+    <query id="280">
+        <query-string>DELETE DG.CAMPEDGROUPINFO WHERE MDN IN (MDNLIST) AND GROUPID = ?</query-string>
+    </query>
+    <query id="281">
+        <query-string>DELETE DG.CAMPEDGROUPINFO WHERE MDN = ? AND GROUPID = ?</query-string>
+    </query>
+    <query id="282">
+        <query-string>UPDATE DG.XDMS_TGSC SET ETAG=? WHERE MDN=?</query-string>
+    </query>
+    <query id="283">
+        <query-string>SELECT 1 FROM DG.EXTCORPCONTACT WHERE CONTACTMDN=? AND CORPID = ?</query-string>
+    </query>
+    <query id="284">
+        <query-string>SELECT MDN FROM DG.POCSUBSCRINFO WHERE MDN IN (MDNLIST) AND CLIENT_TYPE NOT IN (3,4,7,8,12,17,18)
+            AND CORPID=?
+        </query-string>
+    </query>
+    <query id="285">
+        <query-string>SELECT MDN FROM DG.POCSUBSCRINFO WHERE MDN IN (MDNLIST) AND CLIENT_TYPE IN (3,12);</query-string>
+    </query>
+    <query id="286">
+        <query-string>SELECT CONTACTMDN FROM DG.CORPCONTACTLIST WHERE MDN IN(SELECT MDN FROM DG.POCSUBSCRINFO WHERE
+            CORPID=? AND CLIENT_TYPE IN (3,12)) AND CONTACTMDN IN(MDNLIST) AND CONTACTCORPID=?;
+        </query-string>
+    </query>
+    <query id="287">
+        <query-string>SELECT PTTSERVERID, ENABLE_LOC_PUBLISH FROM DG.LOCATIONSERVICECONFIG WHERE PTTSERVERID IN
+            (POCHOMES)
+        </query-string>
+    </query>
+    <query id="288">
+        <query-string>SELECT EXPIRYTIME, INSERTIONTIME, SUBSCRIPTIONKEY FROM DG.TMPVASSUBSCRIPTIONKEYINFO WHERE MDN = ?
+            AND SERVICENAME = ?;
+        </query-string>
+    </query>
+    <query id="289">
+        <query-string>SELECT COUNT(MDN) FROM DG.POCSUBSCRINFO WHERE CORPID=? AND nvl(USERPROFILEINDEX,0)=0 AND SERVICEAUTHSTATUS != 10</query-string>
+    </query>
+    <query id="290">
+        <query-string>SELECT COUNT(CONTACTMDN) FROM DG.EXTCORPCONTACT WHERE CORPID=? AND CONTACT_TYPE=? AND
+            CONTACTMDN NOT IN (SELECT MDN FROM DG.POCSUBSCRINFO WHERE SERVICEAUTHSTATUS =10)
+        </query-string>
+    </query>
+    <query id="291">
+        <query-string>SELECT ROWS ? to ? MDN, SUBSCRNAME, SERVICEAUTHSTATUS, PUBLICSUBSCRIPTIONTYPE,
+            CORPSUBSCRIPTIONTYPE, CLIENT_TYPE, ACTIVEFS1, USER_ID, DISPATCH_TYPE, ALIAS_MDN, LICENSE_TYPE, ACTIVEFS2,
+            MCPTT_COMPLIANCE,CAMERA_TYPE, SUBSCRIBERFS2, GW_ID FROM DG.POCSUBSCRINFO WHERE CORPID=? AND (USERPROFILEINDEX is
+            null or USERPROFILEINDEX=0) AND SERVICEAUTHSTATUS != 10 ORDER BY SORT_TYPE
+        </query-string>
+    </query>
+    <query id="292">
+        <query-string>SELECT ROWS ? to ? CONTACTMDN,CONTACTNAME FROM DG.EXTCORPCONTACT WHERE CORPID=? AND CONTACT_TYPE=1
+            AND CONTACTMDN NOT IN (SELECT MDN FROM DG.POCSUBSCRINFO WHERE SERVICEAUTHSTATUS =10) ORDER BY SORT_TYPE
+        </query-string>
+    </query>
+    <query id="293">
+        <query-string>SELECT ROWS ? to ? EXT.CONTACTMDN, EXT.CONTACTNAME, SUB.PROFILE_ID FROM DG.EXTCORPCONTACT EXT,
+            DG.EXTSUBSCRINFO SUB WHERE EXT.CONTACTMDN = SUB.MDN AND EXT.CONTACT_TYPE=2 AND EXT.CORPID=?
+            AND CONTACTMDN NOT IN (SELECT MDN FROM DG.POCSUBSCRINFO WHERE SERVICEAUTHSTATUS =10) ORDER BY SORT_TYPE
+        </query-string>
+    </query>
+    <query id="294">
+        <query-string>SELECT MDN, CONTACTCOUNT FROM DG.CORPCONTACTCOUNT WHERE MDN IN (MDNLIST)</query-string>
+    </query>
+    <query id="295">
+        <query-string>SELECT EXT.CONTACTMDN, EXT.CONTACTNAME, SUB.PROFILE_ID FROM DG.EXTCORPCONTACT EXT,
+            DG.EXTSUBSCRINFO SUB WHERE EXT.CONTACTMDN = SUB.MDN AND EXT.CONTACT_TYPE=2 AND EXT.CORPID=?
+            AND CONTACTMDN NOT IN (SELECT MDN FROM DG.POCSUBSCRINFO WHERE SERVICEAUTHSTATUS =10)
+        </query-string>
+    </query>
+    <query id="296">
+        <query-string>SELECT CONTACTMDN,CONTACTNAME FROM DG.EXTCORPCONTACT WHERE CORPID=? AND CONTACT_TYPE=1
+            AND CONTACTMDN NOT IN (SELECT MDN FROM DG.POCSUBSCRINFO WHERE SERVICEAUTHSTATUS =10)
+        </query-string>
+    </query>
+    <query id="297">
+        <query-string>SELECT CONTACTMDN,CONTACTNAME, CONTACTCORPID, CONTACT_TYPE FROM DG.EXTCORPCONTACT WHERE CONTACTMDN
+            IN (MDNLIST) AND CORPID = ?
+        </query-string>
+    </query>
+    <query id="298">
+        <query-string>SELECT MDN, PROFILE_ID FROM DG.EXTSUBSCRINFO WHERE MDN IN (MDNLIST)</query-string>
+    </query>
+    <query id="299">
+        <query-string>SELECT MEMBERMDN, MEMBERCORPID FROM DG.CORPLISTMEMBER WHERE CORPLISTID IN (SUBLISTID)
+        </query-string>
+    </query>
+    <query id="300">
+        <query-string>SELECT MDN, SUBSCRNAME, SERVICEAUTHSTATUS, PUBLICSUBSCRIPTIONTYPE, CORPSUBSCRIPTIONTYPE,
+            CLIENT_TYPE, ACTIVEFS1, USER_ID, DISPATCH_TYPE, ALIAS_MDN, LICENSE_TYPE, ACTIVEFS2,
+            MCPTT_COMPLIANCE,CAMERA_TYPE, SUBSCRIBERFS2, GW_ID FROM DG.POCSUBSCRINFO WHERE CORPID = ? AND (USERPROFILEINDEX is
+            null or USERPROFILEINDEX=0) AND SERVICEAUTHSTATUS != 10;
+        </query-string>
+    </query>
+    <query id="301">
+        <query-string>SELECT CORPID, MDN, SUBSCRNAME, PUBLICSUBSCRIPTIONTYPE, CORPSUBSCRIPTIONTYPE, CLIENT_TYPE,
+            POCHOME, PRESENCEHOME, ACTIVEFS1, CLIENTPV_MAJORVERSION, USERAGENT, SUBSCRIBERFS1, LICENSE_TYPE, ALIAS_MDN,
+            USER_ID, SERVICEAUTHSTATUS, ACTIVEFS2, SUBSCRIBERFS2,USERPROFILEID,MCPTT_COMPLIANCE, CORPADMINFS1, CORPADMINFS2 FROM DG.POCSUBSCRINFO
+            WHERE MDN IN (MDNLIST)
+        </query-string>
+    </query>
+    <query id="302">
+        <query-string>SELECT CORPGROUPID, GROUPDISPLAYNAME, ETAG, CORPID, GROUPTYPE, AVATAR_ID, GROUP_CREATED_BY,
+            IS_LARGEGROUP, GROUPMEMBERLISTID,GROUP_SHARED,POCHOME,UGWINTEROP,VIDEO_PERMISSION,HIERARCHY_ID, GRP_PROFILE_ID FROM DG.CORPGROUPINFO WHERE CORPGROUPID
+            IN(GROUPIDS);
+        </query-string>
+    </query>
+    <query id="303">
+        <query-string>SELECT CORPID, CONTACTNAME,CONTACT_TYPE FROM DG.EXTCORPCONTACT WHERE CONTACTMDN=?;</query-string>
+    </query>
+    <query id="304">
+        <query-string>SELECT MDN, ACTIVEFS1, ACTIVEFS2 FROM DG.POCSUBSCRINFO WHERE MDN IN (MDNLIST) AND CORPID = ?
+        </query-string>
+    </query>
+    <query id="305">
+        <query-string>SELECT CORPGROUPID FROM DG.CORPGROUPMEMBERLIST WHERE MEMBERMDN = ? AND IS_BROADCASTER = ?
+        </query-string>
+    </query>
+    <query id="306">
+        <query-string>UPDATE DG.CORPGROUPMEMBERLIST SET IS_BROADCASTER = ? WHERE MEMBERMDN = ? AND CORPGROUPID = ?
+        </query-string>
+    </query>
+    <query id="307">
+        <query-string>SELECT CORPGROUPID, MEMBERCOUNT FROM DG.CORPGROUPMEMBERCOUNT WHERE CORPGROUPID IN(GROUPIDS);
+        </query-string>
+    </query>
+    <query id="308">
+        <query-string>SELECT CORPGROUPID FROM DG.CORPGROUPMEMBERLIST WHERE MEMBERMDN = ? AND IS_SUPERVISOR = ?
+        </query-string>
+    </query>
+    <query id="309">
+        <query-string>UPDATE DG.CORPGROUPINFO SET OVERRIDE_PR = ? WHERE CORPGROUPID = ?</query-string>
+    </query>
+    <query id="310">
+        <query-string>Select PAI.BILLINGMDN, PAI.PAMACCID, PAI.PAMACCNAME, PAI.MAXSUBSCRIBER, PAI.PAMACCSTATE,
+            PAI.LASTUPDATETIME, PSPI.PUBLICSUBSCRIPTIONTYPE, PSPI.CORPSUBSCRIPTIONTYPE,
+            PSPI.CLIENT_TYPE,PSPI.SUBSCRIBERFS,PSPI.SUBSCRIBERFS2 from DG.PAMACCOUNTINFO PAI, DG.PAMSUBSCRPROFILEINFO
+            PSPI where PAI.PAMACCID=PSPI
+            .PAMACCID AND PSPI.CORPID=?
+        </query-string>
+    </query>
+    <query id="311">
+        <query-string>SELECT PAMACCID, LASTUPDATETIME FROM DG.PAMACCOUNTINFO WHERE BILLINGMDN = ?</query-string>
+    </query>
+    <query id="312">
+        <query-string>SELECT MDN, SUBSCRNAME, SERVICEAUTHSTATUS, CLIENT_TYPE, PUBLICSUBSCRIPTIONTYPE,
+            CORPSUBSCRIPTIONTYPE FROM DG.POCSUBSCRINFO WHERE PAMACCID = ?
+        </query-string>
+    </query>
+    <query id="313">
+        <query-string>SELECT MDN, SUBSCRNAME, SERVICEAUTHSTATUS, CLIENT_TYPE , PUBLICSUBSCRIPTIONTYPE,
+            CORPSUBSCRIPTIONTYPE FROM DG.POCSUBSCRINFO WHERE PAMACCID = ? and CORPID = ?
+        </query-string>
+    </query>
+    <query id="314">
+        <query-string>SELECT MDN FROM DG.KUIDPOOLUSAGE WHERE USED=? AND PAMACCID=?</query-string>
+    </query>
+    <query id="315">
+        <query-string>DELETE FROM DG.KUIDPOOLUSAGE WHERE MDN IN (MDNLIST) AND PAMACCID=?</query-string>
+    </query>
+    <query id="316">
+        <query-string>SELECT PAMACCID FROM DG.PAMSUBSCRPROFILEINFO WHERE CORPID = ?</query-string>
+    </query>
+    <query id="317">
+        <query-string>UPDATE DG.PAMACCOUNTINFO SET LASTUPDATETIME = ? WHERE PAMACCID = ?</query-string>
+    </query>
+    <query id="318">
+        <query-string>SELECT CORPGROUPID, GROUPDISPLAYNAME, CORPID FROM DG.CORPGROUPINFO WHERE CORPGROUPID IN (GROUPIDS);
+        </query-string>
+    </query>
+    <query id="319">
+        <query-string>SELECT CONTACTMDN FROM DG.EXTCORPCONTACT WHERE CONTACTMDN = ? AND CORPID = ?</query-string>
+    </query>
+    <query id="320">
+        <query-string>SELECT CORPLISTID FROM DG.CORPLISTMEMBER WHERE MEMBERMDN = ?</query-string>
+    </query>
+    <query id="321">
+        <query-string>SELECT CORPLISTID, LISTDISPLAYNAME FROM DG.CORPLISTINFO WHERE LISTTYPE = ? AND CORPID = ? AND
+            CORPLISTID IN(SUBLISTID)
+        </query-string>
+    </query>
+    <query id="322">
+        <query-string>SELECT MDN, SUBSCRNAME FROM DG.POCSUBSCRINFO WHERE CORPCONTACTLISTID IN(SUBLISTID)</query-string>
+    </query>
+    <query id="323">
+        <query-string>SELECT POCNNI_INTERFACE_ENABLED, POCNNI_SERVICEAUTHPOLICY, POCNNI_SYSTEMID FROM
+            DG.GENERIC_POC_NNI_CONFIG WHERE RECID=1;
+        </query-string>
+    </query>
+    <query id="324">
+        <query-string>SELECT MEMBERMDN,CORPGROUPID from DG.CORPGROUPMEMBERLIST WHERE MEMBERMDN IN (MDNLIST);
+        </query-string>
+    </query>
+    <query id="325">
+        <query-string>SELECT NNI_GW_ACCOUNTID, LASTUPDATETIME, POC_CORP_NNI_REFERENCE_ID FROM
+            DG.CORP_GW_LINKED_ACCOUNTINFO WHERE POC_CORP_NNI_REFERENCE_ID=?;
+        </query-string>
+    </query>
+    <query id="326">
+        <query-string>SELECT MDN, CLIENT_TYPE FROM DG.POCSUBSCRINFO WHERE MDN IN (MDNLIST) AND CORPID=? AND CLIENT_TYPE
+            IN (8,17);
+        </query-string>
+    </query>
+    <query id="327">
+        <query-string>SELECT CORPGROUPID FROM DG.CORPGROUPINFO WHERE CORPID=?;</query-string>
+    </query>
+    <query id="328">
+        <query-string>SELECT GRPMEM.MEMBERMDN, COUNT(GRPMEM.MEMBERMDN)
+            FROM DG.CORPGROUPMEMBERLIST GRPMEM INNER JOIN DG.CORPGROUPINFO GRPINFO ON GRPMEM.CORPGROUPID = GRPINFO.CORPGROUPID
+            WHERE GRPMEM.MEMBERMDN IN (MDNLIST) AND GRPINFO.CORPID = ? GROUP BY GRPMEM.MEMBERMDN;
+        </query-string>
+    </query>
+    <query id="329">
+        <query-string>SELECT MEMBERMDN FROM DG.CORPLISTMEMBER WHERE CORPLISTID IN (SUBLISTID);</query-string>
+    </query>
+    <query id="330">
+        <query-string>SELECT MDN, ETAG FROM DG.XDMS_TGSC WHERE MDN IN(MDNLIST)</query-string>
+    </query>
+    <query id="331">
+        <query-string>SELECT MDN, ACTIVEFS1, ACTIVEFS2 FROM DG.POCSUBSCRINFO WHERE MDN IN(MDNLIST)</query-string>
+    </query>
+    <query id="332">
+        <query-string>SELECT MDN FROM DG.POCSUBSCRINFO WHERE CORPID=? AND CLIENT_TYPE=?;</query-string>
+    </query>
+    <query id="333">
+        <query-string>SELECT CGML.CORPGROUPID, CGML.MEMBERMDN FROM DG.CORPGROUPMEMBERLIST CGML, DG.CORPGROUPINFO CGI
+            WHERE CGI.CORPGROUPID=CGML.CORPGROUPID AND CGI.CORPID=? AND CGML.MEMBERMDN IN (MDNLIST);
+        </query-string>
+    </query>
+    <query id="334">
+        <query-string>SELECT FIRST 1 MDN FROM DG.POCSUBSCRINFO WHERE CLIENT_TYPE in(7, 8, 17) AND CORPID = ?;
+        </query-string>
+    </query>
+    <query id="335">
+        <query-string>SELECT CORPGROUPID FROM DG.CORPGROUPMEMBERLIST WHERE CORPGROUPID IN (GROUPIDS) and IS_SUPERVISOR =
+            2 and MEMBERMDN != ?;
+        </query-string>
+    </query>
+    <query id="336">
+        <query-string>SELECT CORPGROUPID, COUNT(MEMBERMDN) FROM DG.CORPGROUPMEMBERLIST WHERE CORPGROUPID IN (GROUPIDS)
+            AND MEMBERMDN != ? GROUP BY CORPGROUPID;
+        </query-string>
+    </query>
+    <query id="337">
+        <query-string>UPDATE DG.PAMACCOUNTINFO SET PAMACCNAME=? WHERE BILLINGMDN=?</query-string>
+    </query>
+    <query id="338">
+        <query-string>SELECT CORPLISTID FROM DG.CORPLISTMEMBER WHERE MEMBERMDN = ? AND CORPLISTID IN(SELECT CORPLISTID
+            FROM DG.CORPLISTINFO WHERE LISTDISTRIBUTIONPOLICY = ? AND CORPID = ?);
+        </query-string>
+    </query>
+    <query id="339">
+        <query-string>SELECT CORPGROUPID FROM DG.CORPGROUP_LISTREF WHERE CORPLISTID IN (SUBLISTID);</query-string>
+    </query>
+    <query id="340">
+        <query-string>DELETE FROM DG.CORPLISTMEMBER WHERE CORPLISTID IN (SUBLISTID) AND MEMBERMDN = ?;</query-string>
+    </query>
+    <query id="341">
+        <query-string>SELECT RECIPIENTMDN FROM DG.CORPLISTDISTINFO WHERE CORPLISTID IN (SUBLISTID) AND RECIPIENTMDN !=
+            ?;
+        </query-string>
+    </query>
+    <query id="342">
+        <query-string>SELECT CORPLISTID, COUNT(MEMBERMDN) FROM DG.CORPLISTMEMBER WHERE CORPLISTID IN (SUBLISTID) GROUP
+            BY CORPLISTID;
+        </query-string>
+    </query>
+    <query id="343">
+        <query-string>SELECT CORPLISTID FROM DG.CORPLISTMEMBER WHERE CORPLISTID IN (SUBLISTID) AND MEMBERMDN = ?;
+        </query-string>
+    </query>
+    <query id="344">
+        <query-string>SELECT CORPGROUPID FROM DG.CORPGROUPMEMBERLIST WHERE IS_BROADCASTER != 0 AND CORPGROUPID IN
+            (GROUPIDS) ;
+        </query-string>
+    </query>
+    <query id="345">
+        <query-string>SELECT CORPLISTID,ETAG FROM DG.CORPLISTINFO WHERE LISTDISPLAYNAME=? AND CORPID=?;</query-string>
+    </query>
+    <query id="346">
+        <query-string>SELECT CORPGROUPID, ETAG FROM DG.CORPGROUPINFO WHERE CORPID=? AND GROUPDISPLAYNAME=?;
+        </query-string>
+    </query>
+    <query id="347">
+        <query-string>SELECT CLIENT_TYPE,IS_ENABLED FROM DG.CLIENT_TYPE_CONFIGURATION;</query-string>
+    </query>
+    <query id="348">
+        <query-string>SELECT CLIENT_TYPE FROM DG.PAMSUBSCRPROFILEINFO WHERE CORPID= ?;</query-string>
+    </query>
+    <query id="349">
+        <query-string>SELECT MDN, SUBSCRNAME, CLIENT_TYPE, CORPID FROM DG.POCSUBSCRINFO WHERE MDN IN (MDNLIST) AND
+            CORPID=?;
+        </query-string>
+    </query>
+    <query id="361">
+        <query-string>DELETE FROM DG.TMPVASSUBSCRIPTIONKEYINFO WHERE MDN = ? AND SERVICENAME = ?;</query-string>
+    </query>
+    <query id="364">
+        <query-string>UPDATE DG.CORPGROUPINFO SET AVATAR_ID = ? WHERE CORPGROUPID = ?</query-string>
+    </query>
+
+    <query id="365">
+        <query-string>INSERT INTO DG.CHANNELGROUPINFO (MDN, GROUPID,CHANNELID) VALUES (?,?,?)</query-string>
+    </query>
+
+    <query id="366">
+        <query-string>DELETE FROM DG.CHANNELGROUPINFO</query-string>
+    </query>
+
+    <query id="367">
+        <query-string>SELECT GROUPID, CHANNELID FROM DG.CHANNELGROUPINFO WHERE MDN = ?</query-string>
+    </query>
+    <query id="368">
+        <query-string>DELETE DG.CHANNELGROUPINFO WHERE MDN = ? AND GROUPID = ?</query-string>
+    </query>
+    <query id="369">
+        <query-string>SELECT MDN, COUNT(MDN) FROM DG.CHANNELGROUPINFO WHERE MDN IN(MDNLIST) GROUP BY MDN</query-string>
+    </query>
+    <query id="370">
+        <query-string>SELECT MDN FROM DG.CHANNELGROUPINFO WHERE GROUPID=?</query-string>
+    </query>
+    <query id="371">
+        <query-string>DELETE FROM DG.CHANNELGROUPINFO WHERE GROUPID IN (GROUPIDS)</query-string>
+    </query>
+    <query id="372">
+        <query-string>DELETE FROM DG.CHANNELGROUPINFO WHERE MDN = ?</query-string>
+    </query>
+    <query id="373">
+        <query-string>SELECT DISTINCT G.CORPGROUPID, G.GROUPDISPLAYNAME, GMC.MEMBERCOUNT, G.ETAG, G.GROUPTYPE,
+            G.IS_LARGEGROUP FROM DG.CORPGROUPMEMBERCOUNT GMC, DG.CORPGROUPINFO G, DG.CORPGROUPMEMBERLIST GROUPDIS WHERE
+            GROUPDIS.CORPGROUPID = G.CORPGROUPID AND GMC.CORPGROUPID = G.CORPGROUPID AND G.CORPID = ? AND G.CORPGROUPID
+            in (SELECT DISTINCT CORPGROUPID FROM DG.CORPGROUPMEMBERLIST WHERE MEMBERMDN = ?)
+        </query-string>
+    </query>
+    <query id="374">
+        <query-string>SELECT DISTINCT MEMBERMDN FROM DG.CORPGROUPMEMBERLIST WHERE CORPGROUPID IN (SELECT CORPGROUPID
+            FROM DG.CORPGROUPINFO WHERE CORPID = ? AND CORPGROUPID IN (SELECT DISTINCT CORPGROUPID FROM
+            DG.CORPGROUPMEMBERLIST WHERE IS_LOCWATCHER = ?)) AND MEMBERMDN IN (MDNLIST)
+        </query-string>
+    </query>
+    <query id="375">
+        <query-string>SELECT CORPGROUPID, MEMBERMDN, IS_SUPERVISOR, IS_LOCWATCHER, IS_OSMAUTHORIZED,
+            CALL_INITIATE_PERMISSION, CALL_RECEIVE_PERMISSION, INCALL_PERMISSION,V_CALL_INITIATE_PERMISSION,V_CALL_RECEIVE_PERMISSION,V_INCALL_PERMISSION, IS_BROADCASTER , MEMBERMDN_CORPID FROM DG.CORPGROUPMEMBERLIST WHERE CORPGROUPID IN(GROUPIDS);
+        </query-string>
+    </query>
+    <query id="376">
+        <query-string>SELECT CORPGROUPID, MEMBERMDN, IS_SUPERVISOR, IS_LOCWATCHER FROM DG.CORPGROUPMEMBERLIST WHERE
+            CORPGROUPID IN(SELECT DISTINCT CORPGROUPID FROM DG.CORPGROUPMEMBERLIST WHERE CORPGROUPID IN(GROUPIDS) AND
+            IS_LOCWATCHER = ?);
+        </query-string>
+    </query>
+    <query id="377">
+        <query-string>SELECT MDN, CLIENTFS1, CORPADMINFS1, CLIENTFS2, CORPADMINFS2 FROM DG.POCSUBSCRINFO WHERE CORPID =
+            ? AND nvl(USERPROFILEINDEX,0)=0;
+        </query-string>
+    </query>
+    <query id="378">
+        <query-string>SELECT MDN, POCHOME, PRESENCEHOME, XDMSHOME, CLIENTFS1, SUBSCRIBERFS1, OPSFS1, CORPADMINFS1,
+            ACTIVEFS1, CLIENT_TYPE, CLIENTPV_MAJORVERSION, XDMSFS1, CLIENTFS2, SUBSCRIBERFS2, OPSFS2, CORPADMINFS2,
+            ACTIVEFS2, XDMSFS2, LASTPROFILEUPDATETIME, USERPROFILEFS2, SERVICEAUTHSTATUS, USERAGENT,
+            CLIENTPV_MINORVERSION, LAST_ACTIVATION_TIME, IMEI, CLIENT_PASSWORD, VOCODERID, CLIENT_SW_INFO,
+            CLIENT_PLATFORM_TYPE, DYNAMICQOSFLAG, DERIVED_KEY, SERVICE_STATUS_OP, LICENSE_TYPE FROM DG.POCSUBSCRINFO
+            WHERE MDN IN (MDNLIST) AND CORPID = ?
+        </query-string>
+    </query>
+    <query id="379">
+        <query-string>SELECT CGML.CORPGROUPID, CGML.MEMBERMDN, CGML.IS_SUPERVISOR, CGML.IS_BROADCASTER,
+            CGML.MEMBER_TYPE, CGML.CALL_INITIATE_PERMISSION, CGML.CALL_RECEIVE_PERMISSION, CGML.INCALL_PERMISSION,
+            CGML.IS_LOCWATCHER, CGML.V_CALL_INITIATE_PERMISSION, CGML.V_CALL_RECEIVE_PERMISSION, CGML.V_INCALL_PERMISSION FROM DG.CORPGROUPMEMBERLIST CGML, DG.CORPGROUPINFO CGI WHERE
+            CGI.CORPGROUPID=CGML.CORPGROUPID AND CGI.CORPGROUPID IN (GROUPIDS) AND (CGML.IS_SUPERVISOR IN
+            (SUPERVISORVALUE) OR CGML.IS_BROADCASTER = 1 OR MEMBER_TYPE > 0 OR CGML.IS_LOCWATCHER = 1);
+        </query-string>
+    </query>
+    <query id="380">
+        <query-string>SELECT CONTACTMDN, CONTACTNAME, CONTACTCORPID, CONTACT_TYPE FROM DG.EXTCORPCONTACT WHERE CORPID =
+            ?
+        </query-string>
+    </query>
+    <query id="381">
+        <query-string>UPDATE DG.POCSUBSCRINFO SET PUBLICSUBSCRIPTIONTYPE = ?, CORPSUBSCRIPTIONTYPE = ?, SUBSCRNAME= ?,
+            EMAIL = ?, LASTPROFILEUPDATETIME = ?, DISPATCH_TYPE = ?, USER_ID = ?, CLIENT_PASSWORD = ?,
+            SERVICE_STATUS_AUTHUSER = ?, SERVICEAUTHSTATUS = ?, ALIAS_MDN = ? WHERE MDN = ? AND CORPID = ?
+        </query-string>
+    </query>
+    <query id="382">
+        <query-string>SELECT MDN FROM DG.POCSUBSCRINFO WHERE USER_ID = ? AND MDN != ?</query-string>
+    </query>
+    <query id="383">
+        <query-string>SELECT FIRST 500 MDN, INSERTIONTIME, LIID, LI_PTTSERVERID, LICCC_PTTSERVERID, DFCCIPADDRESS,
+            DFCCPORT, IPADDRESSTYPE FROM DG.LI_TARGET_INFO
+        </query-string>
+    </query>
+    <query id="384">
+        <query-string>DELETE FROM DG.TMPVASSUBSCRIPTIONKEYINFO WHERE MDN = ?</query-string>
+    </query>
+    <query id="385">
+        <query-string>SELECT MDN, CORPID, SERVICEAUTHSTATUS, CLIENT_TYPE, USER_ID , SUBSCRNAME , MCPTT_COMPLIANCE ,
+            MC_ID , MC_PTTID , MC_VIDEOID , MC_DATAID , ALIAS_MDN FROM DG.POCSUBSCRINFO WHERE USER_ID = ?
+        </query-string>
+    </query>
+    <query id="386">
+        <query-string>UPDATE DG.CORPGROUPINFO SET LMR_INTEROP_CAPABLE = ? WHERE CORPGROUPID = ?</query-string>
+    </query>
+    <query id="387">
+        <query-string>SELECT CORPGROUPID, COUNT(MEMBER_TYPE) FROM DG.CORPGROUPMEMBERLIST WHERE CORPGROUPID IN (GROUPIDS)
+            AND MEMBER_TYPE > 0 GROUP BY CORPGROUPID
+        </query-string>
+    </query>
+    <query id="388">
+        <query-string>SELECT MDN FROM DG.POCSUBSCRINFO WHERE CORPID=? AND CLIENT_TYPE IN (CLIENTTYPES);</query-string>
+    </query>
+    <query id="389">
+        <query-string>SELECT CORPID, AUTHORIZED_MDN, TARGET_MDN, PERM_BITSET, DISCREET_ENABLED, COMMON_AU FROM
+            DG.MCPTT_PERM_INFO WHERE AUTHORIZED_MDN = ?
+        </query-string>
+    </query>
+    <query id="390">
+        <query-string>INSERT INTO DG.MCPTT_PERM_INFO(CORPID, AUTHORIZED_MDN, TARGET_MDN, PERM_BITSET, DISCREET_ENABLED,
+            COMMON_AU) VALUES (?,?,?,?,?,?);
+        </query-string>
+    </query>
+    <query id="391">
+        <query-string>UPDATE DG.MCPTT_PERM_INFO SET PERM_BITSET = ?, DISCREET_ENABLED = ? , COMMON_AU = ? WHERE
+            AUTHORIZED_MDN = ? AND TARGET_MDN = ?;
+        </query-string>
+    </query>
+    <query id="392">
+        <query-string>DELETE FROM DG.MCPTT_PERM_INFO WHERE AUTHORIZED_MDN = ? AND TARGET_MDN = ?;</query-string>
+    </query>
+    <query id="393">
+        <query-string>SELECT AUTHORIZED_MDN, COUNT(TARGET_MDN) FROM DG.MCPTT_PERM_INFO WHERE AUTHORIZED_MDN IN(MDNLIST)
+            AND CORPID = ? GROUP BY AUTHORIZED_MDN;
+        </query-string>
+    </query>
+    <query id="394">
+        <query-string>DELETE FROM DG.AUTHORIZATION_DOC WHERE MDN = ?;</query-string>
+    </query>
+    <query id="395">
+        <query-string>SELECT MDN, ETAG FROM DG.AUTHORIZATION_DOC WHERE MDN IN (MDNLIST);</query-string>
+    </query>
+    <query id="396">
+        <query-string>INSERT INTO DG.AUTHORIZATION_DOC(MDN, ETAG) VALUES(?, ?);</query-string>
+    </query>
+    <query id="397">
+        <query-string>UPDATE DG.AUTHORIZATION_DOC SET ETAG = ? WHERE MDN = ?;</query-string>
+    </query>
+    <query id="398">
+        <query-string>SELECT AUTHORIZED_MDN FROM DG.MCPTT_PERM_INFO WHERE TARGET_MDN IN(MDNLIST) AND CORPID = ?;
+        </query-string>
+    </query>
+    <query id="399">
+        <query-string>SELECT AUTHORIZED_MDN, PERM_BITSET FROM DG.MCPTT_PERM_INFO WHERE TARGET_MDN = ? AND CORPID = ? AND
+            PERM_BITSET >= ?;
+        </query-string>
+    </query>
+    <query id="400">
+        <query-string>SELECT CORPGROUPID, MEMBERMDN FROM DG.CORPGROUPMEMBERLIST WHERE CORPGROUPID IN(GROUPIDS) AND
+            MEMBERMDN = ?;
+        </query-string>
+    </query>
+    <query id="401">
+        <query-string>SELECT MDN, EMERGDESTPRIORITY, EMERGDESTTYPE, EMERGDEST FROM DG.EMERGENCY_SUBSCR_DESTINFO WHERE
+            MDN = ?;
+        </query-string>
+    </query>
+    <query id="402">
+        <query-string>SELECT PSUBS.EMERGCALLTYPE, PSUBS.EMERGCANCELPERMISSION, PSUBS.EMERGLMRBEHAVIOUR,
+            PSUBS.EMERGINITIATEPERMISSION, PSUBSADD.EMERGDESTTYPE, PSUBSADD.EMERGORIGINDICATORBITSET,
+            PSUBSADD.EMERGRECVINDICATORBITSET, PSUBS.EMERGCONFTIME FROM DG.POCSUBSCRINFO PSUBS LEFT JOIN DG.POCSUBSCR_ADDLINFO PSUBSADD ON
+            PSUBS.MDN = PSUBSADD.MDN WHERE PSUBS.MDN = ? AND CORPID = ?;
+        </query-string>
+    </query>
+    <query id="403">
+        <query-string>DELETE FROM DG.EMERGENCY_SUBSCR_DESTINFO WHERE MDN = ?;</query-string>
+    </query>
+    <query id="404">
+        <query-string>UPDATE DG.POCSUBSCRINFO SET EMERGCALLTYPE = ?, EMERGCANCELPERMISSION = ?, EMERGLMRBEHAVIOUR = ?,
+            EMERGINITIATEPERMISSION = ?, EMERGCONFTIME = ? WHERE MDN = ?;
+        </query-string>
+    </query>
+    <query id="405">
+        <query-string>UPDATE DG.POCSUBSCR_ADDLINFO SET EMERGDESTTYPE = ?, EMERGORIGINDICATORBITSET = ?,
+            EMERGRECVINDICATORBITSET = ? WHERE MDN = ?;
+        </query-string>
+    </query>
+    <query id="406">
+        <query-string>INSERT INTO DG.EMERGENCY_SUBSCR_DESTINFO(MDN, EMERGDESTPRIORITY, EMERGDESTTYPE, EMERGDEST) VALUES
+            (?,?,?,?);
+        </query-string>
+    </query>
+    <query id="407">
+        <query-string>SELECT MDN, ETAG FROM DG.EMERGENCY_DOC WHERE MDN IN (MDNLIST);</query-string>
+    </query>
+    <query id="408">
+        <query-string>INSERT INTO DG.EMERGENCY_DOC(MDN, ETAG) VALUES(?, ?);</query-string>
+    </query>
+    <query id="409">
+        <query-string>UPDATE DG.EMERGENCY_DOC SET ETAG = ? WHERE MDN = ?;</query-string>
+    </query>
+    <query id="410">
+        <query-string>UPDATE DG.CORPGROUPINFO SET EMERGAUTOFLOORTIMER = ? WHERE CORPGROUPID = ?;</query-string>
+    </query>
+    <query id="411">
+        <query-string>UPDATE DG.CORPGROUPINFO SET EMERGHANGTIMERADDON = ? WHERE CORPGROUPID = ?;</query-string>
+    </query>
+    <query id="412">
+        <query-string>UPDATE DG.CORPGROUPINFO SET EMERGDNDOVERRIDE = ? WHERE CORPGROUPID = ?;</query-string>
+    </query>
+    <query id="413">
+        <query-string>UPDATE DG.CORPGROUPINFO SET HANGTIMEOUT = ? WHERE CORPGROUPID = ?;</query-string>
+    </query>
+    <query id="414">
+        <query-string>SELECT CORPGROUPID, GROUPDISPLAYNAME, GROUPTYPE, AVATAR_ID, OVERRIDE_PR, GROUP_OWNER FROM
+            DG.CORPGROUPINFO WHERE CORPID = ? AND GROUP_CREATED_BY = ?;
+        </query-string>
+    </query>
+    <query id="415">
+        <query-string>SELECT CORPGROUPID, CORPID FROM DG.CORPGROUPINFO WHERE GROUPDISPLAYNAME = ? AND GROUP_CREATED_BY =
+            ? AND GROUP_OWNER = ?;
+        </query-string>
+    </query>
+    <query id="416">
+        <query-string>SELECT MDN FROM DG.CORPCONTACTLIST WHERE CONTACTMDN IN(MDNLIST) AND CONTACTCORPID = ?;
+        </query-string>
+    </query>
+    <query id="417">
+        <query-string>SELECT MDN, EMERGDESTPRIORITY, EMERGDESTTYPE, EMERGDEST FROM DG.EMERGENCY_SUBSCR_DESTINFO WHERE
+            EMERGDEST = ?;
+        </query-string>
+    </query>
+    <query id="418">
+        <query-string>SELECT CORPGROUPID FROM DG.CORPGROUPINFO WHERE CORPID = ? AND GROUP_CREATED_BY = ?;</query-string>
+    </query>
+    <query id="419">
+        <query-string>SELECT COUNT(CORPGROUPID) FROM DG.CORPGROUPINFO WHERE CORPID = ? AND GROUP_CREATED_BY = ? AND
+            GROUP_OWNER = ?;
+        </query-string>
+    </query>
+    <query id="420">
+        <query-string>SELECT RECIPIENTMDN, COUNT(CORPGROUPID) FROM DG.CORPGROUPDISTINFO WHERE CORPGROUPID IN (GROUPIDS)
+            GROUP BY RECIPIENTMDN;
+        </query-string>
+    </query>
+    <query id="421">
+        <query-string>SELECT CGML.MEMBERMDN MEMBERMDN, COUNT(CGML.MEMBERMDN) FROM DG.CORPGROUPMEMBERLIST CGML,
+            DG.CORPGROUPINFO CGI WHERE CGI.CORPGROUPID = CGML.CORPGROUPID AND CGI.GROUP_CREATED_BY = ? AND CGI.CORPID =
+            ? AND MEMBERMDN IN (MDNLIST) GROUP BY CGML.MEMBERMDN;
+        </query-string>
+    </query>
+    <query id="422">
+        <query-string>SELECT CORPGROUPID FROM DG.CORPGROUPINFO WHERE CORPID = ? AND GROUP_CREATED_BY = ? AND GROUP_OWNER
+            = ?;
+        </query-string>
+    </query>
+    <query id="423">
+        <query-string>SELECT MDN FROM DG.POCSUBSCRINFO WHERE ALIAS_MDN = ? AND MDN != ?;</query-string>
+    </query>
+    <query id="424">
+        <query-string>SELECT MDN, PROFILE_ID FROM DG.EXTSUBSCRINFO WHERE MDN = ?;</query-string>
+    </query>
+    <query id="425">
+        <query-string>UPDATE DG.POCSUBSCRINFO SET USER_ID = ?, ALIAS_MDN = ? WHERE MDN = ? AND CORPID = ?</query-string>
+    </query>
+    <query id="426">
+        <query-string>SELECT MDN, CORPID, ALIAS_MDN, USER_ID, ACTIVEFS1, CLIENT_TYPE, SUBSCRNAME,
+            ACTIVEFS2,MCPTT_COMPLIANCE, CAMERA_TYPE,CLIENTPV_MAJORVERSION FROM DG.POCSUBSCRINFO WHERE MDN IN (MDNLIST);
+        </query-string>
+    </query>
+    <query id="427">
+        <query-string>SELECT MDN, CORPID, ALIAS_MDN, USER_ID FROM DG.POCSUBSCRINFO WHERE ALIAS_MDN IN (MDNLIST);
+        </query-string>
+    </query>
+    <query id="428">
+        <query-string>SELECT MDN, CORPID, ALIAS_MDN, USER_ID FROM DG.POCSUBSCRINFO WHERE USER_ID IN (USERIDS);
+        </query-string>
+    </query>
+    <query id="429">
+        <query-string>DELETE FROM DG.MCPTT_PERM_INFO WHERE AUTHORIZED_MDN = ?;</query-string>
+    </query>
+    <query id="430">
+        <query-string>DELETE FROM DG.MCPTT_PERM_INFO WHERE TARGET_MDN = ?;</query-string>
+    </query>
+    <query id="431">
+        <query-string>DELETE FROM DG.EMERGENCY_DOC WHERE MDN = ?;</query-string>
+    </query>
+    <query id="432">
+        <query-string>SELECT CORPID, AUTHORIZED_MDN, TARGET_MDN, PERM_BITSET, DISCREET_ENABLED FROM DG.MCPTT_PERM_INFO
+            WHERE TARGET_MDN = ?
+        </query-string>
+    </query>
+    <query id="433">
+        <query-string>UPDATE DG.POCSUBSCRINFO SET LASTPROFILEUPDATETIME = ?, SERVICE_STATUS_OP = ?,
+            SERVICE_STATUS_AUTHUSER = ?, SERVICEAUTHSTATUS = ? WHERE MDN = ? AND CORPID = ?
+        </query-string>
+    </query>
+    <query id="434">
+        <query-string>DELETE FROM DG.EMERGENCY_SUBSCR_DESTINFO WHERE EMERGDEST = ?;</query-string>
+    </query>
+    <query id="435">
+        <query-string>UPDATE DG.EMERGENCY_SUBSCR_DESTINFO SET EMERGDESTTYPE = ?, EMERGDEST = ? WHERE MDN = ? AND
+            EMERGDESTPRIORITY = ? ;
+        </query-string>
+    </query>
+    <query id="436">
+        <query-string>SELECT MDN, EMERGDESTPRIORITY, EMERGDESTTYPE, EMERGDEST FROM DG.EMERGENCY_SUBSCR_DESTINFO WHERE
+            MDN IN (EMERGMDNLIST);
+        </query-string>
+    </query>
+    <query id="437">
+        <query-string>SELECT MDN, EMERGDESTPRIORITY, EMERGDESTTYPE, EMERGDEST FROM DG.EMERGENCY_SUBSCR_DESTINFO WHERE
+            EMERGDEST IN (EMERGDESTLIST);
+        </query-string>
+    </query>
+    <query id="438">
+        <query-string>SELECT MDN, GROUPID, ZONEID, ZONENAME, CHANNELID FROM DG.SUBSCRPTTRADIOTGLIST WHERE MDN = ?;
+        </query-string>
+    </query>
+    <query id="439">
+        <query-string>DELETE FROM DG.SUBSCRPTTRADIOTGLIST WHERE MDN = ? AND GROUPID = ? AND ZONEID = ? AND CHANNELID =
+            ?;
+        </query-string>
+    </query>
+    <query id="440">
+        <query-string>INSERT INTO DG.SUBSCRPTTRADIOTGLIST(MDN, GROUPID, ZONEID, ZONENAME, CHANNELID) VALUES(?, ?, ?, ?,
+            ?);
+        </query-string>
+    </query>
+    <query id="441">
+        <query-string>DELETE FROM DG.SUBSCRPTTRADIOTGLIST WHERE MDN = ?;</query-string>
+    </query>
+    <query id="442">
+        <query-string>SELECT MDN, ETAG FROM DG.SUBSCRPTTRADIOGROUPLISTDOC WHERE MDN IN (MDNLIST);</query-string>
+    </query>
+    <query id="443">
+        <query-string>INSERT INTO DG.SUBSCRPTTRADIOGROUPLISTDOC(MDN, ETAG) VALUES(?, ?);</query-string>
+    </query>
+    <query id="444">
+        <query-string>UPDATE DG.SUBSCRPTTRADIOGROUPLISTDOC SET ETAG = ? WHERE MDN = ?;</query-string>
+    </query>
+    <query id="445">
+        <query-string>SELECT ZONEID, CHANNELID FROM DG.SUBSCRPTTRADIOTGLIST;</query-string>
+    </query>
+    <query id="446">
+        <query-string>DELETE FROM DG.SUBSCRPTTRADIOGROUPLISTDOC WHERE MDN = ?;</query-string>
+    </query>
+    <query id="447">
+        <query-string>SELECT MDN, GROUPID, ZONEID, ZONENAME, CHANNELID FROM DG.SUBSCRPTTRADIOTGLIST WHERE GROUPID
+            IN(GROUPIDS);
+        </query-string>
+    </query>
+    <query id="448">
+        <query-string>SELECT MDN, GROUPID, ZONEID, ZONENAME, CHANNELID FROM DG.SUBSCRPTTRADIOTGLIST WHERE MDN
+            IN(MDNLIST);
+        </query-string>
+    </query>
+    <query id="449">
+        <query-string>UPDATE DG.CORPGROUPMEMBERLIST SET IS_BROADCASTER = ?, GRP_MODIFY_PERM = ?,IS_OSMAUTHORIZED=? WHERE
+            MEMBERMDN = ? AND CORPGROUPID = ?;
+        </query-string>
+    </query>
+    <query id="450">
+        <query-string>SELECT A.THIRD_PARTY_ACCT_ID, B.MDN FROM DG.THIRD_PARTY_ACCOUNT_INFO A,DG.THIRD_PARTY_USER_MDN_MAP
+            B WHERE A.THIRD_PARTY_ID = B.THIRD_PARTY_ID and B.mdn in (MDNLIST);
+        </query-string>
+    </query>
+    <query id="451">
+        <query-string>SELECT THIRD_PARTY_ID, THIRD_PARTY_ACCT_ID, PASSWORD, EMAIL_ID, CREATE_TS, LASTUPDATE_TS FROM
+            DG.THIRD_PARTY_ACCOUNT_INFO WHERE THIRD_PARTY_ACCT_ID=?;
+        </query-string>
+    </query>
+    <query id="452">
+        <query-string>UPDATE DG.CORPGROUPINFO SET GROUP_OWNER = ? WHERE GROUP_OWNER = ? and CORPID = ?;</query-string>
+    </query>
+    <query id="453">
+        <query-string>SELECT CORPGROUPID, CORPID, GROUPTYPE from DG.CORPGROUPINFO WHERE IS_LARGEGROUP = ?;
+        </query-string>
+    </query>
+    <query id="454">
+        <query-string>UPDATE DG.CORPGROUPMEMBERLIST SET IS_LOCWATCHER = ? WHERE CORPGROUPID = ?;</query-string>
+    </query>
+    <query id="455">
+        <query-string>UPDATE DG.CORPGROUPINFO SET IS_LARGEGROUP = ? WHERE CORPGROUPID = ?;</query-string>
+    </query>
+    <query id="456">
+        <query-string>INSERT INTO DG.KUIDPOOLUSAGE (MDN, PAMACCID,USED) VALUES(?, ?, ?);</query-string>
+    </query>
+    <query id="457">
+        <query-string>SELECT COUNT(CORPGROUPID) FROM DG.CORPGROUPINFO WHERE IS_LARGEGROUP = 1 AND CORPID = ? AND
+            GROUP_CREATED_BY = ?;
+        </query-string>
+    </query>
+    <query id="458">
+        <query-string>DELETE FROM DG.SUBSCRPTTRADIOTGLIST WHERE GROUPID = ?;</query-string>
+    </query>
+    <query id="459">
+        <query-string>SELECT MDN, TIER_PKG_CODE, DATA_PKG_ID FROM DG.POCSUBSCR_ADDLINFO WHERE MDN IN (MDNLIST);
+        </query-string>
+    </query>
+    <query id="460">
+        <query-string>SELECT MDN FROM DG.SSCHANNELGROUPINFO WHERE GROUPID = ?</query-string>
+    </query>
+    <query id="461">
+        <query-string>DELETE FROM DG.SSCHANNELGROUPINFO WHERE GROUPID IN (GROUPIDS)</query-string>
+    </query>
+    <query id="462">
+        <query-string>SELECT MDN, ETAG FROM DG.SIMULSESSION_DOC WHERE MDN IN (MDNLIST)</query-string>
+    </query>
+    <query id="463">
+        <query-string>UPDATE DG.SIMULSESSION_DOC SET ETAG = ? WHERE MDN = ?</query-string>
+    </query>
+    <query id="464">
+        <query-string>DELETE FROM DG.SSCHANNELGROUPINFO WHERE GROUPID IN (GROUPIDS) AND MDN IN (MDNLIST)</query-string>
+    </query>
+    <query id="465">
+        <query-string>SELECT MEMBERMDN, CORPGROUPID FROM DG.CORPGROUPMEMBERLIST WHERE MEMBER_TYPE = ? AND CORPGROUPID IN
+            (GROUPIDS)
+        </query-string>
+    </query>
+    <query id="466">
+        <query-string>UPDATE DG.CORPGROUPINFO SET ETAG = ?, LASTUPDATETIME=?, IS_LARGEGROUP=? WHERE CORPGROUPID = ?
+        </query-string>
+    </query>
+    <query id="467">
+        <query-string>SELECT MEMBERMDN FROM DG.CORPGROUPMEMBERLIST WHERE (IS_LOCWATCHER = 1 OR IS_SUPERVISOR = 2) AND
+            CORPGROUPID IN (GROUPIDS)
+        </query-string>
+    </query>
+    <query id="468">
+        <query-string>UPDATE DG.POCSUBSCRINFO SET LASTPROFILEUPDATETIME = ? WHERE MDN = ?</query-string>
+    </query>
+    <query id="469">
+        <query-string>SELECT CGML.CORPGROUPID, CGML.MEMBERMDN, CGML.IS_SUPERVISOR, CGML.IS_BROADCASTER,
+            CGML.MEMBER_TYPE, CGML.CALL_INITIATE_PERMISSION, CGML.CALL_RECEIVE_PERMISSION, CGML.INCALL_PERMISSION,
+            CGML.IS_LOCWATCHER FROM DG.CORPGROUPMEMBERLIST CGML, DG.CORPGROUPINFO CGI WHERE
+            CGI.CORPGROUPID=CGML.CORPGROUPID AND CGI.CORPGROUPID IN (GROUPIDS);
+        </query-string>
+    </query>
+    <query id="470">
+        <query-string>INSERT INTO DG.OSMLISTINFO(OSMLISTID,OSMID,OSMESSAGE,OSMSHORTTEXT,OSMORDERID,OSMTYPE) VALUES
+            (?,?,?,?,?,?);
+        </query-string>
+    </query>
+    <query id="471">
+        <query-string>UPDATE DG.CORPOSMINFO SET OSMLISTNAME=? , ISDEFAULT=? WHERE CORPID=? AND OSMLISTID=?;
+        </query-string>
+    </query>
+    <query id="472">
+        <query-string>UPDATE DG.OSMLISTINFO SET OSMID=?, OSMESSAGE=?,OSMSHORTTEXT=?,OSMORDERID=?,OSMTYPE=? WHERE
+            OSMLISTID=? AND OSMID=?;
+        </query-string>
+    </query>
+    <query id="473">
+        <query-string>DELETE FROM DG.OSMLISTINFO WHERE OSMLISTID=?;</query-string>
+    </query>
+    <query id="474">
+        <query-string>SELECT C.OSMLISTID, C.OSMLISTNAME, C.ISDEFAULT, count(O.OSMLISTID) AS OSMCOUNT FROM DG.CORPOSMINFO
+            C LEFT JOIN DG.OSMLISTINFO O ON (C.OSMLISTID=O.OSMLISTID) WHERE CORPID=? GROUP BY C.OSMLISTID,
+            C.OSMLISTNAME, C.ISDEFAULT;
+        </query-string>
+    </query>
+    <query id="475">
+        <query-string>SELECT OSMLISTID,OSMLISTNAME,ISDEFAULT FROM DG.CORPOSMINFO WHERE CORPID=? AND OSMLISTID=?;
+        </query-string>
+    </query>
+    <query id="476">
+        <query-string>SELECT OSMLISTID,ISDEFAULT FROM DG.CORPOSMINFO WHERE CORPID=?;</query-string>
+    </query>
+    <query id="477">
+        <query-string>SELECT CORPGROUPID FROM DG.CORPGROUPINFO where OSMLISTID=?;</query-string>
+    </query>
+    <query id="478">
+        <query-string>SELECT OSMID,OSMORDERID,OSMTYPE,OSMSHORTTEXT,OSMESSAGE from DG.OSMLISTINFO where OSMLISTID=?;
+        </query-string>
+    </query>
+    <query id="479">
+        <query-string>DELETE FROM DG.CORPOSMINFO WHERE CORPID=? AND OSMLISTID=?;</query-string>
+    </query>
+    <query id="480">
+        <query-string>DELETE FROM DG.OSMLISTINFO WHERE OSMLISTID=? AND OSMID=?;</query-string>
+    </query>
+    <query id="481">
+        <query-string>UPDATE DG.CORPGROUPINFO SET OSMLISTID=? WHERE CORPID=? and CORPGROUPID IN(GROUPIDS);
+        </query-string>
+    </query>
+    <query id="482">
+        <query-string>UPDATE DG.CORPGROUPMEMBERLIST SET IS_OSMAUTHORIZED=? WHERE MEMBERMDN=? AND CORPGROUPID
+            IN(GROUPIDS);
+        </query-string>
+    </query>
+    <query id="483">
+        <query-string>DELETE FROM DG.OSMLISTINFO WHERE OSMLISTID IN (SELECT OSMLISTID FROM DG.CORPOSMINFO WHERE
+            CORPID=?);
+        </query-string>
+    </query>
+    <query id="484">
+        <query-string>DELETE FROM DG.CORPOSMINFO WHERE CORPID=?;</query-string>
+    </query>
+    <query id="485">
+        <query-string>SELECT OSMLISTID,CORPGROUPID FROM DG.CORPGROUPINFO WHERE CORPID=? AND OSMLISTID IN
+            (OSMLISTIDS)ORDER BY OSMLISTID;
+        </query-string>
+    </query>
+    <query id="486">
+        <query-string>UPDATE DG.CORPGROUPINFO SET OSMLISTID =? WHERE CORPID=? and CORPGROUPID =?;</query-string>
+    </query>
+    <query id="487">
+        <query-string>INSERT INTO DG.CORPOSMINFO (CORPID,OSMLISTID,OSMLISTNAME,ISDEFAULT,HIERARCHY_ID) VALUES (?,?,?,?,?);
+        </query-string>
+    </query>
+    <query id="488">
+        <query-string>UPDATE DG.CORPGROUPINFO SET OSMLISTID=NULL WHERE CORPID=? AND OSMLISTID=?;</query-string>
+    </query>
+    <query id="489">
+        <query-string>UPDATE DG.POCSUBSCRINFO SET PRIVACY_OPT_STATUS=?,LASTPROFILEUPDATETIME = ? WHERE MDN=?;
+        </query-string>
+    </query>
+    <query id="490">
+        <query-string>SELECT PTTSERVERID, SIPPROXYURI, GEO_SIPPROXYURI, SIPPROXYURI_WIFI, GEO_SIPPROXYURI_WIFI FROM
+            DG.SIPPROXYSVCCONFIG;
+        </query-string>
+    </query>
+    <query id="491">
+        <query-string>SELECT A.APNID, A.APNNAME, A.ISDEFAULT, B.PTTSERVERID, B.SIPPROXYURI, B.GEO_SIPPROXYURI,
+            B.GEOREG_PRIMF5URI, B.GEOREG_GEOF5URI, B.FDSERVICEURICELL FROM DG.APNINFO A, DG.APNPROFILEINFO B WHERE
+            A.APNID = B.APNID;
+        </query-string>
+    </query>
+    <query id="492">
+        <query-string>UPDATE DG.POCSUBSCRINFO SET MC_ID = ?, MC_PTTID = ?, MC_VIDEOID = ?, MC_DATAID = ? WHERE MDN =
+            ?;
+        </query-string>
+    </query>
+    <query id="493">
+        <query-string>SELECT CORPGROUPID, MEMBERMDN FROM DG.CORPGROUPMEMBERLIST WHERE CORPGROUPID IN(GROUPIDS) AND
+            IS_LOCWATCHER = 1 AND IS_SUPERVISOR != 0;
+        </query-string>
+    </query>
+    <query id="494">
+        <query-string>SELECT USERPROFILEINDEX,COUNT(MDN) FROM DG.POCSUBSCRINFO WHERE USERPROFILEINDEX IN
+            (USERPROFILEINDEXES) AND CORPID=? GROUP BY USERPROFILEINDEX;
+        </query-string>
+    </query>
+    <query id="495">
+        <query-string>SELECT USERPROFILEINDEX,ISDEFAULTPROFILE FROM DG.POCSUBSCRINFO WHERE MC_ID=? AND CORPID=?;
+        </query-string>
+    </query>
+    <query id="496">
+        <query-string>select mdn from DG.POCSUBSCRINFO where mc_id = (select mc_id from DG.POCSUBSCRINFO where mdn=?)
+            and USERPROFILEINDEX!=0;
+        </query-string>
+    </query>
+    <query id="497">
+        <query-string>select r.mdn,r.SUBSCRNAME from DG.POCSUBSCRINFO r,DG.POCSUBSCRINFO p where p.mc_id = r.mc_id and
+            p.USERPROFILEID = ? and (r.USERPROFILEINDEX=0 OR r.USERPROFILEINDEX IS NULL) and p.corpid = ?;
+        </query-string>
+    </query>
+    <query id="498">
+        <query-string>SELECT ROWS ? to ? r.mdn,r.SUBSCRNAME from DG.POCSUBSCRINFO r,DG.POCSUBSCRINFO p WHERE p.mc_id =
+            r.mc_id and p.USERPROFILEID = ? AND (r.USERPROFILEINDEX=0 OR r.USERPROFILEINDEX IS NULL) and p.corpid = ?
+            ORDER BY r.mdn asc;
+        </query-string>
+    </query>
+    <query id="499">
+        <query-string>UPDATE DG.POCSUBSCRINFO SET ISDEFAULTPROFILE = ? WHERE MDN IN (MDNS) ;</query-string>
+    </query>
+    <query id="500">
+        <query-string>select mdn from DG.POCSUBSCRINFO where USERPROFILEID=?;</query-string>
+    </query>
+    <query id="501">
+        <query-string>SELECT DISTINCT p.mdn from DG.POCSUBSCRINFO r,DG.POCSUBSCRINFO p WHERE p.mc_id = r.mc_id AND r.MDN
+            = ? AND p.USERPROFILEINDEX != 0 AND p.ISDEFAULTPROFILE = ?;
+        </query-string>
+    </query>
+    <query id="502">
+        <query-string>SELECT DISTINCT p.mdn from DG.POCSUBSCRINFO r,DG.POCSUBSCRINFO p WHERE p.mc_id = r.mc_id AND
+            p.USERPROFILEID = ? AND r.MDN = ? ;
+        </query-string>
+    </query>
+    <query id="503">
+        <query-string>SELECT DISTINCT MC_PTTID FROM DG.POCSUBSCRINFO WHERE MDN IN(MDNLIST);</query-string>
+    </query>
+    <query id="506">
+        <query-string>SELECT A.MEMBERMDN, A.IS_SUPERVISOR, A.IS_BROADCASTER, A.CALL_INITIATE_PERMISSION,
+            A.CALL_RECEIVE_PERMISSION, A.INCALL_PERMISSION,A.V_CALL_INITIATE_PERMISSION,A.V_CALL_RECEIVE_PERMISSION,A.V_INCALL_PERMISSION, A.IS_LOCWATCHER, A.GRP_MODIFY_PERM,A.IS_OSMAUTHORIZED, B.SERVICEAUTHSTATUS FROM
+            DG.CORPGROUPMEMBERLIST A ,DG.POCSUBSCRINFO B WHERE A.CORPGROUPID = ? AND A.MEMBERMDN=B.MDN AND
+            (B.USERPROFILEINDEX=0 OR B.USERPROFILEINDEX IS NULL);
+        </query-string>
+    </query>
+    <query id="507">
+        <query-string>SELECT DISTINCT A.MDN FROM DG.POCSUBSCRINFO A ,DG.POCSUBSCRINFO B WHERE A.MC_ID = B.MC_ID AND
+            nvl(A.USERPROFILEINDEX,0)=0 AND B.MDN IN(MDNS);
+        </query-string>
+    </query>
+    <query id="508">
+        <query-string>SELECT
+            MDN,MC_ID,LASTPROFILEUPDATETIME,MCPTT_COMPLIANCE,USERPROFILEINDEX,CLIENTPV_MAJORVERSION,ACTIVEFS2 FROM
+            DG.POCSUBSCRINFO WHERE MDN IN (MDNLIST);
+        </query-string>
+    </query>
+    <query id="509">
+        <query-string>SELECT CORPLISTID,LISTDISTRIBUTIONPOLICY FROM DG.CORPLISTINFO WHERE CORPLISTID IN (SUBLISTID) AND CORPID = ? AND
+            LISTDISTRIBUTIONPOLICY IN(3,5,6) AND LISTTYPE = ?
+        </query-string>
+    </query>
+    <query id="510">
+        <query-string>SELECT MDN,USERPROFILEID FROM DG.POCSUBSCRINFO WHERE CORPID=? and ( USERPROFILEINDEX != 0 and
+            USERPROFILEINDEX IS NOT NULL )
+        </query-string>
+    </query>
+    <query id="511">
+        <query-string>SELECT MDN,USERPROFILEINDEX FROM DG.POCSUBSCRINFO WHERE MC_ID IN (select MC_ID from
+            DG.POCSUBSCRINFO WHERE MDN IN (MDNLIST) ) and ( USERPROFILEINDEX != 0 and USERPROFILEINDEX IS NOT NULL )
+        </query-string>
+    </query>
+    <query id="512">
+        <query-string>SELECT CORPGROUPID, IS_LARGEGROUP FROM DG.CORPGROUPINFO WHERE CORPGROUPID IN (GROUPIDS);
+        </query-string>
+    </query>
+    <query id="513">
+        <query-string>select mdn,SUBSCRIBERFS1, SUBSCRIBERFS2,ACTIVEFS1, ACTIVEFS2 from DG.POCSUBSCRINFO where
+            USERPROFILEID=? AND CORPID=?;
+        </query-string>
+    </query>
+    <query id="514">
+        <query-string>SELECT CORPLISTID FROM DG.CORPLISTINFO WHERE CORPLISTID IN (SUBLISTID) AND
+            LISTDISTRIBUTIONPOLICY=5;
+        </query-string>
+    </query>
+    <query id="515">
+        <query-string>INSERT INTO DG.PROFILE_GROUP_INFO (USER_PROFILEID, GROUPID, GROUP_ZONE, GROUP_CHANNEL,
+            GROUP_PRIORITY, IS_SUPERVISOR, IS_BROADCASTER, CALL_INITIATE_PERMISSION, CALL_RECEIVE_PERMISSION,
+            INCALL_PERMISSION,V_CALL_INITIATE_PERMISSION, V_CALL_RECEIVE_PERMISSION, V_INCALL_PERMISSION, IS_LOCWATCHER, IS_OSMAUTHORIZED)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
+        </query-string>
+    </query>
+    <query id="516">
+        <query-string>DELETE FROM DG.PROFILE_GROUP_INFO WHERE USER_PROFILEID = ? AND GROUPID = ?</query-string>
+    </query>
+    <query id="517">
+        <query-string>DELETE FROM DG.PROFILE_GROUP_INFO WHERE GROUPID = ?</query-string>
+    </query>
+    <query id="518">
+        <query-string>DELETE FROM DG.PROFILE_GROUP_INFO WHERE USER_PROFILEID = ?</query-string>
+    </query>
+    <query id="519">
+        <query-string>SELECT CORPLISTID FROM DG.CORPGROUP_LISTREF WHERE CORPGROUPID IN (GROUPIDS)</query-string>
+    </query>
+    <query id="520">
+        <query-string>SELECT MDN FROM DG.POCSUBSCRINFO WHERE MC_ID IN (SELECT MC_ID FROM DG.POCSUBSCRINFO WHERE MDN IN
+            (MDNLIST)) AND (USERPROFILEINDEX=0 OR USERPROFILEINDEX IS NULL);
+        </query-string>
+    </query>
+
+    <query id="521">
+        <query-string>SELECT ROWS ? to ?
+            CORPID,GRPPROFILEID,GRPPROFILENAME,GRPTYPE,AVATAR,SERVICETYPE,OSMLISTID,AUDIOCUTIN,MCXGRP,FEATURESALLOWED,CREATETIMESTAMP,UPDATETIMESTAMP,GRPPROFILESTATUS,OVERRIDEDND,GROUP_SHARED,UGWINTEROP
+            FROM DG.CORPGROUPPROFILE WHERE CORPID = ?;
+        </query-string>
+    </query>
+    <query id="522">
+        <query-string>SELECT COUNT(CORPGROUPID),GRP_PROFILE_ID FROM DG.CORPGROUPINFO WHERE GRP_PROFILE_ID IN
+            (GROUPPROFILEIDS) GROUP BY GRP_PROFILE_ID;
+        </query-string>
+    </query>
+    <query id="523">
+        <query-string>SELECT COUNT( GRPPROFILEID ) FROM DG.CORPGROUPPROFILE WHERE CORPID = ?;</query-string>
+    </query>
+    <query id="524">
+        <query-string>SELECT ROWS ? to ?
+            CORPID,GRPPROFILEID,GRPPROFILENAME,GRPTYPE,AVATAR,SERVICETYPE,OSMLISTID,AUDIOCUTIN,MCXGRP,FEATURESALLOWED,CREATETIMESTAMP,UPDATETIMESTAMP,GRPPROFILESTATUS,OVERRIDEDND,GROUP_SHARED
+            FROM DG.CORPGROUPPROFILE WHERE CORPID = ? AND GRPTYPE = ? ORDER BY GRPPROFILENAME;
+        </query-string>
+    </query>
+    <query id="525">
+        <query-string>SELECT ROWS ? to ?
+            CORPID,GRPPROFILEID,GRPPROFILENAME,GRPTYPE,AVATAR,SERVICETYPE,OSMLISTID,AUDIOCUTIN,MCXGRP,FEATURESALLOWED,CREATETIMESTAMP,UPDATETIMESTAMP,GRPPROFILESTATUS,OVERRIDEDND,GROUP_SHARED
+            FROM DG.CORPGROUPPROFILE WHERE CORPID = ? AND UPPER(GRPPROFILENAME) LIKE ? ESCAPE '!' ORDER BY
+            GRPPROFILENAME;
+        </query-string>
+    </query>
+    <query id="526">
+        <query-string>SELECT ROWS ? to ?
+            CORPID,GRPPROFILEID,GRPPROFILENAME,GRPTYPE,AVATAR,SERVICETYPE,OSMLISTID,AUDIOCUTIN,MCXGRP,FEATURESALLOWED,CREATETIMESTAMP,UPDATETIMESTAMP,GRPPROFILESTATUS,OVERRIDEDND,GROUP_SHARED
+            FROM DG.CORPGROUPPROFILE WHERE CORPID = ? AND GRPTYPE = ? AND UPPER(GRPPROFILENAME) LIKE ? ESCAPE '!' ORDER
+            BY GRPPROFILENAME;
+        </query-string>
+    </query>
+    <query id="527">
+        <query-string>SELECT MEMBERMDN,COUNT(CORPGROUPID) FROM DG.CORPGROUPMEMBERLIST WHERE MEMBERMDN IN (MDNLIST) GROUP
+            BY MEMBERMDN;
+        </query-string>
+    </query>
+    <query id="528">
+        <query-string>UPDATE DG.CORPGROUPPROFILE SET GRPPROFILENAME = ?, AVATAR = ?, SERVICETYPE = ?, OSMLISTID = ?,
+            AUDIOCUTIN = ?, UPDATETIMESTAMP = ?, FEATURESALLOWED = ?, OVERRIDEDND = ?, GROUP_SHARED = ?, UGWINTEROP = ?
+            WHERE GRPPROFILEID = ?
+        </query-string>
+    </query>
+    <query id="529">
+        <query-string>UPDATE DG.CORPGROUPINFO SET ETAG = ?, LASTUPDATETIME = ?, OVERRIDE_PR = ?, AVATAR_ID = ?,
+            OSMLISTID = ?, GRP_SVC_TYPE = ?, FEATURES_ALLOWED = ?, AUDIO_CUTIN = ? , GROUP_SHARED = ?, UGWINTEROP = ?
+            WHERE CORPGROUPID = ?
+        </query-string>
+    </query>
+    <query id="530">
+        <query-string>DELETE FROM DG.CORPGROUPPROFILE WHERE GRPPROFILEID = ?;</query-string>
+    </query>
+
+    <query id="531">
+        <query-string>SELECT GROUPDISPLAYNAME FROM DG.CORPGROUPINFO WHERE CORPID=? AND GROUPDISPLAYNAME IN
+            (GROUPNAMES)
+        </query-string>
+    </query>
+    <query id="532">
+        <query-string>INSERT INTO DG.CORPGROUPINFO (CORPGROUPID, CORPID, GROUPDISPLAYNAME, GROUPMEMBERLISTID,
+            GROUPDISTRIBUTIONPOLICY, ETAG,
+            LASTUPDATETIME, GROUPTYPE, POCHOME, OVERRIDE_PR, AVATAR_ID, LMR_INTEROP_CAPABLE, EMERGAUTOFLOORTIMER,
+            EMERGHANGTIMERADDON, EMERGDNDOVERRIDE,
+            HANGTIMEOUT, GROUP_CREATED_BY, GROUP_OWNER,
+            IS_LARGEGROUP, OSMLISTID, GRP_SVC_TYPE, FEATURES_ALLOWED, GRP_PROFILE_ID, AUDIO_CUTIN, GROUP_SHARED, UGWINTEROP,
+            CLUSTERID, HIERARCHY_ID)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        </query-string>
+    </query>
+    <query id="533">
+        <query-string>SELECT
+            CORPID,GRPPROFILEID,GRPPROFILENAME,GRPTYPE,AVATAR,SERVICETYPE,OSMLISTID,AUDIOCUTIN,MCXGRP,FEATURESALLOWED,CREATETIMESTAMP,UPDATETIMESTAMP,GRPPROFILESTATUS
+            ,OVERRIDEDND,GROUP_SHARED,UGWINTEROP FROM DG.CORPGROUPPROFILE WHERE CORPID = ? AND GRPPROFILEID = ?
+        </query-string>
+    </query>
+    <query id="534">
+        <query-string>SELECT
+            CORPID,GRPPROFILEID,GRPPROFILENAME,GRPTYPE,AVATAR,SERVICETYPE,OSMLISTID,AUDIOCUTIN,MCXGRP,FEATURESALLOWED,CREATETIMESTAMP,UPDATETIMESTAMP,GRPPROFILESTATUS
+            ,OVERRIDEDND,GROUP_SHARED,UGWINTEROP FROM DG.CORPGROUPPROFILE WHERE CORPID = ? AND GRPPROFILENAME = ?
+        </query-string>
+    </query>
+    <query id="535">
+        <query-string>SELECT CGI.CORPGROUPID, CGI.GROUPDISPLAYNAME, GMC.MEMBERCOUNT, CGI.GROUPTYPE, CGI.AVATAR_ID,
+            CGI.GROUP_CREATED_BY,
+            CGI.IS_LARGEGROUP, GRP_PROFILE_ID, CGI.GROUPMEMBERLISTID, CGI.ETAG,CGI.GROUP_SHARED FROM DG.CORPGROUPINFO
+            CGI LEFT JOIN DG.CORPGROUPMEMBERCOUNT GMC ON CGI.CORPGROUPID = GMC.CORPGROUPID WHERE
+            CGI.CORPID=? AND CGI.GRP_PROFILE_ID =? ORDER BY CGI.GROUPDISPLAYNAME;
+        </query-string>
+    </query>
+    <query id="536">
+        <query-string>SELECT ROWS ? to ? CGI.CORPGROUPID, CGI.GROUPDISPLAYNAME, GMC.MEMBERCOUNT, CGI.GROUPTYPE,
+            CGI.AVATAR_ID, CGI.GROUP_CREATED_BY,
+            CGI.IS_LARGEGROUP, GRP_PROFILE_ID, CGI.GROUPMEMBERLISTID, CGI.ETAG,CGI.GROUP_SHARED FROM DG.CORPGROUPINFO
+            CGI LEFT JOIN DG.CORPGROUPMEMBERCOUNT GMC ON CGI.CORPGROUPID = GMC.CORPGROUPID WHERE
+            CGI.CORPID=? AND CGI.GRP_PROFILE_ID =? ORDER BY CGI.GROUPDISPLAYNAME;
+        </query-string>
+    </query>
+    <query id="537">
+        <query-string>INSERT INTO DG.CORPGROUPPROFILE (GRPPROFILEID, CORPID, GRPPROFILENAME, GRPTYPE, AVATAR,
+            SERVICETYPE, OSMLISTID, AUDIOCUTIN, MCXGRP, CREATETIMESTAMP, UPDATETIMESTAMP, GRPPROFILESTATUS,
+            FEATURESALLOWED, OVERRIDEDND, GROUP_SHARED, UGWINTEROP, HIERARCHY_ID)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        </query-string>
+    </query>
+    <query id="538">
+        <query-string>SELECT GRPPROFILEID FROM DG.CORPGROUPPROFILE WHERE CORPID = ? AND OSMLISTID = ?</query-string>
+    </query>
+    <query id="539">
+        <query-string>UPDATE DG.CORPGROUPPROFILE SET OSMLISTID = NULL WHERE CORPID = ? AND OSMLISTID = ?</query-string>
+    </query>
+
+    <query id="540">
+        <query-string>SELECT
+            GROUPID,GROUP_ZONE,GROUP_CHANNEL,GROUP_PRIORITY,IS_SUPERVISOR,IS_BROADCASTER,CALL_INITIATE_PERMISSION,CALL_RECEIVE_PERMISSION,INCALL_PERMISSION,V_CALL_INITIATE_PERMISSION,V_CALL_RECEIVE_PERMISSION,V_INCALL_PERMISSION,IS_LOCWATCHER,IS_OSMAUTHORIZED
+            FROM DG.PROFILE_GROUP_INFO WHERE USER_PROFILEID = ?
+        </query-string>
+    </query>
+    <query id="541">
+        <query-string>SELECT COUNT(GRPPROFILEID) FROM DG.CORPGROUPPROFILE WHERE CORPID = ? AND GRPTYPE = ?
+        </query-string>
+    </query>
+    <query id="542">
+        <query-string>SELECT COUNT(GRPPROFILEID) FROM DG.CORPGROUPPROFILE WHERE CORPID = ? AND UPPER(GRPPROFILENAME)
+            LIKE ? ESCAPE '!'
+        </query-string>
+    </query>
+    <query id="543">
+        <query-string>INSERT INTO DG.CORPGRPPROFILE_SHAREDLIST(GRPPROFILEID
+            ,OWNEDCORPID,SHAREDCORPID,MEM_FEATURES_ALLOWED) VALUES(?,?,?,?);
+        </query-string>
+    </query>
+    <query id="544">
+        <query-string>SELECT EXTCORPID,CORPID FROM DG.POCCORPINFO WHERE CORPID IN(CORPIDLIST);</query-string>
+    </query>
+    <query id="545">
+        <query-string>SELECT EXTCORPID,CORPID FROM DG.POCCORPINFO WHERE EXTCORPID IN(EXTCORPIDLIST);</query-string>
+    </query>
+    <query id="546">
+        <query-string>SELECT GRPPROFILEID ,OWNEDCORPID,SHAREDCORPID,MEM_FEATURES_ALLOWED FROM
+            DG.CORPGRPPROFILE_SHAREDLIST WHERE OWNEDCORPID = ? AND GRPPROFILEID = ?
+        </query-string>
+    </query>
+    <query id="547">
+        <query-string>INSERT INTO DG.CORPGRP_SHAREDLIST(CORPGROUPID ,SHAREDCORPID,OWNEDCORPID,MEM_FEATURES_ALLOWED)
+            VALUES(?,?,?,?);
+        </query-string>
+    </query>
+    <query id="548">
+        <query-string>SELECT CORPGROUPID ,SHAREDCORPID,OWNEDCORPID,MEM_FEATURES_ALLOWED FROM DG.CORPGRP_SHAREDLIST WHERE
+            OWNEDCORPID = ? AND CORPGROUPID = ?
+        </query-string>
+    </query>
+    <query id="549">
+        <query-string>SELECT GRPPROFILEID ,OWNEDCORPID,SHAREDCORPID,MEM_FEATURES_ALLOWED FROM
+            DG.CORPGRPPROFILE_SHAREDLIST WHERE OWNEDCORPID = ? AND GRPPROFILEID IN(GROUPPROFILEIDS)
+        </query-string>
+    </query>
+    <query id="550">
+        <query-string>SELECT CORPGROUPID ,SHAREDCORPID,OWNEDCORPID,MEM_FEATURES_ALLOWED FROM DG.CORPGRP_SHAREDLIST WHERE
+            OWNEDCORPID = ? AND CORPGROUPID IN(GROUPIDS)
+        </query-string>
+    </query>
+    <query id="551">
+        <query-string>SELECT CORPGROUPID ,SHAREDCORPID,OWNEDCORPID,MEM_FEATURES_ALLOWED FROM DG.CORPGRP_SHAREDLIST WHERE
+            SHAREDCORPID = ?
+        </query-string>
+    </query>
+    <query id="552">
+        <query-string>SELECT CORPGROUPID ,SHAREDCORPID,OWNEDCORPID,MEM_FEATURES_ALLOWED FROM DG.CORPGRP_SHAREDLIST WHERE
+            CORPGROUPID IN (GROUPIDS)
+        </query-string>
+    </query>
+    <query id="553">
+        <query-string>SELECT GI.GROUPDISPLAYNAME,GI.GROUPMEMBERLISTID, GI.GROUPDISTRIBUTIONPOLICY, GMC.MEMBERCOUNT,
+            GI.ETAG, GI.GROUPTYPE, GI.OVERRIDE_PR, GI.AVATAR_ID, GI.EMERGAUTOFLOORTIMER, GI.EMERGHANGTIMERADDON,
+            GI.EMERGDNDOVERRIDE, GI.HANGTIMEOUT, GI.GROUP_CREATED_BY, GI.GROUP_OWNER, GI.IS_LARGEGROUP,
+            GI.OSMLISTID,GI.AUDIO_CUTIN,GI.GRP_SVC_TYPE,GI.GRP_PROFILE_ID, GI.GROUP_SHARED, GI.CORPID,
+            GI.IS_PRECONFIG_GRP,GI.UGWINTEROP,GI.RECORDING_FS, GI.AUTHORIZED_LARGE_TG,GI.VIDEO_PERMISSION,GI.HIERARCHY_ID,
+            CHD.HIERARCHY_NAME OWNER_ORGANIZATION_NAME, PCI.EXTCORPID OWNER_AGENCY_NAME
+            FROM DG.CORPGROUPINFO GI
+            INNER JOIN DG.POCCORPINFO PCI ON (GI.CORPID = PCI.CORPID)
+            LEFT JOIN DG.CORPGROUPMEMBERCOUNT GMC ON GI.CORPGROUPID = GMC.CORPGROUPID
+            LEFT JOIN DG.CORP_HIERARCHY_DETAILS CHD ON (GI.HIERARCHY_ID = CHD.HIERARCHY_ID)
+            WHERE GI.CORPGROUPID=?;
+        </query-string>
+    </query>
+    <query id="554">
+        <query-string>DELETE FROM DG.CORPGRP_SHAREDLIST WHERE CORPGROUPID = ?</query-string>
+    </query>
+    <query id="555">
+        <query-string>DELETE FROM DG.CORPGRPPROFILE_SHAREDLIST WHERE GRPPROFILEID = ?</query-string>
+    </query>
+    <query id="556">
+        <query-string>SELECT CORPGROUPID, ETAG, GROUPTYPE, GROUP_CREATED_BY, AVATAR_ID, IS_LARGEGROUP, CORPID,
+            IS_PRECONFIG_GRP, GROUPDISPLAYNAME, VIDEO_PERMISSION FROM DG.CORPGROUPINFO WHERE CORPGROUPID IN (GROUPIDS)
+        </query-string>
+    </query>
+    <query id="557">
+        <query-string>SELECT MDN, SUBSCRNAME, CLIENT_TYPE, CORPID, USERAGENT, CLIENTPV_MAJORVERSION, ACTIVEFS1,
+            ALIAS_MDN, USER_ID, ACTIVEFS2,LICENSE_TYPE, CAMERA_TYPE, SERVICEAUTHSTATUS FROM DG.POCSUBSCRINFO WHERE MDN IN (MDNLIST) AND
+            (USERPROFILEINDEX=0 OR USERPROFILEINDEX IS NULL)
+        </query-string>
+    </query>
+    <query id="558">
+        <query-string>DELETE FROM DG.PROFILE_GROUP_INFO WHERE USER_PROFILEID IN (UPMID)</query-string>
+    </query>
+    <query id="559">
+        <query-string>DELETE FROM DG.CORPGRP_SHAREDLIST WHERE OWNEDCORPID=? OR SHAREDCORPID=?</query-string>
+    </query>
+    <query id="560">
+        <query-string>DELETE FROM DG.CORPGROUPPROFILE WHERE CORPID = ?</query-string>
+    </query>
+    <query id="561">
+        <query-string>DELETE FROM DG.CORPGRPPROFILE_SHAREDLIST WHERE OWNEDCORPID = ? OR SHAREDCORPID= ?</query-string>
+    </query>
+    <query id="562">
+        <query-string>UPDATE DG.CORPGROUPINFO SET GROUP_SHARED = ? WHERE CORPGROUPID = ?</query-string>
+    </query>
+    <query id="563">
+        <query-string>SELECT MDN, SUBSCRNAME, PUBLICSUBSCRIPTIONTYPE, CORPSUBSCRIPTIONTYPE, SERVICEAUTHSTATUS,
+            CLIENT_TYPE, ALIAS_MDN, USER_ID, ACTIVEFS1,
+            ACTIVEFS2,CLIENTPV_MAJORVERSION,CORPID FROM DG.POCSUBSCRINFO WHERE MDN IN (MDNLIST)
+        </query-string>
+    </query>
+    <query id="564">
+        <query-string>SELECT
+            GROUPID,GROUP_ZONE,GROUP_CHANNEL,GROUP_PRIORITY,IS_SUPERVISOR,IS_BROADCASTER,CALL_INITIATE_PERMISSION,CALL_RECEIVE_PERMISSION,INCALL_PERMISSION,V_CALL_INITIATE_PERMISSION,V_CALL_RECEIVE_PERMISSION,V_INCALL_PERMISSION,IS_LOCWATCHER,IS_OSMAUTHORIZED,USER_PROFILEID
+            FROM DG.PROFILE_GROUP_INFO WHERE GROUPID = ?
+        </query-string>
+    </query>
+    <query id="565">
+        <query-string>SELECT CORPGROUPID ,SHAREDCORPID,OWNEDCORPID,MEM_FEATURES_ALLOWED FROM DG.CORPGRP_SHAREDLIST WHERE
+            OWNEDCORPID = ?
+        </query-string>
+    </query>
+    <query id="566">
+        <query-string>SELECT groups.CORPGROUPID FROM DG.CORPGROUPINFO groups JOIN DG.CORPGROUPMEMBERLIST member
+            ON member.CORPGROUPID=groups.CORPGROUPID where member.MEMBERMDN=? and groups.GROUPTYPE=?
+        </query-string>
+    </query>
+    <query id="567">
+        <query-string>SELECT G.CORPGROUPID, G.GROUPDISPLAYNAME, GMC.MEMBERCOUNT, G.ETAG, G.GROUPTYPE, G.AVATAR_ID,
+            GROUPDIS.IS_BROADCASTER, G.GROUP_CREATED_BY, G.IS_LARGEGROUP,COALESCE(G.OSMLISTID,0)AS
+            OSMLISTID,G.GRP_PROFILE_ID,G.GROUP_SHARED,G.CORPID,G.VIDEO_PERMISSION FROM DG.CORPGROUPMEMBERCOUNT GMC, DG.CORPGROUPINFO G
+            ,DG.CORPGROUPMEMBERLIST GROUPDIS WHERE GROUPDIS.CORPGROUPID = G.CORPGROUPID AND GMC.CORPGROUPID
+            =G.CORPGROUPID AND GROUPDIS.MEMBERMDN=?
+        </query-string>
+    </query>
+
+    <query id="568">
+        <query-string>SELECT A.MDN FROM DG.POCSUBSCRINFO A ,DG.POCSUBSCRINFO B WHERE A.MC_ID = B.MC_ID AND
+            (A.USERPROFILEINDEX=0 OR A.USERPROFILEINDEX IS NULL) AND B.MDN=?;
+        </query-string>
+    </query>
+    <query id="569">
+        <query-string>UPDATE DG.POCSUBSCRINFO SET PUBLICSUBSCRIPTIONTYPE = ?, CORPSUBSCRIPTIONTYPE = ?, SUBSCRNAME= ?,
+            EMAIL = ?, LASTPROFILEUPDATETIME = ?, DISPATCH_TYPE = ?, CLIENT_PASSWORD = ?, SERVICE_STATUS_AUTHUSER = ?,
+            SERVICEAUTHSTATUS = ? WHERE MDN = ? AND CORPID = ?
+        </query-string>
+    </query>
+
+    <query id="569">
+        <query-string>UPDATE DG.POCSUBSCRINFO SET PUBLICSUBSCRIPTIONTYPE = ?, CORPSUBSCRIPTIONTYPE = ?, SUBSCRNAME= ?,
+            EMAIL = ?, LASTPROFILEUPDATETIME = ?, DISPATCH_TYPE = ?, CLIENT_PASSWORD = ?, SERVICE_STATUS_AUTHUSER = ?,
+            SERVICEAUTHSTATUS = ? WHERE MDN = ? AND CORPID = ?
+        </query-string>
+    </query>
+    <query id="570">
+        <query-string>SELECT MDN,MC_PTTID FROM DG.POCSUBSCRINFO WHERE MDN IN (MDNLIST);</query-string>
+    </query>
+    <query id="571">
+        <query-string>INSERT INTO DG.USERPROFILE_HIERARCHY_MAP(USERPROFILEID,ID_VALUE,ID_TYPE) VALUES (?,?,?);
+        </query-string>
+    </query>
+    <query id="572">
+        <query-string>DELETE DG.USERPROFILE_HIERARCHY_MAP WHERE USERPROFILEID = ?</query-string>
+    </query>
+    <query id="573">
+        <query-string>SELECT DISTINCT USERPROFILEID FROM DG.USERPROFILE_HIERARCHY_MAP WHERE ID_VALUE IN (ID_VALUES)
+        </query-string>
+    </query>
+    <query id="574">
+        <query-string>SELECT ID_VALUE FROM DG.USERPROFILE_HIERARCHY_MAP WHERE USERPROFILEID = ?</query-string>
+    </query>
+    <query id="575">
+        <query-string>DELETE FROM DG.USERPROFILE_HIERARCHY_MAP WHERE USERPROFILEID = ? AND ID_VALUE=? AND ID_TYPE=?
+        </query-string>
+    </query>
+    <query id="576">
+        <query-string>INSERT INTO DG.GROUP_HIERARCHY_MAP(CORPGROUPID,ID_VALUE,ID_TYPE) VALUES (?,?,?);</query-string>
+    </query>
+    <query id="577">
+        <query-string>DELETE FROM DG.GROUP_HIERARCHY_MAP WHERE CORPGROUPID = ? AND ID_VALUE=? AND ID_TYPE=?
+        </query-string>
+    </query>
+    <query id="578">
+        <query-string>DELETE FROM DG.GROUP_HIERARCHY_MAP WHERE CORPGROUPID = ?</query-string>
+    </query>
+    <query id="579">
+        <query-string>SELECT CORPGROUPID,ID_VALUE FROM DG.GROUP_HIERARCHY_MAP WHERE CORPGROUPID IN (GROUP_IDS) AND
+            ID_TYPE= ?
+        </query-string>
+    </query>
+    <query id="580">
+        <query-string>SELECT CORPGROUPID,ID_VALUE FROM DG.GROUP_HIERARCHY_MAP WHERE CORPGROUPID IN (GROUP_IDS) AND
+            ID_VALUE IN(ID_VALUELIST) AND ID_TYPE= ?
+        </query-string>
+    </query>
+    <query id="581">
+        <query-string>SELECT MDN,PRIVACY_OPT_STATUS FROM DG.POCSUBSCRINFO WHERE MDN IN (MDNLIST)</query-string>
+    </query>
+    <query id="582">
+        <query-string>SELECT SHAREDCORPID FROM DG.USERPROFILE_SHAREDLIST WHERE USERPROFILEID = ?</query-string>
+    </query>
+    <query id="583">
+        <query-string>INSERT INTO DG.USERPROFILE_SHAREDLIST(USERPROFILEID,SHAREDCORPID,OWNEDCORPID) VALUES(?,?,?)
+        </query-string>
+    </query>
+    <query id="584">
+        <query-string>SELECT CORPID FROM DG.POCCORPINFO WHERE EXTCORPID IN (EXTCORPID)</query-string>
+    </query>
+    <query id="585">
+        <query-string>select USERPROFILEID,OWNEDCORPID from DG.USERPROFILE_SHAREDLIST where USERPROFILEID
+            IN(PROFILEIDS);
+        </query-string>
+    </query>
+    <query id="586">
+        <query-string>SELECT USERPROFILEID,ISDEFAULTPROFILE FROM DG.POCSUBSCRINFO WHERE MC_ID=?;</query-string>
+    </query>
+    <query id="587">
+        <query-string>select USERPROFILEID from DG.USERPROFILE_SHAREDLIST WHERE SHAREDCORPID=?;</query-string>
+    </query>
+    <query id="588">
+        <query-string>select count(corpgroupid) from DG.CORPGROUPINFO where IS_PRECONFIG_GRP =1;</query-string>
+    </query>
+    <query id="589">
+        <query-string>SELECT MDN, ACTIVEFS2,ACTIVEFS1 FROM DG.POCSUBSCRINFO WHERE CORPID=?</query-string>
+    </query>
+    <query id="590">
+        <query-string>SELECT MEMBERMDN FROM DG.CORPGROUPMEMBERLIST WHERE MEMBERMDN_CORPID IN (SHAREDCORPIDS)
+            AND CORPGROUPID IN (SELECT CORPGROUPID FROM DG.CORPGRP_SHAREDLIST WHERE OWNEDCORPID=? AND SHAREDCORPID
+            IN(SHAREDCORPIDS))
+        </query-string>
+    </query>
+    <query id="591">
+        <query-string>SELECT MDN FROM DG.POCSUBSCRINFO WHERE USERPROFILEID IN (SELECT USERPROFILEID FROM
+            DG.USERPROFILE_SHAREDLIST where SHAREDCORPID IN (SHAREDCORPIDS) AND OWNEDCORPID=?)
+        </query-string>
+    </query>
+    <query id="592">
+        <query-string>SELECT
+            CORPGROUPID,CORPID,ETAG,GROUPTYPE,GROUP_CREATED_BY,GROUP_OWNER,IS_LARGEGROUP,GROUP_SHARED,IS_PRECONFIG_GRP
+            FROM DG.CORPGROUPINFO WHERE CORPID=? AND IS_PRECONFIG_GRP=?
+        </query-string>
+    </query>
+    <query id="593">
+        <query-string>select IS_PRECONFIG_GRP from DG.CORPGROUPINFO where CORPGROUPID IN (GROUPIDLIST)</query-string>
+    </query>
+    <query id="594">
+        <query-string>select USERPROFILEID,OWNEDCORPID,SHAREDCORPID from DG.USERPROFILE_SHAREDLIST where USERPROFILEID
+            =?;
+        </query-string>
+    </query>
+    <query id="595">
+        <query-string>select r.mdn,r.SUBSCRNAME , r.CORPID from DG.POCSUBSCRINFO r,DG.POCSUBSCRINFO p where p.mc_id =
+            r.mc_id and p.USERPROFILEID = ? and (r.USERPROFILEINDEX=0 OR r.USERPROFILEINDEX IS NULL) and r.SERVICEAUTHSTATUS != 10 and p.SERVICEAUTHSTATUS != 10;
+        </query-string>
+    </query>
+    <query id="596">
+        <query-string>SELECT ROWS ? to ? r.mdn,r.SUBSCRNAME,r.CORPID from DG.POCSUBSCRINFO r,DG.POCSUBSCRINFO p WHERE
+            p.mc_id = r.mc_id and p.USERPROFILEID = ? AND (r.USERPROFILEINDEX=0 OR r.USERPROFILEINDEX IS NULL) AND r.SERVICEAUTHSTATUS != 10 ORDER BY
+            r.mdn asc;
+        </query-string>
+    </query>
+    <query id="597">
+        <query-string>DELETE FROM DG.USERPROFILE_SHAREDLIST WHERE USERPROFILEID = ?</query-string>
+    </query>
+    <query id="598">
+        <query-string>DELETE FROM DG.USERPROFILE_SHAREDLIST WHERE USERPROFILEID = ? AND SHAREDCORPID = ?</query-string>
+    </query>
+    <query id="599">
+        <query-string>select r.mdn,r.SUBSCRNAME,r.CORPID from DG.POCSUBSCRINFO r,DG.POCSUBSCRINFO p where p.mc_id =
+            r.mc_id and p.USERPROFILEID = ? and nvl(r.USERPROFILEINDEX,0)=0;
+        </query-string>
+    </query>
+    <query id="600">
+        <query-string>SELECT MDN, SUBSCRNAME, CLIENT_TYPE, CORPID FROM DG.POCSUBSCRINFO WHERE MDN IN (MDNLIST);
+        </query-string>
+    </query>
+    <query id="601">
+        <query-string>SELECT USERPROFILEID, CORPID, MDN FROM DG.POCSUBSCRINFO WHERE USERPROFILEID IN (PROFILEIDS);
+        </query-string>
+    </query>
+    <query id="602">
+        <query-string>SELECT CORPID FROM DG.CORPLISTINFO WHERE CORPLISTID = ?;</query-string>
+    </query>
+    <query id="603">
+        <query-string>SELECT CORPID FROM DG.POCSUBSCRINFO WHERE MDN IN (MDNLIST);</query-string>
+    </query>
+    <query id="604">
+        <query-string>SELECT RECIPIENTMDN, COUNT(CLD.CORPLISTID) AS COUNT FROM DG.CORPLISTDISTINFO CLD LEFT JOIN
+            DG.CORPLISTINFO CLI ON CLD.CORPLISTID = CLI.CORPLISTID WHERE CLI.LISTTYPE = 1 AND CLI.LISTDISTRIBUTIONPOLICY
+            = 6 AND RECIPIENTMDN IN (MDNLIST) GROUP BY RECIPIENTMDN;
+        </query-string>
+    </query>
+    <query id="605">
+        <query-string>SELECT MEMBERMDN FROM DG.CORPLISTMEMBER WHERE CORPLISTID IN (SELECT CORPLISTID FROM
+            DG.CORPLISTINFO WHERE CORPLISTID IN (SELECT CORPLISTID FROM DG.CORPLISTDISTINFO WHERE RECIPIENTMDN = ?) and
+            LISTDISTRIBUTIONPOLICY = ?);
+        </query-string>
+    </query>
+    <query id="606">
+        <query-string>select MEMBERMDN from DG.CORPLISTMEMBER where CORPLISTID in (select CORPLISTID from
+            DG.CORPLISTDISTINFO where RECIPIENTMDN = ?);
+        </query-string>
+    </query>
+    <query id="607">
+        <query-string>SELECT MEMBERMDN FROM DG.CORPLISTMEMBER WHERE CORPLISTID IN (SELECT CORPLISTID FROM
+            DG.CORPLISTINFO WHERE CORPLISTID IN (SELECT CORPLISTID FROM DG.CORPLISTDISTINFO WHERE RECIPIENTMDN = ?) and
+            LISTDISTRIBUTIONPOLICY != ?);
+        </query-string>
+    </query>
+    <query id="608">
+        <query-string>SELECT AUTHORIZED_MDN,TARGET_MDN FROM DG.MCPTT_PERM_INFO WHERE AUTHORIZED_MDN IN (MDNLIST) AND
+            TARGET_MDN IN (TARGETLIST) AND COMMON_AU = ?;
+        </query-string>
+    </query>
+    <query id="609">
+        <query-string>SELECT CORPID, AUTHORIZED_MDN, TARGET_MDN, PERM_BITSET, DISCREET_ENABLED, COMMON_AU FROM
+            DG.MCPTT_PERM_INFO WHERE AUTHORIZED_MDN IN(MDNLIST);
+        </query-string>
+    </query>
+    <query id="610">
+        <query-string>SELECT CLIENT_TYPE from DG.POCSUBSCRINFO where MDN = ?;</query-string>
+    </query>
+    <query id="611">
+        <query-string>UPDATE DG.CORPGROUPINFO SET UGWINTEROP = ? WHERE CORPGROUPID = ?</query-string>
+    </query>
+    <query id="612">
+        <query-string>SELECT ROWS ? to ? PSI.MDN, PSI.SUBSCRNAME, PSI.SERVICEAUTHSTATUS, PSI.PUBLICSUBSCRIPTIONTYPE,
+            PSI.CORPSUBSCRIPTIONTYPE, PSI.CLIENT_TYPE, PSI.ACTIVEFS1, PSI.USER_ID, PSI.DISPATCH_TYPE, PSI.ALIAS_MDN,
+            PSI.LICENSE_TYPE, PSI.ACTIVEFS2, PSI.MCPTT_COMPLIANCE, PSI.CAMERA_TYPE, PSI.MC_PTTID, PSI.SUBSCRIBERFS2,
+            DI.DEVICEID FROM DG.POCSUBSCRINFO PSI LEFT JOIN DG.DEVICE_INFO DI ON PSI.MDN = DI.DEVICE_SUBSCR_MDN WHERE
+            PSI.CORPID = ? AND (USERPROFILEINDEX is null or USERPROFILEINDEX=0) AND PSI.MDN NOT IN (SELECT MDN FROM DG.POCSUBSCRINFO WHERE SERVICEAUTHSTATUS = 10)
+            ORDER BY SORT_TYPE
+        </query-string>
+    </query>
+    <query id="613">
+        <query-string>SELECT APPENDINPUT
+            PSI.ACTIVEFS1,PSI.ACTIVEFS2,PSI.SUBSCRIBERFS2,DI.DEVICE_SUBSCR_MDN,DI.DEVICEID,DI.DEVICE_TYPE,DI.DEVICE_NAME
+            FROM DG.DEVICE_INFO DI LEFT JOIN DG.POCSUBSCRINFO PSI ON DI.DEVICE_SUBSCR_MDN = PSI.MDN WHERE DI.CORPID = ?
+            order by DEVICEID;
+        </query-string>
+    </query>
+    <query id="614">
+        <query-string>UPDATE DG.CORPGROUPINFO SET RECORDING_FS = ? WHERE CORPGROUPID = ?</query-string>
+    </query>
+    <query id="615">
+        <query-string>SELECT CORPFS2 FROM DG.POCCORPINFO WHERE CORPID = ?</query-string>
+    </query>
+    <query id="616">
+        <query-string>UPDATE DG.POCCORPINFO SET CORPFS2 = ?,LASTPROFILEUPDATETIME = ? WHERE CORPID = ?</query-string>
+    </query>
+    <query id="617">
+        <query-string>SELECT PAMACCID FROM DG.POCSUBSCRINFO WHERE CORPID = ?</query-string>
+    </query>
+    <query id="618">
+        <query-string>SELECT BILLINGMDN,PAMACCID FROM DG.PAMACCOUNTINFO WHERE PAMACCID IN (PAMACCIDLIST)</query-string>
+    </query>
+    <query id="619">
+        <query-string>SELECT A.MEMBERMDN FROM DG.CORPGROUPMEMBERLIST A LEFT JOIN DG.CORPLISTMEMBER B
+            ON (A.MEMBERMDN = B.MEMBERMDN) JOIN DG.CORPGROUPINFO C ON(A.CORPGROUPID = C.CORPGROUPID)
+            WHERE B.MEMBERMDN IS NULL and A.CORPGROUPID=?
+        </query-string>
+    </query>
+    <query id="620">
+        <query-string>select mdn from DG.POCSUBSCRINFO where mdn in(MDNLIST) and USERPROFILEINDEX!=0;</query-string>
+    </query>
+    <query id="621">
+        <query-string>SELECT COUNT(DEVICEID) FROM DG.DEVICE_INFO where CORPID = ?</query-string>
+    </query>
+    <query id="622">
+        <query-string>SELECT G.CORPGROUPID, G.GROUPDISPLAYNAME, G.ETAG, G.GROUPTYPE, G.AVATAR_ID,
+            GROUPDIS.IS_BROADCASTER, G.GROUP_CREATED_BY, G.IS_LARGEGROUP,COALESCE(G.OSMLISTID,0)AS
+            OSMLISTID,G.GRP_PROFILE_ID,G.GROUP_SHARED,G.CORPID,G.VIDEO_PERMISSION FROM DG.CORPGROUPINFO G ,DG.CORPGROUPMEMBERLIST GROUPDIS
+            WHERE GROUPDIS.CORPGROUPID = G.CORPGROUPID AND GROUPDIS.MEMBERMDN = ? AND G.GROUP_CREATED_BY = ?;
+        </query-string>
+    </query>
+    <query id="623">
+        <query-string>SELECT ROWS ? to ?
+            CLI.CORPLISTID, CLI.LISTDISPLAYNAME, CLI.LISTDISTRIBUTIONPOLICY, CLI.ETAG, COUNT(CLM.MEMBERMDN) FROM
+            DG.CORPLISTINFO CLI LEFT JOIN DG.CORPLISTMEMBER CLM ON CLI.CORPLISTID = CLM.CORPLISTID WHERE CORPID = ? AND
+            LISTTYPE = ? GROUP BY CLI.CORPLISTID, CLI.LISTDISPLAYNAME, CLI.LISTDISTRIBUTIONPOLICY, CLI.ETAG ORDER BY
+            CLI.LISTDISPLAYNAME;
+        </query-string>
+    </query>
+    <query id="624">
+        <query-string>SELECT ROWS ? to ? DISTINCT CGI.CORPGROUPID, CGI.GROUPDISPLAYNAME, GMC.MEMBERCOUNT, CGI.GROUPTYPE,
+            CGI.AVATAR_ID, CGI.GROUP_CREATED_BY, CGI.IS_LARGEGROUP,CGI.GRP_PROFILE_ID, CGI.GROUP_SHARED, CGI.POCHOME,
+            CGI.IS_PRECONFIG_GRP, CGI.UGWINTEROP, CGI.RECORDING_FS, CGI.AUTHORIZED_LARGE_TG, CGI.VIDEO_PERMISSION, CGI.HIERARCHY_ID FROM DG.CORPGROUPINFO CGI
+            LEFT JOIN DG.CORPGROUPMEMBERCOUNT GMC ON CGI.CORPGROUPID = GMC.CORPGROUPID
+            LEFT JOIN DG.CORPGRP_SHAREDLIST GSL ON CGI.CORPGROUPID = GSL.CORPGROUPID
+            WHERE (CORPID=? OR GSL.SHAREDCORPID =?) AND CGI.GROUP_CREATED_BY != 2
+            ORDER BY CGI.GROUPDISPLAYNAME;
+        </query-string>
+    </query>
+    <query id="625">
+        <query-string>SELECT CGI.CORPGROUPID FROM DG.CORPGROUPINFO CGI
+            LEFT JOIN DG.CORPGROUPMEMBERCOUNT GMC ON CGI.CORPGROUPID = GMC.CORPGROUPID
+            LEFT JOIN DG.CORPGRP_SHAREDLIST GSL ON CGI.CORPGROUPID = GSL.CORPGROUPID
+            WHERE (CORPID=? OR GSL.SHAREDCORPID =?) AND CGI.GROUP_CREATED_BY != 2;
+        </query-string>
+    </query>
+    <query id="626">
+        <query-string>DELETE FROM DG.CORPLISTINFO WHERE CORPID = ?</query-string>
+    </query>
+
+    <query id="627">
+        <query-string>DELETE FROM DG.GROUP_HIERARCHY_MAP WHERE CORPGROUPID = ?;</query-string>
+    </query>
+    <query id="628">
+        <query-string>SELECT MDN FROM DG.POCSUBSCRINFO WHERE MDN IN (MDNLIST)
+            AND CLIENTPV_MAJORVERSION >= 13 AND SERVICEAUTHSTATUS = 2;
+        </query-string>
+    </query>
+    <query id="629">
+        <query-string>SELECT ROWS ? to ? SUBSC.MDN, SUBSCRNAME , SERVICEAUTHSTATUS, PUBLICSUBSCRIPTIONTYPE,
+            CORPSUBSCRIPTIONTYPE, CORPID, CONTACTCOUNT, CLIENT_TYPE, ACTIVEFS1, ACTIVEFS2, USER_ID, DISPATCH_TYPE,
+            ALIAS_MDN, LICENSE_TYPE, SUBSC.PAMACCID,SUBSCRIBERFS1, SUBSCRIBERFS2, SAI.BAN_ID, SAI.FAN_ID FROM
+            DG.POCSUBSCRINFO SUBSC LEFT JOIN DG.CORPCONTACTCOUNT COUNTDETAILS ON SUBSC.MDN = COUNTDETAILS.MDN LEFT JOIN
+            DG.SUBSCRIBER_ADDLINFO SAI ON SAI.MDN = SUBSC.MDN WHERE CORPID = ? AND nvl(SUBSC.USERPROFILEINDEX,0)=0 AND
+            SAI.FAN_ID IN (LIST) ORDER BY SORT_TYPE;
+        </query-string>
+    </query>
+    <query id="630">
+        <query-string>SELECT COUNT(SUBSC.MDN) FROM DG.POCSUBSCRINFO SUBSC LEFT JOIN DG.CORPCONTACTCOUNT COUNTDETAILS ON
+            SUBSC.MDN = COUNTDETAILS.MDN LEFT JOIN DG.SUBSCRIBER_ADDLINFO SAI ON SAI.MDN = SUBSC.MDN WHERE CORPID = ?
+            AND nvl(SUBSC.USERPROFILEINDEX,0)=0 AND SAI.FAN_ID IN (LIST);
+        </query-string>
+    </query>
+    <query id="631">
+        <query-string>SELECT MEM.MEMBERMDN,INF.LISTDISTRIBUTIONPOLICY FROM DG.CORPLISTMEMBER MEM,DG.CORPLISTINFO INF
+            WHERE MEM.CORPLISTID=INF.CORPLISTID AND MEM.CORPLISTID IN (SUBLISTID);
+        </query-string>
+    </query>
+    <query id="632">
+        <query-string>SELECT CORPGROUPID,ID_VALUE FROM DG.GROUP_HIERARCHY_MAP WHERE CORPGROUPID IN (GROUP_IDS) AND
+            ID_TYPE=3;
+        </query-string>
+    </query>
+    <query id="633">
+        <query-string>SELECT MDN,FAN_ID,BAN_ID FROM DG.SUBSCRIBER_ADDLINFO WHERE MDN IN (MDNLIST);
+        </query-string>
+    </query>
+    <query id="634">
+        <query-string>SELECT ID_VALUE, ID_TYPE FROM DG.GROUP_HIERARCHY_MAP WHERE CORPGROUPID IN (GROUP_IDS) AND (ID_TYPE=2 or ID_TYPE=3);
+        </query-string>
+    </query>
+    <query id="635">
+        <query-string>SELECT DISTINCT FAN_ID FROM DG.SUBSCRIBER_ADDLINFO WHERE MDN IN (MDNLIST);
+        </query-string>
+    </query>
+    <query id="636">
+        <query-string>SELECT DISTINCT BAN_ID FROM DG.SUBSCRIBER_ADDLINFO WHERE MDN IN (MDNLIST);
+        </query-string>
+    </query>
+    <query id="637">
+        <query-string>SELECT CORPID,LARGE_GROUP_SUPPORTED FROM DG.POCCORPINFO WHERE CORPID IN (CORPIDLIST);</query-string>
+    </query>
+    <query id="638">
+        <query-string>SELECT ROWS ? to ? DISTINCT USERPROFILEID FROM DG.USERPROFILE_HIERARCHY_MAP WHERE ID_VALUE IN (ID_VALUES)
+        </query-string>
+    </query>
+    <query id="639">
+        <query-string>UPDATE DG.CORPGROUPMEMBERCOUNT SET MEMBERCOUNT = 0 WHERE CORPGROUPID IN (GROUPIDS);</query-string>
+    </query>
+    <query id="640">
+        <query-string>SELECT MDN FROM DG.POCSUBSCRINFO WHERE USERPROFILEID IN (SELECT USER_PROFILEID FROM
+            DG.PROFILE_GROUP_INFO WHERE GROUPID=? );
+        </query-string>
+    </query>
+    <query id="641">
+        <query-string>SELECT COUNT(MEMBERMDN) FROM DG.CORPGROUPMEMBERLIST WHERE IS_SUPERVISOR=2 AND CORPGROUPID = ?
+            ;
+        </query-string>
+    </query>
+    <query id="642">
+        <query-string>SELECT COUNT(USER_PROFILEID) FROM DG.PROFILE_GROUP_INFO WHERE IS_LOCWATCHER=1 AND GROUPID=?;
+        </query-string>
+    </query>
+    <query id="643">
+        <query-string>SELECT COUNT(MEMBERMDN) FROM DG.CORPGROUPMEMBERLIST WHERE IS_LOCWATCHER=1 AND CORPGROUPID=?;
+        </query-string>
+    </query>
+    <query id="644">
+        <query-string>SELECT GROUPID FROM DG.PROFILE_GROUP_INFO WHERE USER_PROFILEID IN(SELECT USERPROFILEID FROM
+            DG.POCSUBSCRINFO WHERE MDN=?);
+        </query-string>
+    </query>
+    <query id="645">
+        <query-string>SELECT COUNT(MDN) FROM DG.POCSUBSCRINFO WHERE USERPROFILEID IN (SELECT USER_PROFILEID FROM
+            DG.PROFILE_GROUP_INFO WHERE IS_LOCWATCHER = 1 AND GROUPID IN (GROUPIDS));
+        </query-string>
+    </query>
+    <query id="646">
+        <query-string>SELECT MDN FROM DG.POCSUBSCRINFO WHERE USERPROFILEID IN (SELECT USER_PROFILEID FROM
+            DG.PROFILE_GROUP_INFO WHERE GROUPID IN (GROUPIDS));
+        </query-string>
+    </query>
+    <query id="647">
+        <query-string>SELECT CORPGROUPID, CORPID, GROUPDISPLAYNAME, GROUPMEMBERLISTID, ETAG, GROUPTYPE, AVATAR_ID, LMR_INTEROP_CAPABLE, GROUP_OWNER, GROUP_CREATED_BY, IS_LARGEGROUP ,GRP_PROFILE_ID, GROUP_SHARED, OVERRIDE_PR,IS_PRECONFIG_GRP,UGWINTEROP, RECORDING_FS FROM DG.CORPGROUPINFO WHERE (CORPGROUPID, CORPID) IN (GROUPCORPIDMAP);
+        </query-string>
+    </query>
+    <query id="648">
+        <query-string>select CORPGROUPID, GROUPDISPLAYNAME, GROUPMEMBERLISTID, ETAG,GROUPTYPE, AVATAR_ID, LMR_INTEROP_CAPABLE, GROUP_OWNER, GROUP_CREATED_BY, IS_LARGEGROUP, GRP_PROFILE_ID, GROUP_SHARED, OVERRIDE_PR, IS_PRECONFIG_GRP, CORPID, UGWINTEROP FROM DG.CORPGROUPINFO WHERE CORPGROUPID IN (GROUPIDLIST);
+        </query-string>
+    </query>
+    <query id="649">
+        <query-string>SELECT A.CORPGROUPID, A.MEMBERMDN FROM DG.CORPGROUPMEMBERLIST A JOIN DG.CORPGROUPINFO C ON A.CORPGROUPID = C.CORPGROUPID WHERE NOT EXISTS (SELECT 1 FROM DG.CORPLISTMEMBER B WHERE A.MEMBERMDN = B.MEMBERMDN)AND A.CORPGROUPID IN (GROUPIDS)</query-string>
+    </query>
+    <query id="650">
+        <query-string>SELECT GROUPDISPLAYNAME, COUNT(CORPGROUPID) FROM DG.CORPGROUPINFO WHERE GROUPDISPLAYNAME IN (GROUPNAMES) AND CORPID = ? GROUP BY GROUPDISPLAYNAME</query-string>
+    </query>
+    <query id="651">
+        <query-string>SELECT CORPGROUPID, CORPLISTID FROM DG.CORPGROUP_LISTREF WHERE CORPGROUPID IN (GROUPIDS)</query-string>
+    </query>
+    <query id="652">
+        <query-string>SELECT CORPLISTID, MEMBERMDN, MEMBERCORPID FROM DG.CORPLISTMEMBER WHERE CORPLISTID IN (SUBLISTID)</query-string>
+    </query>
+    <query id="653">
+        <query-string>SELECT CORPGROUPID, MEMBERMDN, IS_SUPERVISOR, IS_LOCWATCHER, IS_OSMAUTHORIZED, CALL_INITIATE_PERMISSION, CALL_RECEIVE_PERMISSION, INCALL_PERMISSION, IS_BROADCASTER, MEMBERMDN_CORPID, GRP_MODIFY_PERM, V_CALL_INITIATE_PERMISSION, V_CALL_RECEIVE_PERMISSION, V_INCALL_PERMISSION FROM DG.CORPGROUPMEMBERLIST WHERE CORPGROUPID IN(GROUPIDS);</query-string>
+    </query>
+    <query id="654">
+        <query-string>SELECT CORPGROUPID FROM DG.CORPGROUPINFO where (CORPGROUPID, OSMLISTID) IN (GROUPOSMMAP);</query-string>
+    </query>
+    <query id="655">
+        <query-string>SELECT CORPGROUPID , COUNT(MEMBERMDN) FROM DG.CORPGROUPMEMBERLIST WHERE IS_LOCWATCHER = 1 AND
+            CORPGROUPID IN(GROUPIDS) GROUP BY CORPGROUPID;
+        </query-string>
+    </query>
+    <query id="656">
+        <query-string>SELECT CORPGROUPID , COUNT(MEMBERMDN) FROM DG.CORPGROUPMEMBERLIST WHERE CORPGROUPID
+            IN(GROUPIDS) GROUP BY CORPGROUPID;
+        </query-string>
+    </query>
+    <query id="657">
+        <query-string>SELECT CORPGROUPID, MEMBERMDN, IS_SUPERVISOR, IS_LOCWATCHER, IS_OSMAUTHORIZED, CALL_INITIATE_PERMISSION, CALL_RECEIVE_PERMISSION, INCALL_PERMISSION, IS_BROADCASTER, MEMBERMDN_CORPID, GRP_MODIFY_PERM, V_CALL_INITIATE_PERMISSION, V_CALL_RECEIVE_PERMISSION, V_INCALL_PERMISSION FROM DG.CORPGROUPMEMBERLIST WHERE CORPGROUPID IN(GROUPIDS) AND MEMBERMDN = ?;</query-string>
+    </query>
+    <query id="658">
+        <query-string>UPDATE DG.POCCORPINFO SET PERMSET_UPDATETIME = ?, CATACCESS_PERMSET = ? WHERE EXTCORPID = ?;</query-string>
+    </query>
+    <query id="659">
+        <query-string>SELECT CORPID, CORPGROUPID from DG.CORPGROUPINFO where GROUP_CREATED_BY=2 and CORPGROUPID in (GROUPIDS);</query-string>
+    </query>
+    <query id="660">
+        <query-string>SELECT G.CORPGROUPID, G.GROUPDISPLAYNAME, GMC.MEMBERCOUNT, G.ETAG, G.GROUPTYPE, G.AVATAR_ID,
+            GROUPDIS.IS_BROADCASTER, G.GROUP_CREATED_BY, G.IS_LARGEGROUP, COALESCE(G.OSMLISTID,0)AS OSMLISTID,
+            G.GRP_PROFILE_ID, G.GROUP_SHARED, G.CORPID, G.VIDEO_PERMISSION FROM DG.CORPGROUPMEMBERCOUNT GMC, DG.CORPGROUPINFO G,
+            DG.CORPGROUPMEMBERLIST GROUPDIS WHERE GROUPDIS.CORPGROUPID = G.CORPGROUPID AND GMC.CORPGROUPID = G.CORPGROUPID
+            AND GROUPDIS.MEMBERMDN=?;</query-string>
+    </query>
+    <query id="661">
+        <query-string>SELECT ROWS ? to ? G.CORPGROUPID, G.GROUPDISPLAYNAME, GMC.MEMBERCOUNT, G.ETAG, G.GROUPTYPE, G.AVATAR_ID,
+            GROUPDIS.IS_BROADCASTER, G.GROUP_CREATED_BY, G.IS_LARGEGROUP,COALESCE(G.OSMLISTID,0)AS
+            OSMLISTID,G.GRP_PROFILE_ID,G.GROUP_SHARED,G.CORPID,G.VIDEO_PERMISSION FROM DG.CORPGROUPMEMBERCOUNT GMC, DG.CORPGROUPINFO G
+            ,DG.CORPGROUPMEMBERLIST GROUPDIS WHERE GROUPDIS.CORPGROUPID = G.CORPGROUPID AND GMC.CORPGROUPID
+            =G.CORPGROUPID AND GROUPDIS.MEMBERMDN=? ORDER BY G.GROUPDISPLAYNAME;
+        </query-string>
+
+    </query>
+    <query id="662">
+        <query-string>SELECT GMC.MEMBERMDN, COUNT(GMC.CORPGROUPID) FROM DG.CORPGROUPINFO CGI LEFT JOIN
+            DG.CORPGROUPMEMBERLIST GMC ON CGI.CORPGROUPID = GMC.CORPGROUPID WHERE CGI.GROUP_CREATED_BY!=2
+            AND  MEMBERMDN IN (MDNLIST) GROUP BY MEMBERMDN;
+        </query-string>
+    </query>
+    <query id="663">
+        <query-string>SELECT GROUPID,COUNT(USER_PROFILEID) FROM DG.PROFILE_GROUP_INFO WHERE IS_LOCWATCHER=1 AND GROUPID
+            IN (GROUPIDS) GROUP BY GROUPID;
+        </query-string>
+    </query>
+    <query id="664">
+        <query-string>SELECT CORPGROUPID,COUNT(MEMBERMDN) FROM DG.CORPGROUPMEMBERLIST WHERE IS_SUPERVISOR=2 AND
+            CORPGROUPID IN (GROUPIDS) GROUP BY CORPGROUPID;
+        </query-string>
+    </query>
+    <query id="665">
+        <query-string>SELECT COUNT(MEMBERMDN) FROM DG.CORPGROUPMEMBERLIST WHERE CORPGROUPID IN(GROUPIDS);
+        </query-string>
+    </query>
+    <query id="666">
+        <query-string>SELECT COUNT(MDN) FROM DG.POCSUBSCRINFO WHERE USERPROFILEID IN (SELECT USER_PROFILEID FROM
+            DG.PROFILE_GROUP_INFO WHERE GROUPID IN (GROUPIDS));
+        </query-string>
+    </query>
+    <query id="667">
+        <query-string>SELECT GMC.MEMBERMDN, COUNT(GMC.CORPGROUPID) FROM DG.CORPGROUPINFO CGI LEFT JOIN
+            DG.CORPGROUPMEMBERLIST GMC ON CGI.CORPGROUPID = GMC.CORPGROUPID WHERE CGI.GROUPTYPE=2
+            AND  MEMBERMDN IN (MDNLIST) GROUP BY MEMBERMDN;
+        </query-string>
+    </query>
+    <query id="668">
+        <query-string>SELECT MEMBERMDN FROM DG.CORPGROUPMEMBERLIST WHERE CORPGROUPID IN(GROUPIDS) AND IS_LOCWATCHER = ?;
+        </query-string>
+    </query>
+    <query id="669">
+        <query-string>SELECT S.MDN,S.MC_ID,S.LASTPROFILEUPDATETIME,S.MCPTT_COMPLIANCE,S.USERPROFILEINDEX,
+            S.CLIENTPV_MAJORVERSION,S.ACTIVEFS2, G.ETAG FROM DG.POCSUBSCRINFO S JOIN DG.XDM_DIRECTORY
+            G ON S.MDN = G.MDN WHERE G.MDN IN (MDNLIST);
+        </query-string>
+    </query>
+    <query id="670">
+        <query-string>SELECT DISTINCT MEMBERMDN FROM DG.CORPGROUPMEMBERLIST WHERE CORPGROUPID IN(GROUPIDS)
+        </query-string>
+    </query>
+    <query id="671">
+        <query-string>UPDATE DG.CORPGROUPINFO SET AUTHORIZED_LARGE_TG = ? WHERE CORPGROUPID = ?</query-string>
+    </query>
+    <query id="672">
+        <query-string>UPDATE DG.POCSUBSCRINFO SET DISPATCH_GRP_MEMBER = 0 WHERE MDN IN (MDNLIST);
+        </query-string>
+    </query>
+    <query id="673">
+        <query-string>SELECT MEMBERMDN FROM DG.CORPGROUPMEMBERLIST WHERE CORPGROUPID IN (GROUPIDS);
+        </query-string>
+    </query>
+    <query id="674">
+        <query-string>SELECT * FROM (SELECT T.RECIPIENTMDN, ROWNUM AS RN FROM (SELECT RECIPIENTMDN FROM
+            DG.CORPGROUPDISTINFO WHERE CORPGROUPID = ? ORDER BY RECIPIENTMDN) T) WHERE RN BETWEEN ? AND ?;
+        </query-string>
+    </query>
+    <query id="675">
+        <query-string>SELECT * FROM (SELECT t.corpgroupid, ROWNUM AS rn FROM (SELECT CORPGROUPID FROM
+            DG.CORPGROUPMEMBERLIST WHERE MEMBERMDN IN (MDNLIST) ORDER BY CORPGROUPID) t) WHERE rn = ?;
+        </query-string>
+    </query>
+    <query id="676">
+        <query-string>SELECT TXN_ID, CORPID FROM (SELECT TXN_ID, CORPID, ROWNUM AS RN FROM (SELECT TXN_ID, CORPID FROM DG.PENDING_TXN_INFO
+            WHERE STATUS = 3 ORDER BY INSERTION_TIME)) WHERE RN BETWEEN 0 AND 20;
+        </query-string>
+    </query>
+    <query id="677">
+        <query-string>SELECT * FROM (SELECT T.MDN, ROWNUM AS RN FROM (SELECT MDN FROM
+            DG.CORPCONTACTLIST WHERE CONTACTMDN IN (CONTACTMDNLIST) ORDER BY MDN) T) WHERE RN BETWEEN ? AND ?;
+        </query-string>
+    </query>
+    <query id="678">
+        <query-string>SELECT * FROM (SELECT T.AUTHORIZED_MDN, ROWNUM AS RN FROM (SELECT AUTHORIZED_MDN FROM
+            DG.MCPTT_PERM_INFO WHERE TARGET_MDN IN (TARGETMDNLIST) ORDER BY AUTHORIZED_MDN) T) WHERE RN BETWEEN ? AND ?;
+        </query-string>
+    </query>
+    <query id="679">
+        <query-string>SELECT * FROM (SELECT T.MDN, ROWNUM AS RN FROM (SELECT MDN FROM
+            DG.EMERGENCY_SUBSCR_DESTINFO WHERE EMERGDEST IN (EMERGDESTLIST) ORDER BY MDN) T) WHERE RN BETWEEN ? AND ?;
+        </query-string>
+    </query>
+    <query id="680">
+        <query-string>SELECT MDN FROM DG.CORPCONTACTLIST WHERE CONTACTMDN = ?;
+        </query-string>
+    </query>
+    <query id="681">
+        <query-string>SELECT CORPGROUPID,IS_SUPERVISOR,IS_LOCWATCHER,MEMBERMDN_CORPID, MEMBERMDN FROM DG.CORPGROUPMEMBERLIST
+            WHERE CORPGROUPID in (GROUPIDLIST) AND MEMBERMDN IN (MDNLIST);
+        </query-string>
+    </query>
+    <query id="682">
+        <query-string>DELETE FROM DG.CORPCONTACTLIST WHERE CONTACTMDN = ?</query-string>
+    </query>
+    <query id="683">
+        <query-string>UPDATE DG.CORPGROUPMEMBERLIST SET IS_LOCWATCHER = ? WHERE MEMBERMDN = ?;</query-string>
+    </query>
+    <query id="684">
+        <query-string>SELECT MDN, SERVICEAUTHSTATUS FROM DG.POCSUBSCRINFO WHERE MDN IN (MDNLIST);</query-string>
+    </query>
+    <query id="685">
+        <query-string>UPDATE DG.CORPGROUPMEMBERLIST SET IS_OSMAUTHORIZED=? WHERE MEMBERMDN=?;
+        </query-string>
+    </query>
+    <query id="686">
+        <query-string>SELECT DISTINCT MC_ID FROM DG.POCSUBSCRINFO WHERE MDN IN (MDNLIST)
+        </query-string>
+    </query>
+    <query id="687">
+        <query-string>SELECT CORPGROUPID FROM DG.CORPGROUPINFO WHERE IS_LARGEGROUP = ? and CORPGROUPID IN (GROUPIDS)
+        </query-string>
+    </query>
+    <query id="688">
+        <query-string>SELECT MDN FROM DG.POCSUBSCRINFO WHERE USERPROFILEINDEX!=0 AND DISPATCH_GRP_MEMBER=? AND MC_ID IN
+            (SELECT MC_ID FROM DG.POCSUBSCRINFO WHERE MDN IN(MDNLIST));
+        </query-string>
+    </query>
+    <query id="689">
+        <query-string>INSERT INTO DG.CORP_HIERARCHY_DETAILS(CORPID, HIERARCHY_ID, EXTERNAL_HIERARCHY_ID, HIERARCHY_NAME, HIERARCHY_ALIAS,
+            HIERARCHY_TYPE, SEGMENT_INDICATOR, SUBSCR_DEF_PTTRADIO, FEATURE_VERSION, CREATION_TIME, UPDATE_TIME,STATUS,
+            CUSTOM_FIELD_1, CUSTOM_FIELD_2) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        </query-string>
+    </query>
+    <query id="690">
+        <query-string>
+            INSERT INTO DG.CORP_HIERARCHY_DEPTH(CORPID, ANCESTOR_HIER_ID, DESCENDANT_HIER_ID, DEPTH, CREATION_TIME, UPDATE_TIME,
+            CUSTOM_FIELD_1, CUSTOM_FIELD_2) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+        </query-string>
+    </query>
+    <query id="691">
+        <query-string>
+            SELECT CLUSTERID, DEPLOYMENT_TYPE, CLUSTER_NAME, CLUSTER_FQDN, DESC, COUNTRYCODE, ISREDUNDANT, REDUNDANTCLSID,
+            CLUSTER_TYPE, GEOCODE FROM DG.DEPLOY_SITE_INFO;
+        </query-string>
+    </query>
+    <query id="692">
+        <query-string>
+            SELECT HIERARCHY_NAME from DG.CORP_HIERARCHY_DETAILS WHERE HIERARCHY_NAME IN (HIERARCHY_NAME_LIST)
+            AND CORPID = ?;
+        </query-string>
+    </query>
+    <query id="693">
+        <query-string>
+            UPDATE DG.CORP_HIERARCHY_DETAILS
+            SET HIERARCHY_NAME = NVL(?,HIERARCHY_NAME), HIERARCHY_ALIAS = NVL(?,HIERARCHY_ALIAS), SEGMENT_INDICATOR = ?, SUBSCR_DEF_PTTRADIO = ?, FEATURE_VERSION = ?,
+            UPDATE_TIME = ?, STATUS = ?, CUSTOM_FIELD_1 = ?, CUSTOM_FIELD_2 = ?
+            WHERE CORPID = ? AND HIERARCHY_ID = ?;
+        </query-string>
+    </query>
+    <query id="694">
+        <query-string>
+            UPDATE DG.CORP_HIERARCHY_DEPTH
+            SET DEPTH = ?, UPDATE_TIME = ?, CUSTOM_FIELD_1 = ?, CUSTOM_FIELD_2 = ?
+            WHERE CORPID = ? AND ANCESTOR_HIER_ID = ? AND DESCENDANT_HIER_ID = ?;
+        </query-string>
+    </query>
+    <query id="695">
+        <query-string>
+            INSERT INTO DG.CORP_HIERARCHY_GEOCODE_MAP (CORPID, HIERARCHY_ID, GEOCODE, CREATION_TIME, UPDATE_TIME,
+            CUSTOM_FIELD_1, CUSTOM_FIELD_2) VALUES (?, ?, ?, ?, ?, ?, ?);
+        </query-string>
+    </query>
+    <query id="696">
+        <query-string>
+            UPDATE DG.CORP_HIERARCHY_DETAILS SET HIERARCHY_NAME = NVL(?,HIERARCHY_NAME) , HIERARCHY_ALIAS = ? WHERE HIERARCHY_ID = ?;
+        </query-string>
+    </query>
+    <query id="697">
+        <query-string>
+            SELECT DISTINCT ANCESTOR_HIER_ID , DEPTH FROM DG.CORP_HIERARCHY_DEPTH WHERE CORPID = ? AND DESCENDANT_HIER_ID = ? AND DEPTH NOT IN (0);
+        </query-string>
+    </query>
+    <query id="698">
+        <query-string>
+            DELETE FROM DG.CORP_HIERARCHY_GEOCODE_MAP WHERE HIERARCHY_ID = ? AND CORPID = ? AND GEOCODE = ?;
+        </query-string>
+    </query>
+    <query id="699">
+        <query-string>
+            SELECT HIERARCHY_ID, GEOCODE  FROM DG.CORP_HIERARCHY_GEOCODE_MAP WHERE CORPID=? AND HIERARCHY_ID IN (HIERARCHY_ID_LIST);
+        </query-string>
+    </query>
+    <query id="700">
+        <query-string>SELECT GEOCODE, CLUSTERID FROM DG.DEPLOY_SITE_INFO WHERE GEOCODE IN (GEOCODELIST);
+        </query-string>
+    </query>
+    <query id="701">
+        <query-string>SELECT POCHOME,CLUSTERID FROM DG.ANCHOR_POC_INFO WHERE CORPID = ? AND HIERARCHY_ID = ? AND
+            CLUSTERID IN (CLUSTERIDLIST);
+        </query-string>
+    </query>
+    <query id="702">
+        <query-string>INSERT INTO DG.ANCHOR_POC_INFO (CORPID, HIERARCHY_ID, CLUSTERID, POCHOME, CUSTOM_FIELD_1,
+            CUSTOM_FIELD_2) VALUES (?, ?, ?, ?, ?, ?);
+        </query-string>
+    </query>
+    <query id="703">
+        <query-string>SELECT OPSCORPFS2 FROM DG.POCCORPINFO WHERE CORPID = ?</query-string>
+    </query>
+    <query id="704">
+        <query-string>SELECT MDN, CLIENT_TYPE, CORPID, USERAGENT, CLIENTPV_MAJORVERSION,
+            SERVICEAUTHSTATUS,PRESENCEHOME,XDMSHOME,CORPSUBSCRIPTIONTYPE,SUBSCRIBERFS2,CLIENTFS2,OPSFS2,CORPADMINFS2,XDMSFS2,
+            USERPROFILEFS2,HIERARCHY_ID,CLUSTERID,POCHOME,MCPTT_COMPLIANCE FROM DG.POCSUBSCRINFO WHERE MDN IN (MDNLIST)
+        </query-string>
+    </query>
+    <query id="705">
+        <query-string>UPDATE DG.POCSUBSCRINFO SET CLUSTERID = ?, POCHOME = ?, PRESENCEHOME=?, SERVICEAUTHSTATUS = ?, ACTIVEFS2 = ?,
+            HIERARCHY_ID = ?, HIERARCHY_ROOT = ?, PREVSERVICEAUTHSTATUS = ?, LASTPROFILEUPDATETIME = ? WHERE MDN = ? ;
+        </query-string>
+    </query>
+    <query id="706">
+        <query-string>SELECT COUNT(*) FROM DG.CORP_HIERARCHY_DETAILS WHERE CORPID = ? AND HIERARCHY_ID = ?;
+        </query-string>
+    </query>
+    <query id="707">
+        <query-string>
+            SELECT DISTINCT chd.HIERARCHY_NAME, chd.HIERARCHY_ID  FROM DG.CORP_HIERARCHY_DETAILS chd
+            INNER JOIN DG.CORP_HIERARCHY_DEPTH chdp ON (chd.HIERARCHY_ID = chdp.DESCENDANT_HIER_ID)
+            WHERE chd.CORPID = ? ;
+        </query-string>
+    </query>
+    <query id="708">
+        <query-string>SELECT DISTINCT PTT_SETTING_DOCID,IS_DEFAULTDOC  FROM DG.CORP_PTTSETTING_MAP WHERE CORPID =?;
+        </query-string>
+    </query>
+    <query id="709">
+        <query-string>UPDATE DG.CORP_PTTSETTING_MAP SET IS_DEFAULTDOC = 1, UPDATE_TIME=? WHERE PTT_SETTING_DOCID=? AND HIERARCHY_ID =? AND CORPID=?;
+        </query-string>
+    </query>
+    <query id="710">
+        <query-string>INSERT INTO DG.CORP_PTTSETTING_MAP(CORPID, PTT_SETTING_DOCID ,HIERARCHY_ID, IS_DEFAULTDOC, CREATION_TIME, UPDATE_TIME) VALUES (?,?,?,?,?,?);
+        </query-string>
+    </query>
+    <query id="711">
+        <query-string>DELETE FROM DG.CORP_PTTSETTING_MAP WHERE CORPID=? AND PTT_SETTING_DOCID=? AND HIERARCHY_ID=?;
+        </query-string>
+    </query>
+    <query id="712">
+        <query-string>SELECT DISTINCT PTT_SETTING_DOCID,IS_DEFAULTDOC  FROM DG.CORP_PTTSETTING_MAP WHERE CORPID =? AND HIERARCHY_ID =?;
+        </query-string>
+    </query>
+    <query id="713">
+        <query-string>SELECT *  FROM DG.CORP_PTTSETTING_MAP WHERE PTT_SETTING_DOCID  =?;
+        </query-string>
+    </query>
+    <query id="714">
+        <query-string>UPDATE DG.POCSUBSCR_ADDLINFO SET PTT_SETTING_DOCID = ? WHERE MDN IN (MDNLIST);
+        </query-string>
+    </query>
+    <query id="715">
+        <query-string>UPDATE DG.POCSUBSCR_ADDLINFO SET PTT_SETTING_DOCID = NULL WHERE MDN IN (MDNLIST);
+        </query-string>
+    </query>
+    <query id="716">
+        <query-string>SELECT SUB.MDN, SUB.SUBSCRNAME FROM DG.POCSUBSCR_ADDLINFO ADL LEFT JOIN DG.POCSUBSCRINFO SUB ON SUB.MDN = ADL.MDN
+            WHERE ADL.PTT_SETTING_DOCID = ? AND SUB.CORPID=?
+        </query-string>
+    </query>
+    <query id="717">
+        <query-string>UPDATE DG.CORP_PTTSETTING_MAP SET IS_DEFAULTDOC = 1, UPDATE_TIME=? WHERE PTT_SETTING_DOCID=? AND CORPID=? ;
+        </query-string>
+    </query>
+    <query id="718">
+        <query-string>SELECT COUNT(ADL.MDN) FROM DG.POCSUBSCR_ADDLINFO ADL INNER JOIN DG.POCSUBSCRINFO SUB ON ADL.MDN = SUB.MDN WHERE ADL.PTT_SETTING_DOCID = ? AND SUB.CORPID = ?;
+        </query-string>
+    </query>
+    <query id="719">
+        <query-string>SELECT IS_DEFAULTDOC FROM DG.CORP_PTTSETTING_MAP WHERE PTT_SETTING_DOCID=? AND HIERARCHY_ID=? AND CORPID=?;
+        </query-string>
+    </query>
+    <query id="720">
+        <query-string>SELECT IS_DEFAULTDOC FROM DG.CORP_PTTSETTING_MAP WHERE PTT_SETTING_DOCID=? AND CORPID=?;
+        </query-string>
+    </query>
+    <query id="721">
+        <query-string>UPDATE DG.CORP_PTTSETTING_MAP SET IS_DEFAULTDOC = 0, UPDATE_TIME=? WHERE HIERARCHY_ID=? AND CORPID=?;
+        </query-string>
+    </query>
+    <query id="722">
+        <query-string>UPDATE DG.CORP_PTTSETTING_MAP SET IS_DEFAULTDOC = 0, UPDATE_TIME=? WHERE CORPID=?;
+        </query-string>
+    </query>
+    <query id="723">
+        <query-string>SELECT POCHOME FROM DG.CORPGROUPINFO WHERE CORPGROUPID = ?;
+        </query-string>
+    </query>
+    <query id="724">
+        <query-string>UPDATE DG.CORPGROUPINFO SET POCHOME = ?, CLUSTERID = ? WHERE CORPGROUPID = ?</query-string>
+    </query>
+
+    <query id="725">
+        <query-string>SELECT C.OSMLISTID, C.OSMLISTNAME, C.ISDEFAULT, count(O.OSMLISTID) AS OSMCOUNT FROM DG.CORPOSMINFO
+            C LEFT JOIN DG.OSMLISTINFO O ON (C.OSMLISTID=O.OSMLISTID) WHERE C.CORPID=? AND C.HIERARCHY_ID = ? GROUP BY C.OSMLISTID,
+            C.OSMLISTNAME, C.ISDEFAULT;
+        </query-string>
+    </query>
+    <query id="726">
+        <query-string>SELECT GMC.MEMBERMDN, COUNT(GMC.CORPGROUPID)
+            FROM DG.CORPGROUPINFO CGI
+            LEFT JOIN DG.CORPGROUPMEMBERLIST GMC ON CGI.CORPGROUPID = GMC.CORPGROUPID
+            WHERE CGI.CORPID =? AND MEMBERMDN IN (MDNLIST)
+            GROUP BY MEMBERMDN;
+        </query-string>
+    </query>
+    <query id="727">
+        <query-string>SELECT CGML.MEMBERMDN, COUNT(DISTINCT CGML.CORPGROUPID) AS GroupCount
+            FROM DG.CORPGROUPINFO CGI
+            LEFT JOIN DG.CORPGROUPMEMBERLIST CGML ON CGI.CORPGROUPID = CGML.CORPGROUPID
+            LEFT JOIN DG.CORPGRP_SHAREDLIST CGSL ON CGI.CORPGROUPID = CGSL.CORPGROUPID
+            WHERE CGML.MEMBERMDN IN (MDNLIST)
+            AND CGI.GROUP_CREATED_BY != 2
+            AND ((CGI.GROUP_SHARED IS NOT NULL AND CGI.GROUP_SHARED = 1) OR CGI.CORPID =?)
+            AND ((CGI.GROUP_SHARED IS NULL OR CGI.GROUP_SHARED = 0) OR (CGSL.SHAREDCORPID =? OR CGSL.OWNEDCORPID =? OR CGI.CORPID =?))
+            GROUP BY CGML.MEMBERMDN;
+        </query-string>
+    </query>
+    <query id="728">
+        <query-string>SELECT CHGM.GEOCODE FROM DG.CORP_HIERARCHY_GEOCODE_MAP CHGM WHERE CHGM.CORPID = ? AND CHGM.HIERARCHY_ID = ?</query-string>
+    </query>
+
+    <query id="729">
+        <query-string>SELECT DISTINCT DSI.GEOCODE AS GEOCODE FROM DG.DEPLOY_SITE_INFO DSI INNER JOIN DG.SIGNALINGCARD_SITE_MAP SSM ON DSI.CLUSTERID = SSM.CLUSTERID INNER JOIN DG.PTTSERVERIPINFO PSI ON SSM.SIGNALINGCARDID = PSI.SIGNALINGCARDID WHERE PSI.SIGNALINGCARDTYPE = 32;</query-string>
+    </query>
+    <query id="730">
+        <query-string>SELECT ROWS ? to ?
+            CORPID,GRPPROFILEID,GRPPROFILENAME,GRPTYPE,AVATAR,SERVICETYPE,OSMLISTID,AUDIOCUTIN,MCXGRP,FEATURESALLOWED,CREATETIMESTAMP,UPDATETIMESTAMP,GRPPROFILESTATUS,OVERRIDEDND,GROUP_SHARED,UGWINTEROP
+            FROM DG.CORPGROUPPROFILE WHERE CORPID = ? AND HIERARCHY_ID=?;
+        </query-string>
+    </query>
+    <query id="731">
+        <query-string>SELECT COUNT( GRPPROFILEID ) FROM DG.CORPGROUPPROFILE WHERE CORPID = ? AND HIERARCHY_ID=?;</query-string>
+    </query>
+    <query id="732">
+        <query-string>
+            UPDATE DG.CORPGROUPINFO SET VIDEO_PERMISSION = ? WHERE CORPGROUPID = ?;
+        </query-string>
+    </query>
+    <query id="733">
+        <query-string>
+            SELECT ANCESTOR_HIER_ID, COUNT(*) MAX_NODE_COUNT from DG.CORP_HIERARCHY_DEPTH WHERE CORPID= ? AND ANCESTOR_HIER_ID IN ( HIERARCHY_ID_LIST) AND DEPTH = 1 GROUP BY ANCESTOR_HIER_ID;
+        </query-string>
+    </query>
+    <query id="734">
+        <query-string>
+            SELECT DESCENDANT_HIER_ID, MAX(DEPTH) MAX_DEPTH from DG.CORP_HIERARCHY_DEPTH WHERE CORPID = ? AND DESCENDANT_HIER_ID IN ( HIERARCHY_ID_LIST )  GROUP BY DESCENDANT_HIER_ID;
+        </query-string>
+    </query>
+    <query id="735">
+        <query-string>
+            SELECT DESCENDANT_HIER_ID, DEPTH  FROM DG.CORP_HIERARCHY_DEPTH WHERE CORPID = ? AND ANCESTOR_HIER_ID = ? ;
+        </query-string>
+    </query>
+    <query id="736">
+        <query-string>
+            SELECT ANCESTOR_HIER_ID, MAX(DEPTH) MAX_CHILD_DEPTH from DG.CORP_HIERARCHY_DEPTH WHERE CORPID = ? AND ANCESTOR_HIER_ID IN ( HIERARCHY_ID_LIST )  GROUP BY ANCESTOR_HIER_ID;
+        </query-string>
+    </query>
+    <query id="737">
+        <query-string>
+            DELETE FROM DG.CORP_HIERARCHY_DEPTH WHERE DESCENDANT_HIER_ID = ? AND CORPID = ?;
+        </query-string>
+    </query>
+    <query id="738">
+        <query-string>
+            DELETE FROM DG.CORP_HIERARCHY_DEPTH D
+            WHERE D.CORPID = ?
+            AND EXISTS (
+                SELECT 1 FROM DG.CORP_HIERARCHY_DEPTH A
+                WHERE A.DESCENDANT_HIER_ID = ?
+                    AND A.ANCESTOR_HIER_ID = D.ANCESTOR_HIER_ID
+                    AND A.CORPID = D.CORPID
+            )
+            AND EXISTS (
+                SELECT 1 FROM DG.CORP_HIERARCHY_DEPTH B
+                WHERE B.ANCESTOR_HIER_ID = ?
+                    AND B.CORPID = D.CORPID
+                    AND B.DESCENDANT_HIER_ID = D.DESCENDANT_HIER_ID
+            );
+        </query-string>
+    </query>
+    <query id="739">
+        <query-string>INSERT INTO DG.GROUP_HIERARCHY_MAP(CORPGROUPID, ID_VALUE, ID_TYPE, CORPID, UPDATETIME) VALUES (?,?,?,?,?);</query-string>
+    </query>
+    <query id="740">
+        <query-string>SELECT ID_VALUE, CORPID FROM DG.GROUP_HIERARCHY_MAP WHERE CORPGROUPID=? AND ID_TYPE=4</query-string>
+    </query>
+    <query id="741">
+        <query-string>SELECT COUNT(*) FROM DG.CORPGRP_SHAREDLIST WHERE OWNEDCORPID=? AND SHAREDCORPID=?</query-string>
+    </query>
+    <query id="739">
+        <query-string>SELECT GM.CORPGROUPID, GM.MEMBERMDN, GI.CORPID FROM DG.CORPGROUPMEMBERLIST GM INNER JOIN DG.CORPGROUPINFO GI ON GM.CORPGROUPID = GI.CORPGROUPID WHERE GM.MEMBERMDN IN (MDNLIST)
+        </query-string>
+    </query>
+    <query id="742">
+        <query-string>SELECT COUNT(*) FROM DG.GROUP_HIERARCHY_MAP WHERE ID_VALUE=? AND ID_TYPE=4</query-string>
+    </query>
+    <query id="743">
+        <query-string>
+            SELECT CHD.HIERARCHY_ID, CHD.HIERARCHY_NAME FROM DG.CORP_HIERARCHY_DETAILS CHD
+            INNER JOIN DG.CORP_HIERARCHY_DEPTH CHDP ON (CHD.CORPID = CHDP.CORPID AND  CHD.HIERARCHY_ID = CHDP.DESCENDANT_HIER_ID)
+            WHERE CHD.CORPID = ? AND CHDP.DEPTH=0;
+        </query-string>
+    </query>
+    <query id="744">
+        <query-string>UPDATE DG.POCSUBSCR_ADDLINFO SET PTT_SETTING_DOCID = NULL WHERE PTT_SETTING_DOCID = ?
+            AND MDN IN (SELECT SUB.MDN FROM DG.POCSUBSCRINFO SUB WHERE SUB.CORPID = ? AND SUB.HIERARCHY_ID = ?);
+        </query-string>
+    </query>
+    <query id="745">
+        <query-string>UPDATE DG.CORPGROUPINFO SET ETAG = ?, LASTUPDATETIME = ?, OVERRIDE_PR = ?, AVATAR_ID = ?,
+            OSMLISTID = ?, GRP_SVC_TYPE = ?, FEATURES_ALLOWED = ?, AUDIO_CUTIN = ?, UGWINTEROP = ?
+            WHERE CORPGROUPID = ?
+        </query-string>
+    </query>
+    <query id="746">
+        <query-string>
+            SELECT HIERARCHY_ID, CLUSTERID, COUNT(MDN) SUBSCRIBER_COUNT from DG.POCSUBSCRINFO WHERE CORPID = ? AND HIERARCHY_ID IN (HIERARCHY_ID_LIST) AND CLUSTERID IS NOT NULL
+            GROUP BY CORPID, HIERARCHY_ID, CLUSTERID;
+        </query-string>
+    </query>
+    <query id="747">
+        <query-string>SELECT OSMLISTID,ISDEFAULT FROM DG.CORPOSMINFO WHERE CORPID=? AND HIERARCHY_ID = ?;</query-string>
+    </query>
+    <query id="748">
+        <query-string>SELECT
+            CORPID,GRPPROFILEID,GRPPROFILENAME,GRPTYPE,AVATAR,SERVICETYPE,OSMLISTID,AUDIOCUTIN,MCXGRP,FEATURESALLOWED,CREATETIMESTAMP,UPDATETIMESTAMP,GRPPROFILESTATUS
+            ,OVERRIDEDND,GROUP_SHARED,UGWINTEROP FROM DG.CORPGROUPPROFILE WHERE CORPID = ? AND GRPPROFILEID = ? AND HIERARCHY_ID = ?
+        </query-string>
+    </query>
+    <query id="749">
+        <query-string>SELECT
+            CORPID,GRPPROFILEID,GRPPROFILENAME,GRPTYPE,AVATAR,SERVICETYPE,OSMLISTID,AUDIOCUTIN,MCXGRP,FEATURESALLOWED,CREATETIMESTAMP,UPDATETIMESTAMP,GRPPROFILESTATUS
+            ,OVERRIDEDND,GROUP_SHARED,UGWINTEROP FROM DG.CORPGROUPPROFILE WHERE CORPID = ? AND GRPPROFILENAME = ? AND HIERARCHY_ID = ?
+        </query-string>
+    </query>
+    <query id="750">
+        <query-string>UPDATE DG.ANCHOR_POC_INFO SET POCHOME = ? WHERE CORPID = ? AND HIERARCHY_ID = ? AND CLUSTERID = ?;</query-string>
+    </query>
+</sql-map-corporate>

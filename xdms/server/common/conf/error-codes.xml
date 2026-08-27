@@ -1,0 +1,614 @@
+<!--
+Copyright Motorola Solutions, Inc. and/or Kodiak Networks, Inc.
+All Rights Reserved
+Motorola Solutions Confidential Restricted
+-->
+
+<error-codes>
+    <!-- Generic errors -->
+    <error code="KNEC-CM10001">
+        <label>INTERNAL_ERROR</label>
+        <msg>Internal Server Error Occured. Please contact administrator</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Validator, Authorizer, Authenticator, ConfigManager, ModuleLoader, ConfigInitializer, CacheManager,
+            DAO, BOEntity, ProfileHandler,Initializer
+        </originators>
+        <error-context>GPLib-Initializer-Error</error-context>
+    </error>
+    <error code="KNEC-CM10002">
+        <label>CONFIG_ERROR</label>
+        <msg>Library Configuration Error. Please contact administrator</msg>
+        <level>ERROR</level>
+        <cause>Configuration error in group provisioning library cofig files</cause>
+        <originators>Validator, Authorizer, Authenticator, ConfigManager, ModuleLoader, ConfigInitializer,
+            CacheManager
+        </originators>
+        <error-context>Configuration Module</error-context>
+    </error>
+    <error code="KNEC-CM10003">
+        <label>INVALID_PROFILE</label>
+        <msg>Invalid Profile. Please contact administrator</msg>
+        <level>ERROR</level>
+        <cause>Configuration error in common library cofig files</cause>
+        <originators>Authorizer, BOEntity</originators>
+        <error-context>Configuration Module</error-context>
+    </error>
+
+    <!--  Configuration/Cache/Initializer errors -->
+    <error code="KNEC-CM10251">
+        <label>EMPTY_KEYS</label>
+        <msg>Empty keys passed to Cache Manager</msg>
+        <level>INFO</level>
+        <cause>Configuration is wrong</cause>
+        <originators>CacheManager</originators>
+        <error-context>DAO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10252">
+        <label>INVALID_MODULE</label>
+        <msg>Invalid module passed to Cache manager</msg>
+        <level>INFO</level>
+        <cause/>
+        <originators>CacheManager</originators>
+        <error-context>DAO-Layer-error</error-context>
+    </error>
+    <!-- Validation Framework errors -->
+    <error code="KNEC-CM10301">
+        <label>CONS_BO_VAL_ERRORS</label>
+        <msg>validation errors</msg>
+        <level>INFO</level>
+        <cause>Multiple validation failures</cause>
+        <originators>Validator</originators>
+        <error-context>Business-functionality</error-context>
+    </error>
+    <error code="KNEC-CM10302">
+        <label>CONS_DATA_VAL_EXPRN_ERRORS</label>
+        <msg>consolidate data validation expression errors</msg>
+        <level>INFO</level>
+        <cause>empty value</cause>
+        <originators>Validator</originators>
+        <error-context>DTO-Input-data-error</error-context>
+    </error>
+    <error code="KNEC-CM10303">
+        <label>CONS_BO_VAL_EXPRN_ERRORS</label>
+        <msg>consolidate BO validation expression errors</msg>
+        <level>INFO</level>
+        <cause>Mutilple business validation failures</cause>
+        <originators>Validator</originators>
+        <error-context>Business-functionality</error-context>
+    </error>
+    <error code="KNEC-CM10304">
+        <label>CONS_DATA_VAL_ERRORS</label>
+        <msg>consolidate DATA validation errors</msg>
+        <level>INFO</level>
+        <cause>Multiple data validation failures</cause>
+        <originators>Validator</originators>
+        <error-context>DTO-Input-data-error</error-context>
+    </error>
+    <error code="KNEC-CM10305">
+        <label>MDN_NOT_OF_CORPORATION</label>
+        <msg>consolidate DATA validation errors</msg>
+        <level>INFO</level>
+        <cause>Multiple data validation failures</cause>
+        <originators>Validator</originators>
+        <error-context>DTO-Input-data-error</error-context>
+    </error>
+    <error code="KNEC-CM10306">
+        <label>MDN_NOT_OF_VENDORID</label>
+        <msg>consolidate DATA validation errors</msg>
+        <level>INFO</level>
+        <cause>Multiple data validation failures</cause>
+        <originators>Validator</originators>
+        <error-context>DTO-Input-data-error</error-context>
+    </error>
+    <error code="KNEC-CM10307">
+        <label>OWNERMDN_NOT_CORP_PUB_SUBS</label>
+        <msg>consolidate DATA validation errors</msg>
+        <level>INFO</level>
+        <cause>Multiple data validation failures</cause>
+        <originators>Validator</originators>
+        <error-context>DTO-Input-data-error</error-context>
+    </error>
+    <error code="KNEC-CM10308">
+        <label>CONTACT_MDN_PUB_SUBS</label>
+        <msg>consolidate DATA validation errors</msg>
+        <level>INFO</level>
+        <cause>Multiple data validation failures</cause>
+        <originators>Validator</originators>
+        <error-context>DTO-Input-data-error</error-context>
+    </error>
+    <error code="KNEC-CM10309">
+        <label>CONTACT_MDN_CLIENT_TYPE_INVALID</label>
+        <msg>consolidate DATA validation errors</msg>
+        <level>INFO</level>
+        <cause>Multiple data validation failures</cause>
+        <originators>Validator</originators>
+        <error-context>DTO-Input-data-error</error-context>
+    </error>
+    <error code="KNEC-CM10310">
+        <label>MODIFYING_CONTACT_NOT_EXIST</label>
+        <msg>consolidate DATA validation errors</msg>
+        <level>INFO</level>
+        <cause>Multiple data validation failures</cause>
+        <originators>Validator</originators>
+        <error-context>DTO-Input-data-error</error-context>
+    </error>
+    <error code="KNEC-CM10311">
+        <label>ADDED_CONTACT_ALRREADY_EXIST</label>
+        <msg>consolidate DATA validation errors</msg>
+        <level>INFO</level>
+        <cause>Multiple data validation failures</cause>
+        <originators>Validator</originators>
+        <error-context>DTO-Input-data-error</error-context>
+    </error>
+    <error code="KNEC-CM10312">
+        <label>OWNER_MDN_NOT_TP_CLIENT</label>
+        <msg>consolidate DATA validation errors</msg>
+        <level>INFO</level>
+        <cause>Multiple data validation failures</cause>
+        <originators>Validator</originators>
+        <error-context>DTO-Input-data-error</error-context>
+    </error>
+    <error code="KNEC-CM10313">
+        <label>MODIFING_GROUP_MEMBER_NOT_EXIST</label>
+        <msg>consolidate DATA validation errors</msg>
+        <level>INFO</level>
+        <cause>Multiple data validation failures</cause>
+        <originators>Validator</originators>
+        <error-context>DTO-Input-data-error</error-context>
+    </error>
+    <error code="KNEC-CM10314">
+        <label>ADDED_GROUP_MEMBER_ALREADY_EXIST</label>
+        <msg>consolidate DATA validation errors</msg>
+        <level>INFO</level>
+        <cause>Multiple data validation failures</cause>
+        <originators>Validator</originators>
+        <error-context>DTO-Input-data-error</error-context>
+    </error>
+    <error code="KNEC-CM10315">
+        <label>DYNAMIC_API_SERVICE_FLAG_DISABLED</label>
+        <msg>consolidate DATA validation errors</msg>
+        <level>INFO</level>
+        <cause>Multiple data validation failures</cause>
+        <originators>Validator</originators>
+        <error-context>DTO-Input-data-error</error-context>
+    </error>
+    <!-- Authenticator-->
+    <error code="KNEC-CM10351">
+        <label>NOT_ALLOWED</label>
+        <msg>Authentication not Allowed</msg>
+        <level>ERROR</level>
+        <cause>Authentication not Allowed</cause>
+        <originators>Authenticator</originators>
+        <error-context>Business-functionality</error-context>
+    </error>
+    <error code="KNEC-CM10451">
+        <label>SERVER_BUSY</label>
+        <msg>Server is busy. Please try again after sometime</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>DAO</originators>
+        <error-context>DAO-Layer-error</error-context>
+    </error>
+
+    <!-- DAO specific error codes -->
+    <error code="KNEC-CM10452">
+        <label>ROW_NOT_FOUND</label>
+        <msg>Requested data not found in database</msg>
+        <level>INFO</level>
+        <cause/>
+        <originators>DAO</originators>
+        <error-context>DAO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10453">
+        <label>CONNECTION_FAILED</label>
+        <msg>Connection to Database failed</msg>
+        <level>INFO</level>
+        <cause/>
+        <originators>DAO</originators>
+        <error-context>DAO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10454">
+        <label>SERVER_ERROR</label>
+        <msg>Critical Database Server Error. Please contact administrator</msg>
+        <level>INFO</level>
+        <cause/>
+        <originators>DAO</originators>
+        <error-context>DAO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10455">
+        <label>SQL_QUERY_ERROR</label>
+        <msg>Syntax error in query. Please contact administrator</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>DAO</originators>
+        <error-context>DAO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10456">
+        <label>ROW_ALREADY_EXISTS</label>
+        <msg>Data already exists in Server</msg>
+        <level>INFO</level>
+        <cause/>
+        <originators>DAO</originators>
+        <error-context>DAO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10457">
+        <label>ROW_ALREADY_DELETED</label>
+        <msg>Row already deleted</msg>
+        <level>INFO</level>
+        <cause/>
+        <originators>DAO</originators>
+        <error-context>DAO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10468">
+        <label>ROW_ALREADY_EXISTS_GROUP_DOC</label>
+        <msg>Row not found</msg>
+        <level>INFO</level>
+        <cause/>
+        <originators>DAO</originators>
+        <error-context>DAO-Layer-error</error-context>
+    </error>
+    <!--  factory and Txn related errors-->
+    <error code="KNEC-CM10458">
+        <label>INVALID_FACTORY_TYPE</label>
+        <msg>Database type invalid. Please contact administrator</msg>
+        <level>INFO</level>
+        <cause/>
+        <originators>DAO</originators>
+        <error-context>DAO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10459">
+        <label>TXN_START_FAILED</label>
+        <msg>Cannot start Transaction. Please contact administrator</msg>
+        <level>INFO</level>
+        <cause/>
+        <originators>DAO</originators>
+        <error-context>DAO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10460">
+        <label>TXN_COMMIT_FAILED</label>
+        <msg>Cannot commit Transaction. Please contact administrator</msg>
+        <level>INFO</level>
+        <cause/>
+        <originators>DAO</originators>
+        <error-context>DAO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10461">
+        <label>TXN_ROLLBACK_FAILED</label>
+        <msg>Cannot rollback Transaction. Please contact administrator</msg>
+        <level>INFO</level>
+        <cause/>
+        <originators>DAO</originators>
+        <error-context>DAO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10462">
+        <label>TXN_CONNECTION_NOT_AVAILABLE</label>
+        <msg>Connection not available. Please try again later</msg>
+        <level>INFO</level>
+        <cause/>
+        <originators>DAO</originators>
+        <error-context>DAO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10463">
+        <label>TXN_NOT_STARTED</label>
+        <msg>Transaction not started. Please contact administrator</msg>
+        <level>INFO</level>
+        <cause/>
+        <originators>DAO</originators>
+        <error-context>DAO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10464">
+        <label>COLUMN_WIDTH_EXCEEDED</label>
+        <msg>Length of the data is more than the column width</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>DAO</originators>
+        <error-context>DAO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10465">
+        <label>INVALID_PTTSERVERID</label>
+        <msg>Invalid PttServer Id</msg>
+        <level>INFO</level>
+        <cause/>
+        <originators>DAO, BOEntity</originators>
+        <error-context>DAO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10466">
+        <label>SQL_EXCEPTION</label>
+        <msg>Unexpected SQL exception without proper error code</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>DAO</originators>
+        <error-context>DAO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10467">
+        <label>INVALID_INPUT</label>
+        <msg>Invalid input data to DAO layer</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>DAO</originators>
+        <error-context>DAO-Input-Data-Error</error-context>
+    </error>
+
+    <!-- Business errors -->
+    <error code="KNEC-CM10511">
+        <label>INVALID_MDN</label>
+        <msg>Invalid Subscriber</msg>
+        <level>INFO</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-Input-data-error</error-context>
+    </error>
+
+    <!-- Authorization error codes -->
+    <error code="KNEC-CM10401">
+        <label>INVALID_SERVICE_STATUS</label>
+        <msg>Invalid Service auth status for subscriber</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Authorizer</originators>
+        <error-context>BO-Layer-Error</error-context>
+    </error>
+    <error code="KNEC-CM10402">
+        <label>INVALID_SUBSCRIPTION_TYPE</label>
+        <msg>Invalid Subscription Type</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Authorizer</originators>
+        <error-context>BO-Layer-Error</error-context>
+    </error>
+    <error code="KNEC-CM10004">
+        <label>PTT_SERVER_NOT_REACHABLE</label>
+        <msg>Server not reachable</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity,DAO</originators>
+        <error-context>BO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10501">
+        <label>SUBSC_NOT_REGISTERED</label>
+        <msg>Subscriber is not registered</msg>
+        <level>ERROR</level>
+        <cause>Subscriber not registered</cause>
+        <originators>BOEntity,Validator</originators>
+        <error-context>BO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10509">
+        <label>LICENCE_INFO_NOT_FOUND</label>
+        <msg>Licence info not found</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10503">
+        <label>PASSWORD_LOCKED_BY_ADMIN</label>
+        <msg>Password locked by administrator</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10005">
+        <label>WRONG_PASSWORD</label>
+        <msg>Wrong password</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Authenticator, BOEntity</originators>
+        <error-context>BO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10352">
+        <label>SESSION_TIMEOUT</label>
+        <msg>Session time out</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Authenticator</originators>
+        <error-context>BO-layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10353">
+        <label>AUTHENTICATION_FAILED</label>
+        <msg>Athentication Failed</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>Authenticator</originators>
+        <error-context>BO-layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10504">
+        <label>INVALID_OLD_PASSWORD</label>
+        <msg>Invalid old password</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10512">
+        <label>UNSUPPORTED_OPERATION</label>
+        <msg>Unsupported operation for user.</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10505">
+        <label>INVALID_NEW_PASSWORD</label>
+        <msg>Invalid new password.</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10510">
+        <label>SERVER_CONFIGURATION_FAILURE</label>
+        <msg>Server configuration failure. Please contact Administrator</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity, Validator</originators>
+        <error-context>BO-Layer-error</error-context>
+    </error>
+
+    <error code="KNEC-CM10507">
+        <label>XDMS_SERVICE_CONFIG_NOT_FOUND</label>
+        <msg>XDMS Service Configuration not found</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-Layer-error</error-context>
+    </error>
+
+    <error code="KNEC-CM10508">
+        <label>XDMS_SUBSYSTEM_CONFIG_NOT_FOUND</label>
+        <msg>XDMS Subsytem Service Configuration not found</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-Layer-error</error-context>
+    </error>
+
+    <error code="KNEC-CM10502">
+        <label>INVALID_USER_ID</label>
+        <msg>Invalid User Id is passed</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-Layer-error</error-context>
+    </error>
+
+    <error code="KNEC-CM10506">
+        <label>MESSAGE_PROCESSING_FAILED</label>
+        <msg>Messaging Processing failed</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10513">
+        <label>DIAL_PLAN_INFO_NOT_FOUND</label>
+        <msg>Dial plan info not found</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10514">
+        <label>POC_SUPPORTED_DEVICES_NOT_FOUND</label>
+        <msg>Black listed device not found</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10515">
+        <label>SUBSCRIBER_IS_DEACTIVATED</label>
+        <msg>Subscriber id deactivated</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10518">
+        <label>UNSUPPORTED_APNNAME</label>
+        <msg>Unsupported APN Name</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10519">
+        <label>POC_BLACKLISTED_DEVICES_NOT_FOUND</label>
+        <msg>Black listed device not found</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10520">
+        <label>UNSUPPORTED_VERSION</label>
+        <msg>Unsupported Version</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-layer-error</error-context>
+    </error>
+    <error code="KNEC-SP12083">
+        <label>POC_UNAUTHORIZED_SUBS_CLIENT_TYPE</label>
+        <msg>Unauthorized client type</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-layer-error</error-context>
+    </error>
+
+       <error code="KNEC-CM10525">
+        <label>XDMS_PTX_BUCKET_URLS_NOT_FOUND</label>
+        <msg>Bucket URL not found</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-layer-error</error-context>
+    </error>
+
+       <error code="KNEC-CM10526">
+        <label>INVALID_HIERARCHY_REQUEST</label>
+        <msg>Invalid hierarchy passed</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10527">
+        <label>PSEUDO_NUMBER_NOT_AVAILABLE</label>
+        <msg>Pseudo number not available</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10528">
+        <label>INVALID_CORPORATE_PROFILE</label>
+        <msg>Pseudo number not available</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10529">
+        <label>INVALID_THIRD_PARTY_ACCOUNT</label>
+        <msg>Pseudo number not available</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-Layer-error</error-context>
+    </error>
+      <error code="KNEC-CM10530">
+        <label>DYNAMIC_FLAG_DISABLED</label>
+        <msg>Dynamic Group management flag disabled</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10531">
+        <label>ABDG_FLAG_DISABLED</label>
+        <msg>Area Based Group management flag disabled</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-Layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10559">
+        <label>GATEWAY_ID_NOT_AVAILABLE</label>
+        <msg>Invalid GatewayId passed</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>BO-layer-error</error-context>
+    </error>
+    <error code="KNEC-CM10562">
+        <label>MODIFIED_ID_DETAILS_MISSING</label>
+        <msg>Modified ID details should not empty.</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>Controller-layer-error</error-context>
+    </error>
+</error-codes>

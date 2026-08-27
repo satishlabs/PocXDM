@@ -1,0 +1,58 @@
+<!--
+Copyright Motorola Solutions, Inc. and/or Kodiak Networks, Inc.
+All Rights Reserved
+Motorola Solutions Confidential Restricted
+-->
+
+<corpmgmt-library>
+    <cache>
+        <manager-class>com.kodiak.xdms.server.common.configuration.cache.impl.KnCacheManager</manager-class>
+        <manager-config-class>com.kodiak.xdms.server.common.configuration.cache.impl.KnCacheManagerInitConfigData</manager-config-class>
+        <manager-config-data>
+            <key-generator-config>
+                <delimiter>.</delimiter>
+            </key-generator-config>
+        </manager-config-data>
+    </cache>
+
+    <modules>
+        <module>
+            <name>ERRORCODES</name>
+            <loader-class>com.kodiak.xdms.server.common.configuration.loader.xml.KnXmlLoader</loader-class>
+            <loader-config-data>
+                <xml>
+                    <xml-file>error-codes.xml,corp-error-codes.xml</xml-file>
+                    <unique-identifer-label>code</unique-identifer-label>
+                </xml>
+            </loader-config-data>
+            <cache-datastructure-class>com.kodiak.xdms.server.common.configuration.cache.datastructure.KnCacheElement</cache-datastructure-class>
+        </module>
+
+        <module>
+            <name>AAS</name>
+            <loader-class>com.kodiak.xdms.server.common.configuration.loader.xml.KnXmlLoader</loader-class>
+            <loader-config-data>
+                <xml>
+                    <xml-file>corp-aas.xml</xml-file>
+                    <unique-identifer-label>id</unique-identifer-label>
+                </xml>
+            </loader-config-data>
+            <severe/>
+            <cache-datastructure-class>com.kodiak.xdms.server.common.configuration.cache.datastructure.KnCacheElement</cache-datastructure-class>
+        </module>
+
+        <module>
+            <name>BOVALIDATOR</name>
+            <loader-class>com.kodiak.xdms.server.common.configuration.loader.xml.KnXmlLoader</loader-class>
+            <loader-config-data>
+                <xml>
+                    <xml-file>corp-business-validations.xml</xml-file>
+                    <unique-identifer-label>id</unique-identifer-label>
+                </xml>
+            </loader-config-data>
+            <severe/>
+            <cache-datastructure-class>com.kodiak.xdms.server.common.configuration.cache.datastructure.KnCacheElement</cache-datastructure-class>
+        </module>
+
+    </modules>
+</corpmgmt-library>

@@ -1,0 +1,523 @@
+<!--
+Copyright Motorola Solutions, Inc. and/or Kodiak Networks, Inc.
+All Rights Reserved
+Motorola Solutions Confidential Restricted
+-->
+
+<business-validations enabled="true">
+    <validation-entities>
+        <!-- Public Contact Management entity -->
+        <entity id="ContactManager">
+            <operation id="createContactList" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubContactInfoPersistDTO"
+                       consolidate-rules="true">
+                <validation-rule id="UniqueContactListNameChecker" validator-id="UniqueContactListNameChecker" throw-on="true" enabled="true"/>
+                <validation-rule id="MaxContactListCountChecker" validator-id="MaxGrpChecker" throw-on="true" enabled="true"/>
+                <validation-rule id="MaxMemberCountChecker" validator-id="MaxMemberCountChecker" throw-on="true" enabled="true"/>
+                <validation-rule id="MinMemberCountChecker" validator-id="MinMemberCountChecker" throw-on="true" enabled="true"/>
+            </operation>
+
+            <operation id="addContact" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubContactInfoPersistDTO" consolidate-rules="true">
+                <validation-rule id="MaxContactCountChecker" validator-id="MaxContactMemberCountChecker" iterate="true"
+                                 enabled="true"/>
+                <validation-rule id="MembersClientTypeChecker" validator-id="MembersClientTypeChecker" throw-on="true" enabled="true">
+                    <parameters>
+                        <param id="nonAllowedTypes">7,8</param>
+                    </parameters>
+                </validation-rule>
+                <validation-rule id="PTTSubscriptionTypeValidationChecker" validator-id="PTTSubscriptionTypeValidationChecker" throw-on="true"
+                                 enabled="true"/>
+            </operation>
+
+            <operation id="updateContact" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubContactInfoPersistDTO"
+                       consolidate-rules="true">
+                <validation-rule id="MembersClientTypeChecker" validator-id="MembersClientTypeChecker" throw-on="true" enabled="true">
+                    <parameters>
+                        <param id="nonAllowedTypes">7,8</param>
+                    </parameters>
+                </validation-rule>
+                <validation-rule id="PTTSubscriptionTypeValidationChecker" validator-id="PTTSubscriptionTypeValidationChecker" throw-on="true"
+                                 enabled="true"/>
+            </operation>
+
+            <operation id="deleteContact" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubContactInfoPersistDTO"
+                       consolidate-rules="false">
+<!--                <validation-rule id="MinMemberCountChecker" validator-id="ClgNCCChecker" property="NewMembers" iterate="true"-->
+<!--                                 enabled="true" consolidate-dtos="true"/>-->
+					<validation-rule id="PTTSubscriptionTypeValidationChecker" validator-id="PTTSubscriptionTypeValidationChecker" throw-on="true"
+                                 enabled="true"/>
+            </operation>
+            <operation id="deleteContactList" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubContactInfoPersistDTO"
+                       consolidate-rules="false">
+            </operation>
+            <operation id="getContactList" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubContactInfoPersistDTO"
+                        consolidate-rules="false">
+            </operation>
+            <operation id="getAllContactLists" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubContactInfoPersistDTO"
+                       consolidate-rules="false">
+            </operation>
+
+            <operation id="modifyDynamicContact" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnDynamicContactPersistDTO" consolidate-rules="false">
+                <validation-rule id="DynAPIFlagChecker" validator-id="DynAPIFlagChecker" throw-on="true" enabled="true"/>
+                <validation-rule id="CorpMDNChecker" validator-id="CorpMDNChecker" iterate="true"
+                                 enabled="true"/>
+                <validation-rule id="OwnerClientTypeChecker" validator-id="OwnerClientTypeChecker" iterate="true"
+                                 enabled="true">
+                    <parameters>
+                        <param id="allowedTypes">6,13,12</param>
+                    </parameters>
+                </validation-rule>
+                <validation-rule id="VendorIdChecker" validator-id="VendorIdChecker" iterate="true"
+                                 enabled="true"/>
+                <validation-rule id="MDNSubscriptionTypeChecker" validator-id="MDNSubscriptionTypeChecker" iterate="true"
+                                 enabled="true"/>
+                <validation-rule id="MembersClientTypeChecker" validator-id="MembersClientTypeChecker" throw-on="true" enabled="true">
+                    <parameters>
+                        <param id="nonAllowedTypes">7,8</param>
+                    </parameters>
+                </validation-rule>
+                <validation-rule id="MaxContactCountChecker" validator-id="MaxContactMemberCountChecker" iterate="true"
+                                 enabled="true"/>
+                <validation-rule id="ModifyContactExistChecker" validator-id="ModifyContactExistChecker" iterate="true"
+                                 enabled="true"/>
+             </operation>
+
+            <operation id="deleteDynamicContacts" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnDynamicContactPersistDTO" consolidate-rules="false">
+                <validation-rule id="DynAPIFlagChecker" validator-id="DynAPIFlagChecker" throw-on="true" enabled="true"/>
+                <validation-rule id="MDNSubscriptionTypeChecker" validator-id="MDNSubscriptionTypeChecker" iterate="true"
+                                 enabled="true"/>
+
+            </operation>
+
+            <operation id="getDynamicContacts" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnDynamicContactPersistDTO" consolidate-rules="false">
+                <validation-rule id="DynAPIFlagChecker" validator-id="DynAPIFlagChecker" throw-on="true" enabled="true"/>
+                <validation-rule id="MDNSubscriptionTypeChecker" validator-id="MDNSubscriptionTypeChecker" iterate="true"
+                                 enabled="true"/>
+
+            </operation>
+
+        </entity>
+
+        <!-- Public Group Management entity -->
+        <entity id="GroupManager">
+            <operation id="createGroup" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubGroupInfoPersistDTO"
+                       consolidate-rules="true">
+<!--                <validation-rule id="UniqueGrpNameChecker" validator-id="UniqueGrpChecker" throw-on="true" enabled="true"/>-->
+                <validation-rule id="MaxGroupChecker" validator-id="MaxGrpChecker" throw-on="true" enabled="true"/>
+                <validation-rule id="MaxGroupMemberCountChecker" validator-id="MaxGrpMemberCountChecker" throw-on="true" enabled="true"/>
+<!--                <validation-rule id="MinMemberCountChecker" validator-id="MinMemberCountChecker" throw-on="true" enabled="true"/>-->
+                <validation-rule id="MembersClientTypeChecker" validator-id="MembersClientTypeChecker" throw-on="true" enabled="true">
+                    <parameters>
+                        <param id="nonAllowedTypes">7,8</param>
+                    </parameters>
+                </validation-rule>
+                <validation-rule id="PTTSubscriptionTypeValidationChecker" validator-id="PTTSubscriptionTypeValidationChecker" throw-on="true"
+                                 enabled="true"/>
+            </operation>
+
+            <operation id="modifyGroup" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubGroupInfoPersistDTO"
+                       consolidate-rules="true">
+                <!--min group size validation is not applicable for public groups-->
+<!--                <validation-rule id="MinMemberCountChecker" validator-id="MinMemberCountChecker" throw-on="true" enabled="true"/>-->
+                <validation-rule id="MembersClientTypeChecker" validator-id="MembersClientTypeChecker" throw-on="true" enabled="true">
+                    <parameters>
+                        <param id="nonAllowedTypes">7,8</param>
+                    </parameters>
+                </validation-rule>
+            </operation>
+            <operation id="updateGroupName" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubGroupInfoPersistDTO"
+                       consolidate-rules="false">
+                       <validation-rule id="PTTSubscriptionTypeValidationChecker" validator-id="PTTSubscriptionTypeValidationChecker" throw-on="true"
+                                 enabled="true"/>
+            </operation>
+            <operation id="deleteGroup" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubGroupInfoPersistDTO"
+                        consolidate-rules="false">
+                        <validation-rule id="PTTSubscriptionTypeValidationChecker" validator-id="PTTSubscriptionTypeValidationChecker" throw-on="true"
+                                 enabled="true"/>
+            </operation>
+            <operation id="deleteGroupMember" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubGroupInfoPersistDTO"
+                        consolidate-rules="false">
+                <!--min group size validation is not applicable for public groups-->
+<!--                <validation-rule id="MinMemberCountChecker" validator-id="MinMemberCountChecker" throw-on="true" enabled="true"/>-->
+				<validation-rule id="PTTSubscriptionTypeValidationChecker" validator-id="PTTSubscriptionTypeValidationChecker" throw-on="true"
+                                 enabled="true"/>
+            </operation>
+            <operation id="updateGroupMember" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubGroupInfoPersistDTO"
+                        consolidate-rules="true">
+                <validation-rule id="MembersClientTypeChecker" validator-id="MembersClientTypeChecker" throw-on="true" enabled="true">
+                    <parameters>
+                        <param id="nonAllowedTypes">7,8</param>
+                    </parameters>
+                    <validation-rule id="PTTSubscriptionTypeValidationChecker" validator-id="PTTSubscriptionTypeValidationChecker" throw-on="true"
+                                 enabled="true"/>
+                </validation-rule>
+            </operation>
+            <operation id="addGroupMember" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubGroupInfoPersistDTO"
+                        consolidate-rules="true">
+                <validation-rule id="MembersClientTypeChecker" validator-id="MembersClientTypeChecker" throw-on="true" enabled="true">
+                    <parameters>
+                        <param id="nonAllowedTypes">7,8</param>
+                    </parameters>
+                    <validation-rule id="PTTSubscriptionTypeValidationChecker" validator-id="PTTSubscriptionTypeValidationChecker" throw-on="true"
+                                 enabled="true"/>
+                </validation-rule>
+            </operation>
+            <operation id="getGroupDocDetails" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubGroupInfoPersistDTO"
+                        consolidate-rules="false">
+            </operation>
+
+            <operation id="getGroupDetails" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubGroupInfoPersistDTO"
+                        consolidate-rules="false">
+            </operation>
+            <operation id="retrieveGroupList" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubGroupInfoPersistDTO"
+                       consolidate-rules="false">
+            </operation>
+
+            <operation id="createNonSharedGroup" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnDynamicGroupPersistDTO"
+                       consolidate-rules="false">
+                <validation-rule id="DynAPIFlagChecker" validator-id="DynAPIFlagChecker" throw-on="true" enabled="true"/>
+                <validation-rule id="OwnerClientTypeChecker" validator-id="OwnerClientTypeChecker" iterate="true"
+                                 enabled="true">
+                    <parameters>
+                        <param id="allowedTypes">6,13,12</param>
+                    </parameters>
+                </validation-rule>
+                <validation-rule id="MDNSubscriptionTypeChecker" validator-id="MDNSubscriptionTypeChecker" iterate="true"
+                                 enabled="true"/>
+                <validation-rule id="VendorIdChecker" validator-id="VendorIdChecker" iterate="true"
+                                 enabled="true"/>
+                <validation-rule id="MembersClientTypeChecker" validator-id="MembersClientTypeChecker" throw-on="true" enabled="true">
+                <parameters>
+                    <param id="nonAllowedTypes">7,8</param>
+                </parameters>
+                </validation-rule>
+                <validation-rule id="CorpMDNChecker" validator-id="CorpMDNChecker" iterate="true"
+                                 enabled="true"/>
+
+                <validation-rule id="MaxGroupChecker" validator-id="MaxGrpChecker" throw-on="true" enabled="true"/>
+                <validation-rule id="UniqueGrpNameChecker" validator-id="UniqueGrpChecker" throw-on="true" enabled="true"/>
+
+                <validation-rule id="MaxGroupMemberCountChecker" validator-id="MaxGrpMemberCountChecker" throw-on="true" enabled="true"/>
+
+            </operation>
+
+            <operation id="modifyNonSharedGroup" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnDynamicGroupPersistDTO"
+                       consolidate-rules="false">
+                <validation-rule id="DynAPIFlagChecker" validator-id="DynAPIFlagChecker" throw-on="true" enabled="true"/>
+                <validation-rule id="OwnerClientTypeChecker" validator-id="OwnerClientTypeChecker" iterate="true"
+                                 enabled="true">
+                    <parameters>
+                        <param id="allowedTypes">6,13,12</param>
+                    </parameters>
+                </validation-rule>
+                <validation-rule id="MDNSubscriptionTypeChecker" validator-id="MDNSubscriptionTypeChecker" iterate="true"
+                                 enabled="true"/>
+                <validation-rule id="VendorIdChecker" validator-id="VendorIdChecker" iterate="true"
+                                 enabled="true"/>
+                <validation-rule id="MembersClientTypeChecker" validator-id="MembersClientTypeChecker" throw-on="true" enabled="true">
+                    <parameters>
+                        <param id="nonAllowedTypes">7,8</param>
+                    </parameters>
+                </validation-rule>
+                <validation-rule id="CorpMDNChecker" validator-id="CorpMDNChecker" iterate="true"
+                                 enabled="true"/>
+
+                <validation-rule id="UniqueGrpNameChecker" validator-id="UniqueGrpChecker" throw-on="true" enabled="true"/>
+
+                <validation-rule id="MaxGroupMemberCountChecker" validator-id="MaxGrpMemberCountChecker" throw-on="true" enabled="true"/>
+
+                <validation-rule id="ModifingGrpMemChecker" validator-id="ModifingGrpMemChecker" iterate="true"
+                                 enabled="true"/>
+                <validation-rule id="AddedGrpMemAlreadyExist" validator-id="AddedGrpMemAlreadyExist" iterate="true"
+                                 enabled="true"/>
+
+            </operation>
+
+            <operation id="getDynamicGroupDetails" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnDynamicGroupPersistDTO" consolidate-rules="false">
+                <validation-rule id="DynAPIFlagChecker" validator-id="DynAPIFlagChecker" throw-on="true" enabled="true"/>
+                <validation-rule id="MDNSubscriptionTypeChecker" validator-id="MDNSubscriptionTypeChecker" iterate="true"
+                                 enabled="true"/>
+                <validation-rule id="OwnerClientTypeChecker" validator-id="OwnerClientTypeChecker" iterate="true"
+                                 enabled="true">
+                    <parameters>
+                        <param id="allowedTypes">6,13,12</param>
+                    </parameters>
+                </validation-rule>
+
+
+            </operation>
+            <operation id="getDynamicGroupList" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnDynamicGroupPersistDTO" consolidate-rules="false">
+                <validation-rule id="DynAPIFlagChecker" validator-id="DynAPIFlagChecker" throw-on="true" enabled="true"/>
+                <validation-rule id="MDNSubscriptionTypeChecker" validator-id="MDNSubscriptionTypeChecker" iterate="true"
+                                 enabled="true"/>
+                <validation-rule id="OwnerClientTypeChecker" validator-id="OwnerClientTypeChecker" iterate="true"
+                                 enabled="true">
+                    <parameters>
+                        <param id="allowedTypes">6,13,12</param>
+                    </parameters>
+                </validation-rule>
+
+            </operation>
+            <operation id="deleteDynamicGroup" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnDynamicGroupPersistDTO" consolidate-rules="false">
+                <validation-rule id="DynAPIFlagChecker" validator-id="DynAPIFlagChecker" throw-on="true" enabled="true"/>
+                <validation-rule id="MDNSubscriptionTypeChecker" validator-id="MDNSubscriptionTypeChecker" iterate="true"
+                                 enabled="true"/>
+                <validation-rule id="OwnerClientTypeChecker" validator-id="OwnerClientTypeChecker" iterate="true"
+                                 enabled="true">
+                    <parameters>
+                        <param id="allowedTypes">6,13,12</param>
+                    </parameters>
+                </validation-rule>
+
+            </operation>
+
+        </entity>
+        <entity id="AuthListManager">
+            <operation id="getAuthList" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubAuthListPersistDTO" consolidate-rules="false">
+            </operation>
+            <operation id="updateAuthList" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubAuthListPersistDTO" consolidate-rules="true">
+                <validation-rule id="CorpIdValidator" validator-id="CorpIdValidator" throw-on="true" enabled="true"/>
+            </operation>
+            <validation-rule id="MembersClientTypeChecker" validator-id="MembersClientTypeChecker" throw-on="true" enabled="true">
+                <parameters>
+                    <param id="nonAllowedTypes">7,8,17</param>
+                </parameters>
+            </validation-rule>
+        </entity>
+        <entity id="TGSSListManager">
+           <operation id="getTGSSList" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnTGSSListPersistDTO" consolidate-rules="true">
+               <validation-rule id="TGSSBitChecker" validator-id="TGSSBitChecker" throw-on="true" enabled="true"/>
+            </operation>
+            <operation id="updateTGSSList" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnTGSSListPersistDTO" consolidate-rules="true">
+                <validation-rule id="TGSSBitChecker" validator-id="TGSSBitChecker" throw-on="true" enabled="true"/>
+                <validation-rule id="TGSSCorpIdMdnChecker" validator-id="TGSSCorpIdMdnChecker" throw-on="true" enabled="true"/>
+                <validation-rule id="TGSSMaxGrpCntChecker" validator-id="TGSSMaxGrpCntChecker" throw-on="true" enabled="true"/>
+                <validation-rule id="TgssGroupMdnMemberShipCheck" validator-id="TgssGroupMdnMemberShipCheck" throw-on="true" enabled="true"/>
+            </operation>
+            <operation id="deleteTGSSList" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnTGSSListPersistDTO" consolidate-rules="true">
+                <validation-rule id="TGSSBitChecker" validator-id="TGSSBitChecker" throw-on="true" enabled="true"/>
+                <validation-rule id="TGSSCorpIdMdnChecker" validator-id="TGSSCorpIdMdnChecker" throw-on="true" enabled="true"/>
+            </operation>
+        </entity>
+        <entity id="MCPTTManager">
+            <operation id="getMCPTTUEConfig" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubMCSXCAPPersistDTO" consolidate-rules="true">
+                <validation-rule id="MCSXCAPPVChecker" validator-id="MCSXCAPPVChecker" throw-on="true" enabled="true">
+                <parameters>
+                    <param id="minPVSupport">17</param>
+                </parameters>
+                </validation-rule>
+                <validation-rule id="MCSXCAPMCPTTIDMatcher" validator-id="MCSXCAPMCPTTIDMatcher" throw-on="true" enabled="true"/>
+            </operation>
+        </entity>
+
+        <entity id="MCPTTManager">
+            <operation id="getMCPTTUserProfile" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubMCSXCAPPersistDTO" consolidate-rules="true">
+                <validation-rule id="MCSXCAPPVChecker" validator-id="MCSXCAPPVChecker" throw-on="true" enabled="true">
+                    <parameters>
+                        <param id="minPVSupport">17</param>
+                    </parameters>
+                </validation-rule>
+                <validation-rule id="MCSXCAPMCPTTIDMatcher" validator-id="MCSXCAPMCPTTIDMatcher" throw-on="true" enabled="true"/>
+            </operation>
+        </entity>
+
+        <entity id="MCPTTManager">
+            <operation id="getMCPTTServiceConfig" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubMCSXCAPPersistDTO" consolidate-rules="true">
+                <validation-rule id="MCSXCAPPVChecker" validator-id="MCSXCAPPVChecker" throw-on="true" enabled="true">
+                    <parameters>
+                        <param id="minPVSupport">17</param>
+                    </parameters>
+                </validation-rule>
+            </operation>
+        </entity>
+
+        <entity id="MCDATAManager">
+            <operation id="getUEConfig" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubMCSXCAPPersistDTO" consolidate-rules="true">
+                <validation-rule id="MCSXCAPPVChecker" validator-id="MCSXCAPPVChecker" throw-on="true" enabled="true">
+                    <parameters>
+                        <param id="minPVSupport">17</param>
+                    </parameters>
+                </validation-rule>
+                <validation-rule id="MCSXCAPMCPTTIDMatcher" validator-id="MCSXCAPMCPTTIDMatcher" throw-on="true" enabled="true"/>
+            </operation>
+            <operation id="getUserProfile" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubMCSXCAPPersistDTO" consolidate-rules="true">
+                <validation-rule id="MCSXCAPPVChecker" validator-id="MCSXCAPPVChecker" throw-on="true" enabled="true">
+                    <parameters>
+                        <param id="minPVSupport">17</param>
+                    </parameters>
+                </validation-rule>
+                <validation-rule id="MCSXCAPMCPTTIDMatcher" validator-id="MCSXCAPMCPTTIDMatcher" throw-on="true" enabled="true"/>
+            </operation>
+            <operation id="getServiceConfig" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubMCSXCAPPersistDTO" consolidate-rules="true">
+                <validation-rule id="MCSXCAPPVChecker" validator-id="MCSXCAPPVChecker" throw-on="true" enabled="true">
+                    <parameters>
+                        <param id="minPVSupport">17</param>
+                    </parameters>
+                </validation-rule>
+            </operation>
+        </entity>
+
+        <entity id="MCVideoManager">
+            <operation id="getUEConfig" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubMCSXCAPPersistDTO" consolidate-rules="true">
+                <validation-rule id="MCSXCAPPVChecker" validator-id="MCSXCAPPVChecker" throw-on="true" enabled="true">
+                    <parameters>
+                        <param id="minPVSupport">17</param>
+                    </parameters>
+                </validation-rule>
+                <validation-rule id="MCSXCAPMCPTTIDMatcher" validator-id="MCSXCAPMCPTTIDMatcher" throw-on="true" enabled="true"/>
+            </operation>
+            <operation id="getUserProfile" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubMCSXCAPPersistDTO" consolidate-rules="true">
+                <validation-rule id="MCSXCAPPVChecker" validator-id="MCSXCAPPVChecker" throw-on="true" enabled="true">
+                    <parameters>
+                        <param id="minPVSupport">17</param>
+                    </parameters>
+                </validation-rule>
+                <validation-rule id="MCSXCAPMCPTTIDMatcher" validator-id="MCSXCAPMCPTTIDMatcher" throw-on="true" enabled="true"/>
+            </operation>
+            <operation id="getServiceConfig" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubMCSXCAPPersistDTO" consolidate-rules="true">
+                <validation-rule id="MCSXCAPPVChecker" validator-id="MCSXCAPPVChecker" throw-on="true" enabled="true">
+                    <parameters>
+                        <param id="minPVSupport">17</param>
+                    </parameters>
+                </validation-rule>
+            </operation>
+        </entity>
+
+        <entity id="MCSGroupManager">
+             <operation id="getMCSGroupDoc" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubMCSXCAPPersistDTO" consolidate-rules="true">
+                <validation-rule id="MCSXCAPPVChecker" validator-id="MCSXCAPPVChecker" throw-on="true" enabled="true">
+                    <parameters>
+                        <param id="minPVSupport">17</param>
+                    </parameters>
+                </validation-rule>
+                 <validation-rule id="MCSGroupMemberChecker" validator-id="MCSGroupMemberChecker" throw-on="true" enabled="true"/>
+            </operation>
+        </entity>
+
+        <entity id="MCSUserDirManager">
+            <operation id="getMCSUserDir" dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubMCSXCAPPersistDTO" consolidate-rules="true">
+                <validation-rule id="MCSXCAPPVChecker" validator-id="MCSXCAPPVChecker" throw-on="true" enabled="true">
+                    <parameters>
+                        <param id="minPVSupport">18</param>
+                    </parameters>
+                </validation-rule>
+                <validation-rule id="MCSXCAPMCPTTIDMatcher" validator-id="MCSXCAPMCPTTIDMatcher" throw-on="true" enabled="true"/>
+                <validation-rule id="ServiceAuthStatusCheck" validator-id="ServiceAuthStatusCheck" throw-on="true" enabled="true"/>
+            </operation>
+        </entity>
+
+    </validation-entities>
+
+    <rules-config>
+        <validator id="UniqueGrpChecker"
+                   class-name="com.kodiak.xdms.server.pubmgmt.business.validator.rules.KnUniqueGrpNameValidationRule"
+                   dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubGroupInfoPersistDTO">
+        </validator>
+
+        <validator id="MaxGrpChecker"
+                   class-name="com.kodiak.xdms.server.pubmgmt.business.validator.rules.KnMaxGroupsValidationRule"
+                   dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubGroupInfoPersistDTO">
+        </validator>
+
+                <!--min group size validation is not applicable for public groups-->
+<!--        <validator id="MinMemberCountChecker"-->
+<!--                   class-name="com.kodiak.xdms.server.pubmgmt.business.validator.rules.KnMinGroupSizeValidationRule"-->
+<!--                   dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubGroupInfoPersistDTO">-->
+<!--        </validator>-->
+
+        <validator id="MaxGrpMemberCountChecker"
+                   class-name="com.kodiak.xdms.server.pubmgmt.business.validator.rules.KnMaxGroupSizeValidationRule"
+                   dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubGroupInfoPersistDTO">
+        </validator>
+
+        <validator id="MaxContactMemberCountChecker"
+                   class-name="com.kodiak.xdms.server.pubmgmt.business.validator.rules.KnMaxContactSizeValidationRule"
+                   dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubContactInfoPersistDTO">
+        </validator>
+
+        <validator id="MembersClientTypeChecker"
+                   class-name="com.kodiak.xdms.server.pubmgmt.business.validator.rules.KnMembersClientTypeValidationRule"
+                   dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubContactInfoPersistDTO">
+        </validator>
+        <validator id="CorpIdValidator"
+                   class-name="com.kodiak.xdms.server.pubmgmt.business.validator.rules.KnMDNCorpValidationRule"
+                   dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubAuthListPersistDTO">
+        </validator>
+
+        <validator id="CorpMDNChecker"
+                   class-name="com.kodiak.xdms.server.pubmgmt.business.validator.rules.KnCorpMDNValidationRule"
+                   dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnDynamicContactPersistDTO">
+        </validator>
+
+        <validator id="VendorIdChecker"
+                   class-name="com.kodiak.xdms.server.pubmgmt.business.validator.rules.KnVendorIDValidationRule"
+                   dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnDynamicContactPersistDTO">
+        </validator>
+
+        <validator id="MDNSubscriptionTypeChecker"
+                   class-name="com.kodiak.xdms.server.pubmgmt.business.validator.rules.KnMDNSubsTypeValidationRule"
+                   dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnDynamicContactPersistDTO">
+        </validator>
+        <validator id="ModifyContactExistChecker"
+                   class-name="com.kodiak.xdms.server.pubmgmt.business.validator.rules.KnExistingContactValidationRule"
+                   dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnDynamicContactPersistDTO">
+        </validator>
+
+        <validator id="OwnerClientTypeChecker"
+                   class-name="com.kodiak.xdms.server.pubmgmt.business.validator.rules.KnOwnerClientTypeValidationRule"
+                   dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnDynamicContactPersistDTO">
+        </validator>
+
+        <validator id="ModifingGrpMemChecker"
+                   class-name="com.kodiak.xdms.server.pubmgmt.business.validator.rules.KnModifingGrpMemValidationRule"
+                   dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnDynamicGroupPersistDTO">
+        </validator>
+
+        <validator id="AddedGrpMemAlreadyExist"
+                   class-name="com.kodiak.xdms.server.pubmgmt.business.validator.rules.KnAddedMemberValidationRule"
+                   dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnDynamicGroupPersistDTO">
+        </validator>
+
+        <validator id="DynAPIFlagChecker"
+                   class-name="com.kodiak.xdms.server.pubmgmt.business.validator.rules.KnDynAPIFlagValidationRule"
+                   dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnDynamicGroupPersistDTO">
+        </validator>
+
+        <validator id="TGSSBitChecker"
+                   class-name="com.kodiak.xdms.server.pubmgmt.business.validator.rules.KnTGSSFeatureValidationRule"
+                   dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnTGSSListPersistDTO">
+        </validator>
+        <validator id="TGSSCorpIdMdnChecker"
+                   class-name="com.kodiak.xdms.server.pubmgmt.business.validator.rules.KnTGSSMDNCorpIdValidationRule"
+                   dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnTGSSListPersistDTO">
+        </validator>
+        <validator id="TGSSMaxGrpCntChecker"
+                   class-name="com.kodiak.xdms.server.pubmgmt.business.validator.rules.KnTGSSGroupCountValidationRule"
+                   dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnTGSSListPersistDTO">
+        </validator>
+        <validator id="PTTSubscriptionTypeValidationChecker"
+                   class-name="com.kodiak.xdms.server.pubmgmt.business.validator.rules.KnPTTSubscriptionTypeValidation"
+                   dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubContactInfoPersistDTO">
+        </validator>
+        <validator id="MCSXCAPPVChecker"
+                   class-name="com.kodiak.xdms.server.pubmgmt.business.validator.rules.KnMCSXCAPPVCheckerValidationRule"
+                   dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubMCSXCAPPersistDTO">
+        </validator>
+        <validator id="MCSXCAPMCPTTIDMatcher"
+                   class-name="com.kodiak.xdms.server.pubmgmt.business.validator.rules.KnMCSXCAPTokenValidationRule"
+                   dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubMCSXCAPPersistDTO">
+        </validator>
+        <validator id="ServiceAuthStatusCheck"
+                   class-name="com.kodiak.xdms.server.pubmgmt.business.validator.rules.KnServiceAuthStatusValidationRule"
+                   dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubMCSXCAPPersistDTO">
+        </validator>
+        <validator id="MCSGroupMemberChecker"
+                   class-name="com.kodiak.xdms.server.pubmgmt.business.validator.rules.KnMCSXCAPGroupDocValidationRule"
+                   dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnPubMCSXCAPPersistDTO">
+        </validator>
+        <validator id="TgssGroupMdnMemberShipCheck"
+                   class-name="com.kodiak.xdms.server.pubmgmt.business.validator.rules.KnTgssMdnMembershipValidationRule"
+                   dto-type="com.kodiak.xdms.server.pubmgmt.dto.persistdat.KnTGSSListPersistDTO">
+        </validator>
+    </rules-config>
+
+</business-validations>
