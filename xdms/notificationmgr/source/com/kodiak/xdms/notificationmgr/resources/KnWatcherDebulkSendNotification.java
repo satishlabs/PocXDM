@@ -320,7 +320,7 @@ public class KnWatcherDebulkSendNotification implements Runnable {
                 .filter(dto -> dto.getDocDiffObj() != null)
                 .flatMap(dto -> dto.getDocDiffObj().stream())
                 .map(KnXcapDiffDocDTO::getDocumentSelector)
-                .filter(sel -> sel != null && !sel.isBlank())
+                .filter(sel -> sel != null && !sel.trim().isEmpty())
                 .distinct()
                 .count();
     }
@@ -341,7 +341,7 @@ public class KnWatcherDebulkSendNotification implements Runnable {
                 .filter(dto -> dto.getDocDiffObj() != null)
                 .flatMap(dto -> dto.getDocDiffObj().stream())
                 .map(KnXcapDiffDocDTO::getDocumentSelector)
-                .filter(sel -> sel != null && !sel.isBlank())
+                .filter(sel -> sel != null && !sel.trim().isEmpty())
                 .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 

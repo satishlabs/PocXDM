@@ -144,6 +144,11 @@ public class KnConstants {
 
     public static final String DEFAULT_XDM_MAX_NOTIFICATION_COUNT = "0";
 
+    // Temporal workflow controls for watcher-level wait-and-bundle notifications.
+    public static final String XCAP_NOTIFICATION_OPTIMIZED = "XCAP_NOTIFICATION_OPTIMIZED";
+    public static final String XCAP_NOTIFICATION_PERIOD = "XCAP_NOTIFICATION_PERIOD";
+    public static final String XCAP_DIFF_PAYLOAD_SIZE = "XCAP_DIFF_PAYLOAD_SIZE";
+
     public static final Map<String,Object> dynamicQueueArgs =  new HashMap<>(){{put("x-queue-type", "classic");}};
 
     public static final Map<String,Object> staticQueueArgs =  new HashMap<>(){{put("x-queue-type", "quorum");}};

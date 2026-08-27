@@ -1,0 +1,135 @@
+Subject: [PATCH] Test
+---
+Index: xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/impl/KnXcapDiffNotifierImpl.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/impl/KnXcapDiffNotifierImpl.java b/xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/impl/KnXcapDiffNotifierImpl.java
+--- a/xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/impl/KnXcapDiffNotifierImpl.java	(revision be7797db1ae57a79fb959aa2fb7e9d9730924339)
++++ b/xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/impl/KnXcapDiffNotifierImpl.java	(date 1787838063574)
+@@ -196,19 +196,24 @@
+                     LinkedHashSet<String> watcherMdns = extractWatcherMdnsFromDirChg(initialList);
+                     xcapDiffNotifier.logQueueSnapshotForMdns("STEP-P2A", watcherMdns, persisterTxn);
+ 
+-                    // ── TRACKER UPSERT (epoch registration) ────────────────────────────────────
++                    // ── TRACKER UPSERT (epoch registration; optimized mode only) ───────────────
+                     // Register each watcher MDN in MDN_NOTIFY_TRACKER (insert-if-absent).
+-                    // This preserves the original epoch start time across rapid repeated changes
+-                    // for the same subscriber.  If the row already exists, we do nothing – the
+-                    // existing LAST_NOTIFIED_TIME remains intact so the epoch is not reset.
+-                    try {
+-                        xcapDiffNotifier.upsertMdnNotifyTracker(watcherMdns, persisterTxn);
+-                        knLogger.info(methodName, FLOW_TAG + " STEP-P3 Upserted MDN tracker entries (DirChg). uniqueMdns="
+-                                + watcherMdns.size());
+-                        xcapDiffNotifier.logTrackerSnapshotForMdns("STEP-P3B", watcherMdns, persisterTxn);
+-                    } catch (KnPersistenceException trackerEx) {
+-                        knLogger.warn(methodName, FLOW_TAG + " STEP-P3 MDN tracker upsert failed for DirChg; queue rows remain saved. uniqueMdns="
+-                                + watcherMdns.size(), trackerEx);
++                    // Preserves original epoch start across rapid repeats for the same subscriber.
++                    // Legacy mode (XCAP_NOTIFICATION_OPTIMIZED=0) skips tracker entirely.
++                    if (xcapDiffNotifier.isOptimizedNotificationEnabled()) {
++                        try {
++                            xcapDiffNotifier.upsertMdnNotifyTracker(watcherMdns, persisterTxn);
++                            knLogger.info(methodName, FLOW_TAG + " STEP-P3 Upserted MDN tracker entries (DirChg). uniqueMdns="
++                                    + watcherMdns.size());
++                            xcapDiffNotifier.logTrackerSnapshotForMdns("STEP-P3B", watcherMdns, persisterTxn);
++                        } catch (KnPersistenceException trackerEx) {
++                            knLogger.warn(methodName, FLOW_TAG + " STEP-P3 MDN tracker upsert failed for DirChg; queue rows remain saved. uniqueMdns="
++                                    + watcherMdns.size(), trackerEx);
++                        }
++                    } else {
++                        knLogger.info(methodName, FLOW_TAG
++                                + " STEP-P3 Legacy mode – tracker upsert skipped (DirChg). uniqueMdns="
++                                + watcherMdns.size());
+                     }
+ 
+                     xcapDiffNotifier.sendXcapDiffDirMicroserviceNotificationforEtagNotify(initialList);
+@@ -353,16 +358,21 @@
+                     LinkedHashSet<String> watcherMdns = extractWatcherMdnsFromDiff(initialList);
+                     xcapDiffNotifier.logQueueSnapshotForMdns("STEP-P2A", watcherMdns, persisterTxn);
+ 
+-                    // ── TRACKER UPSERT ─────────────────────────────────────────────────────────
+-                    // Register watcher MDNs for epoch-based pickup when optimization is enabled.
+-                    try {
+-                        xcapDiffNotifier.upsertMdnNotifyTracker(watcherMdns, persisterTxn);
+-                        knLogger.info(methodName, FLOW_TAG + " STEP-P3 Upserted MDN tracker entries (DiffList). uniqueMdns="
+-                                + watcherMdns.size());
+-                        xcapDiffNotifier.logTrackerSnapshotForMdns("STEP-P3B", watcherMdns, persisterTxn);
+-                    } catch (KnPersistenceException trackerEx) {
+-                        knLogger.warn(methodName, FLOW_TAG + " STEP-P3 MDN tracker upsert failed for DiffList; queue rows remain saved. uniqueMdns="
+-                                + watcherMdns.size(), trackerEx);
++                    // ── TRACKER UPSERT (optimized mode only) ───────────────────────────────────
++                    if (xcapDiffNotifier.isOptimizedNotificationEnabled()) {
++                        try {
++                            xcapDiffNotifier.upsertMdnNotifyTracker(watcherMdns, persisterTxn);
++                            knLogger.info(methodName, FLOW_TAG + " STEP-P3 Upserted MDN tracker entries (DiffList). uniqueMdns="
++                                    + watcherMdns.size());
++                            xcapDiffNotifier.logTrackerSnapshotForMdns("STEP-P3B", watcherMdns, persisterTxn);
++                        } catch (KnPersistenceException trackerEx) {
++                            knLogger.warn(methodName, FLOW_TAG + " STEP-P3 MDN tracker upsert failed for DiffList; queue rows remain saved. uniqueMdns="
++                                    + watcherMdns.size(), trackerEx);
++                        }
++                    } else {
++                        knLogger.info(methodName, FLOW_TAG
++                                + " STEP-P3 Legacy mode – tracker upsert skipped (DiffList). uniqueMdns="
++                                + watcherMdns.size());
+                     }
+ 
+                     xcapDiffNotifier.sendXcapDiffMicroserviceNotificationforEtagNotify(initialList);
+@@ -469,16 +479,21 @@
+                     LinkedHashSet<String> watcherMdns = extractWatcherMdnsFromDiff(initialList);
+                     xcapDiffNotifier.logQueueSnapshotForMdns("STEP-P2A", watcherMdns, null);
+ 
+-                    // ── TRACKER UPSERT ─────────────────────────────────────────────────────────
+-                    // Single-item notifications also participate in epoch gating.
+-                    try {
+-                        xcapDiffNotifier.upsertMdnNotifyTracker(watcherMdns, null);
+-                        knLogger.info(methodName, FLOW_TAG + " STEP-P3 Upserted MDN tracker entries (SingleDiff). uniqueMdns="
+-                                + watcherMdns.size());
+-                        xcapDiffNotifier.logTrackerSnapshotForMdns("STEP-P3B", watcherMdns, null);
+-                    } catch (KnPersistenceException trackerEx) {
+-                        knLogger.warn(methodName, FLOW_TAG + " STEP-P3 MDN tracker upsert failed for SingleDiff; queue rows remain saved. uniqueMdns="
+-                                + watcherMdns.size(), trackerEx);
++                    // ── TRACKER UPSERT (optimized mode only) ───────────────────────────────────
++                    if (xcapDiffNotifier.isOptimizedNotificationEnabled()) {
++                        try {
++                            xcapDiffNotifier.upsertMdnNotifyTracker(watcherMdns, null);
++                            knLogger.info(methodName, FLOW_TAG + " STEP-P3 Upserted MDN tracker entries (SingleDiff). uniqueMdns="
++                                    + watcherMdns.size());
++                            xcapDiffNotifier.logTrackerSnapshotForMdns("STEP-P3B", watcherMdns, null);
++                        } catch (KnPersistenceException trackerEx) {
++                            knLogger.warn(methodName, FLOW_TAG + " STEP-P3 MDN tracker upsert failed for SingleDiff; queue rows remain saved. uniqueMdns="
++                                    + watcherMdns.size(), trackerEx);
++                        }
++                    } else {
++                        knLogger.info(methodName, FLOW_TAG
++                                + " STEP-P3 Legacy mode – tracker upsert skipped (SingleDiff). uniqueMdns="
++                                + watcherMdns.size());
+                     }
+ 
+                     xcapDiffNotifier.sendXcapDiffMicroserviceNotificationforEtagNotify(initialList);
+Index: xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/impl/KnXcapDiffNotifier.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/impl/KnXcapDiffNotifier.java b/xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/impl/KnXcapDiffNotifier.java
+--- a/xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/impl/KnXcapDiffNotifier.java	(revision be7797db1ae57a79fb959aa2fb7e9d9730924339)
++++ b/xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/impl/KnXcapDiffNotifier.java	(date 1787838042278)
+@@ -3935,10 +3935,11 @@
+             knLogger.info(methodName, FLOW_TAG + " STEP-SF0 Skipping tracker upsert because MDN collection is empty");
+             return;
+         }
+-        boolean optimizedEnabled = isOptimizedNotificationEnabled();
+-        if (!optimizedEnabled) {
+-            knLogger.warn(methodName, FLOW_TAG + " STEP-SF0 Optimized mode is OFF but tracker upsert will still execute to preserve watcher lifecycle state. inputMdnCount="
+-                    + mdns.size());
++        // Legacy mode must not touch MDN_NOTIFY_TRACKER (XCAP-DEBULK-002 / rollback path).
++        if (!isOptimizedNotificationEnabled()) {
++            knLogger.info(methodName, FLOW_TAG
++                    + " STEP-SF0 Optimized mode OFF – skipping tracker upsert. inputMdnCount=" + mdns.size());
++            return;
+         }
+ 
+         boolean ownedTxn      = false;

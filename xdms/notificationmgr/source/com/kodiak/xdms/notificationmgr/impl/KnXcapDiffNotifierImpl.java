@@ -188,31 +188,37 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
                 if (saveNotificationEnabled) {
                     knLogger.info(methodName, FLOW_TAG + " STEP-P1 Save-first entry (DirChg). watcherCount="
                             + watcherCount + " notificationCount=" + notificationCount);
-                    // ── SAVE-FIRST ─────────────────────────────────────────────────────────────
-                    // Persist the notification payload to the pending queue in its own transaction
-                    // so queue durability is not coupled to tracker registration.
+                    // Queue commit is independent of tracker / post-processing.
                     xcapDiffNotifier.saveNotification(null, initialList, notificationParamDTO);
                     knLogger.info(methodName, FLOW_TAG + " STEP-P2 Saved notifications to DG.XCAP_PENDING_NOTIFYQ (DirChg)");
-                    LinkedHashSet<String> watcherMdns = extractWatcherMdnsFromDirChg(initialList);
-                    xcapDiffNotifier.logQueueSnapshotForMdns("STEP-P2A", watcherMdns, persisterTxn);
 
-                    // ── TRACKER UPSERT (epoch registration) ────────────────────────────────────
-                    // Register each watcher MDN in MDN_NOTIFY_TRACKER (insert-if-absent).
-                    // This preserves the original epoch start time across rapid repeated changes
-                    // for the same subscriber.  If the row already exists, we do nothing – the
-                    // existing LAST_NOTIFIED_TIME remains intact so the epoch is not reset.
+                    // Anything after queue save must never undo / block the queue write.
                     try {
-                        xcapDiffNotifier.upsertMdnNotifyTracker(watcherMdns, persisterTxn);
-                        knLogger.info(methodName, FLOW_TAG + " STEP-P3 Upserted MDN tracker entries (DirChg). uniqueMdns="
-                                + watcherMdns.size());
-                        xcapDiffNotifier.logTrackerSnapshotForMdns("STEP-P3B", watcherMdns, persisterTxn);
-                    } catch (KnPersistenceException trackerEx) {
-                        knLogger.warn(methodName, FLOW_TAG + " STEP-P3 MDN tracker upsert failed for DirChg; queue rows remain saved. uniqueMdns="
-                                + watcherMdns.size(), trackerEx);
-                    }
+                        LinkedHashSet<String> watcherMdns = extractWatcherMdnsFromDirChg(initialList);
+                        xcapDiffNotifier.logQueueSnapshotForMdns("STEP-P2A", watcherMdns, null);
 
-                    xcapDiffNotifier.sendXcapDiffDirMicroserviceNotificationforEtagNotify(initialList);
-                    knLogger.info(methodName, FLOW_TAG + " STEP-P4 Triggered microservice etag notify for DirChg batch");
+                        if (xcapDiffNotifier.isOptimizedNotificationEnabled()) {
+                            try {
+                                xcapDiffNotifier.upsertMdnNotifyTracker(watcherMdns, null);
+                                knLogger.info(methodName, FLOW_TAG + " STEP-P3 Upserted MDN tracker entries (DirChg). uniqueMdns="
+                                        + watcherMdns.size());
+                                xcapDiffNotifier.logTrackerSnapshotForMdns("STEP-P3B", watcherMdns, null);
+                            } catch (Exception trackerEx) {
+                                knLogger.warn(methodName, FLOW_TAG + " STEP-P3 MDN tracker upsert failed for DirChg; queue rows remain saved. uniqueMdns="
+                                        + watcherMdns.size(), trackerEx);
+                            }
+                        } else {
+                            knLogger.info(methodName, FLOW_TAG
+                                    + " STEP-P3 Legacy mode – tracker upsert skipped (DirChg). uniqueMdns="
+                                    + watcherMdns.size());
+                        }
+
+                        xcapDiffNotifier.sendXcapDiffDirMicroserviceNotificationforEtagNotify(initialList);
+                        knLogger.info(methodName, FLOW_TAG + " STEP-P4 Triggered microservice etag notify for DirChg batch");
+                    } catch (Throwable postSaveEx) {
+                        knLogger.error(methodName, FLOW_TAG
+                                + " STEP-ERR Post-save processing failed for DirChg; queue insert already committed", postSaveEx);
+                    }
                 } else if (saveSuppressEnabled) {
                     knLogger.info(methodName, FLOW_TAG + " STEP-PX Save-first bypassed; entering suppress flow (DirChg)");
                     knLogger.debug(methodName, "inside notification suppressed ");
@@ -248,6 +254,10 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
                 persisterTxn.save();
             }
         } catch (KnPersistenceException e) {
+            knLogger.error(methodName, FLOW_TAG + " STEP-ERR Persister failure in DirChg send path", e);
+            rollback(persisterTxn);
+        } catch (Exception e) {
+            knLogger.error(methodName, FLOW_TAG + " STEP-ERR Unexpected failure in DirChg send path", e);
             rollback(persisterTxn);
         }
         return isSuccess;
@@ -347,26 +357,35 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
                 if (saveNotificationEnabled) {
                     knLogger.info(methodName, FLOW_TAG + " STEP-P1 Save-first entry (DiffList). watcherCount="
                             + watcherCount + " notificationCount=" + notificationCount);
-                    // ── SAVE-FIRST ─────────────────────────────────────────────────────────────
-                    xcapDiffNotifier.saveNotification(initialList, notificationParamDTO, persisterTxn);
+                    xcapDiffNotifier.saveNotification(initialList, notificationParamDTO, null);
                     knLogger.info(methodName, FLOW_TAG + " STEP-P2 Saved notifications to DG.XCAP_PENDING_NOTIFYQ (DiffList)");
-                    LinkedHashSet<String> watcherMdns = extractWatcherMdnsFromDiff(initialList);
-                    xcapDiffNotifier.logQueueSnapshotForMdns("STEP-P2A", watcherMdns, persisterTxn);
 
-                    // ── TRACKER UPSERT ─────────────────────────────────────────────────────────
-                    // Register watcher MDNs for epoch-based pickup when optimization is enabled.
                     try {
-                        xcapDiffNotifier.upsertMdnNotifyTracker(watcherMdns, persisterTxn);
-                        knLogger.info(methodName, FLOW_TAG + " STEP-P3 Upserted MDN tracker entries (DiffList). uniqueMdns="
-                                + watcherMdns.size());
-                        xcapDiffNotifier.logTrackerSnapshotForMdns("STEP-P3B", watcherMdns, persisterTxn);
-                    } catch (KnPersistenceException trackerEx) {
-                        knLogger.warn(methodName, FLOW_TAG + " STEP-P3 MDN tracker upsert failed for DiffList; queue rows remain saved. uniqueMdns="
-                                + watcherMdns.size(), trackerEx);
-                    }
+                        LinkedHashSet<String> watcherMdns = extractWatcherMdnsFromDiff(initialList);
+                        xcapDiffNotifier.logQueueSnapshotForMdns("STEP-P2A", watcherMdns, null);
 
-                    xcapDiffNotifier.sendXcapDiffMicroserviceNotificationforEtagNotify(initialList);
-                    knLogger.info(methodName, FLOW_TAG + " STEP-P4 Triggered microservice etag notify for DiffList batch");
+                        if (xcapDiffNotifier.isOptimizedNotificationEnabled()) {
+                            try {
+                                xcapDiffNotifier.upsertMdnNotifyTracker(watcherMdns, null);
+                                knLogger.info(methodName, FLOW_TAG + " STEP-P3 Upserted MDN tracker entries (DiffList). uniqueMdns="
+                                        + watcherMdns.size());
+                                xcapDiffNotifier.logTrackerSnapshotForMdns("STEP-P3B", watcherMdns, null);
+                            } catch (Exception trackerEx) {
+                                knLogger.warn(methodName, FLOW_TAG + " STEP-P3 MDN tracker upsert failed for DiffList; queue rows remain saved. uniqueMdns="
+                                        + watcherMdns.size(), trackerEx);
+                            }
+                        } else {
+                            knLogger.info(methodName, FLOW_TAG
+                                    + " STEP-P3 Legacy mode – tracker upsert skipped (DiffList). uniqueMdns="
+                                    + watcherMdns.size());
+                        }
+
+                        xcapDiffNotifier.sendXcapDiffMicroserviceNotificationforEtagNotify(initialList);
+                        knLogger.info(methodName, FLOW_TAG + " STEP-P4 Triggered microservice etag notify for DiffList batch");
+                    } catch (Throwable postSaveEx) {
+                        knLogger.error(methodName, FLOW_TAG
+                                + " STEP-ERR Post-save processing failed for DiffList; queue insert already committed", postSaveEx);
+                    }
                 } else if (saveSuppressEnabled) {
                     knLogger.info(methodName, FLOW_TAG + " STEP-PX Save-first bypassed; entering suppress flow (DiffList)");
                     knLogger.info(methodName, "inside notification suppressed ");
@@ -400,6 +419,10 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
             }
             persisterTxn.save();
         } catch (KnPersistenceException e) {
+            knLogger.error(methodName, FLOW_TAG + " STEP-ERR Persister failure in DiffList send path", e);
+            rollback(persisterTxn);
+        } catch (Exception e) {
+            knLogger.error(methodName, FLOW_TAG + " STEP-ERR Unexpected failure in DiffList send path", e);
             rollback(persisterTxn);
         }
         return isSuccess;
@@ -463,26 +486,35 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
                 if (saveNotificationEnabled) {
                     knLogger.info(methodName, FLOW_TAG + " STEP-P1 Save-first entry (SingleDiff). watcherCount="
                             + watcherCount + " notificationCount=" + notificationCount);
-                    // ── SAVE-FIRST ─────────────────────────────────────────────────────────────
                     xcapDiffNotifier.saveNotification(initialList, notificationParamDTO, null);
                     knLogger.info(methodName, FLOW_TAG + " STEP-P2 Saved notifications to DG.XCAP_PENDING_NOTIFYQ (SingleDiff)");
-                    LinkedHashSet<String> watcherMdns = extractWatcherMdnsFromDiff(initialList);
-                    xcapDiffNotifier.logQueueSnapshotForMdns("STEP-P2A", watcherMdns, null);
 
-                    // ── TRACKER UPSERT ─────────────────────────────────────────────────────────
-                    // Single-item notifications also participate in epoch gating.
                     try {
-                        xcapDiffNotifier.upsertMdnNotifyTracker(watcherMdns, null);
-                        knLogger.info(methodName, FLOW_TAG + " STEP-P3 Upserted MDN tracker entries (SingleDiff). uniqueMdns="
-                                + watcherMdns.size());
-                        xcapDiffNotifier.logTrackerSnapshotForMdns("STEP-P3B", watcherMdns, null);
-                    } catch (KnPersistenceException trackerEx) {
-                        knLogger.warn(methodName, FLOW_TAG + " STEP-P3 MDN tracker upsert failed for SingleDiff; queue rows remain saved. uniqueMdns="
-                                + watcherMdns.size(), trackerEx);
-                    }
+                        LinkedHashSet<String> watcherMdns = extractWatcherMdnsFromDiff(initialList);
+                        xcapDiffNotifier.logQueueSnapshotForMdns("STEP-P2A", watcherMdns, null);
 
-                    xcapDiffNotifier.sendXcapDiffMicroserviceNotificationforEtagNotify(initialList);
-                    knLogger.info(methodName, FLOW_TAG + " STEP-P4 Triggered microservice etag notify for SingleDiff batch");
+                        if (xcapDiffNotifier.isOptimizedNotificationEnabled()) {
+                            try {
+                                xcapDiffNotifier.upsertMdnNotifyTracker(watcherMdns, null);
+                                knLogger.info(methodName, FLOW_TAG + " STEP-P3 Upserted MDN tracker entries (SingleDiff). uniqueMdns="
+                                        + watcherMdns.size());
+                                xcapDiffNotifier.logTrackerSnapshotForMdns("STEP-P3B", watcherMdns, null);
+                            } catch (Exception trackerEx) {
+                                knLogger.warn(methodName, FLOW_TAG + " STEP-P3 MDN tracker upsert failed for SingleDiff; queue rows remain saved. uniqueMdns="
+                                        + watcherMdns.size(), trackerEx);
+                            }
+                        } else {
+                            knLogger.info(methodName, FLOW_TAG
+                                    + " STEP-P3 Legacy mode – tracker upsert skipped (SingleDiff). uniqueMdns="
+                                    + watcherMdns.size());
+                        }
+
+                        xcapDiffNotifier.sendXcapDiffMicroserviceNotificationforEtagNotify(initialList);
+                        knLogger.info(methodName, FLOW_TAG + " STEP-P4 Triggered microservice etag notify for SingleDiff batch");
+                    } catch (Throwable postSaveEx) {
+                        knLogger.error(methodName, FLOW_TAG
+                                + " STEP-ERR Post-save processing failed for SingleDiff; queue insert already committed", postSaveEx);
+                    }
                 } else if (saveSuppressEnabled) {
                     knLogger.info(methodName, FLOW_TAG + " STEP-PX Save-first bypassed; entering suppress flow (SingleDiff)");
                     knLogger.info(methodName, "inside notification suppressed ");
@@ -516,6 +548,10 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
             }
             persisterTxn.save();
         } catch (KnPersistenceException e) {
+            knLogger.error(methodName, FLOW_TAG + " STEP-ERR Persister failure in SingleDiff send path", e);
+            rollback(persisterTxn);
+        } catch (Exception e) {
+            knLogger.error(methodName, FLOW_TAG + " STEP-ERR Unexpected failure in SingleDiff send path", e);
             rollback(persisterTxn);
         }
         return isSuccess;
@@ -567,7 +603,7 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
             }
             // getMDNFromURI strips the URI path and returns only the MDN portion.
             String mdn = getMDNFromURI(dto.getDirURI());
-            if (mdn != null && !mdn.isBlank()) {
+            if (mdn != null && !mdn.trim().isEmpty()) {
                 mdns.add(mdn.trim());
             } else {
                 knLogger.warn(methodName,
@@ -606,7 +642,7 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
                 continue;
             }
             String mdn = getMDNFromURI(dto.getDirURI());
-            if (mdn != null && !mdn.isBlank()) {
+            if (mdn != null && !mdn.trim().isEmpty()) {
                 mdns.add(mdn.trim());
             } else {
                 knLogger.warn(methodName,

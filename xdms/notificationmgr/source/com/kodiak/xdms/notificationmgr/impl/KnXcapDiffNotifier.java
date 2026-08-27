@@ -187,14 +187,11 @@ public class KnXcapDiffNotifier {
     /**
      * INSERT-IF-ABSENT into MDN_NOTIFY_TRACKER.
      *
-     * Uses INSERT...WHERE NOT EXISTS so that a second change for the same MDN
-     * within the same epoch does NOT overwrite the original LAST_NOTIFIED_TIME.
+     * Uses plain INSERT; duplicate PK is treated as success (epoch preserved).
+     * Avoids FROM DUAL dialect issues across TimesTen/Oracle variants.
      */
-    private final String UPSERT_MDN_NOTIFY_TRACKER =
-            // TimesTen-safe insert-if-absent form; avoids MERGE/VALUES dialect issues.
-            "INSERT INTO DG.MDN_NOTIFY_TRACKER (MDN, LAST_NOTIFIED_TIME) " +
-            "SELECT ?, ? FROM DUAL " +
-            "WHERE NOT EXISTS (SELECT 1 FROM DG.MDN_NOTIFY_TRACKER WHERE MDN = ?)";
+    private final String INSERT_MDN_NOTIFY_TRACKER =
+            "INSERT INTO DG.MDN_NOTIFY_TRACKER (MDN, LAST_NOTIFIED_TIME) VALUES (?, ?)";
 
     /**
      * Advances LAST_NOTIFIED_TIME after a watcher batch has been claimed for processing.
@@ -3935,10 +3932,11 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
             knLogger.info(methodName, FLOW_TAG + " STEP-SF0 Skipping tracker upsert because MDN collection is empty");
             return;
         }
-        boolean optimizedEnabled = isOptimizedNotificationEnabled();
-        if (!optimizedEnabled) {
-            knLogger.warn(methodName, FLOW_TAG + " STEP-SF0 Optimized mode is OFF but tracker upsert will still execute to preserve watcher lifecycle state. inputMdnCount="
-                    + mdns.size());
+        // Legacy mode must not touch MDN_NOTIFY_TRACKER (XCAP-DEBULK-002 / rollback path).
+        if (!isOptimizedNotificationEnabled()) {
+            knLogger.info(methodName, FLOW_TAG
+                    + " STEP-SF0 Optimized mode OFF – skipping tracker upsert. inputMdnCount=" + mdns.size());
+            return;
         }
 
         boolean ownedTxn      = false;
@@ -3957,34 +3955,77 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                 ownedTxn = true;
             }
             String localPttId = KnDbUtil.getDBConfigInfo().getLocalPttId();
+            boolean usedSecondary = true;
             try {
                 connection = persisterTxn.getDBConnection(localPttId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
+                knLogger.info(methodName, FLOW_TAG + " STEP-SF1A Using secondary DB for MDN tracker upsert. datastore="
+                        + KnDBConst.DataStores.XDM_SHARED_DATA.getValue() + " localPttId=" + localPttId);
             } catch (Exception e) {
-                throw new KnPersistenceException(KnErrorCodes.DAO.TXN_CONNECTION_NOT_AVAILABLE,
-                        FLOW_TAG + " STEP-SF1A Failed to open secondary DB for tracker upsert. datastore="
-                                + KnDBConst.DataStores.XDM_SHARED_DATA.getValue() + " localPttId=" + localPttId,
-                        e);
+                usedSecondary = false;
+                connection = persisterTxn.getDBConnection(localPttId, false);
+                knLogger.warn(methodName, FLOW_TAG
+                        + " STEP-SF1A Secondary DB unavailable for tracker upsert; falling back to primary. localPttId="
+                        + localPttId + " cause=" + e.getMessage());
             }
-            knLogger.info(methodName, FLOW_TAG + " STEP-SF1A Using secondary DB for MDN tracker upsert. datastore="
-                    + KnDBConst.DataStores.XDM_SHARED_DATA.getValue() + " localPttId=" + localPttId);
-            pStmt = connection.prepareStatement(UPSERT_MDN_NOTIFY_TRACKER);
+            String selectExistingSql = "SELECT 1 FROM DG.MDN_NOTIFY_TRACKER WHERE MDN = ?";
+            PreparedStatement selectStmt = null;
+            pStmt = connection.prepareStatement(INSERT_MDN_NOTIFY_TRACKER);
+            selectStmt = connection.prepareStatement(selectExistingSql);
 
             long now = System.currentTimeMillis();
-            for (String mdn : mdns) {
-                if (mdn == null || mdn.isBlank()) {
-                    knLogger.warn(methodName, "Skipping blank MDN in tracker upsert batch");
-                    skippedBlankCount++;
-                    continue;
+            int affectedRows = 0;
+            int unchangedRows = 0;
+            int failedRows = 0;
+
+            try {
+                for (String mdn : mdns) {
+                    if (mdn == null || mdn.trim().isEmpty()) {
+                        knLogger.warn(methodName, "Skipping blank MDN in tracker upsert batch");
+                        skippedBlankCount++;
+                        continue;
+                    }
+                    validMdnCount++;
+                    String trimmedMdn = mdn.trim();
+                    if (trackerMdnSample.size() < 10) {
+                        trackerMdnSample.add(trimmedMdn);
+                    }
+                    try {
+                        selectStmt.setString(1, trimmedMdn);
+                        try (ResultSet rs = selectStmt.executeQuery()) {
+                            if (rs.next()) {
+                                unchangedRows++;
+                                knLogger.debug(methodName, FLOW_TAG
+                                        + " STEP-SF2A MDN already in tracker (insert-if-absent). mdn=" + trimmedMdn);
+                                continue;
+                            }
+                        }
+                        pStmt.setString(1, trimmedMdn);
+                        pStmt.setLong(2, now);
+                        int rows = pStmt.executeUpdate();
+                        if (rows > 0) {
+                            affectedRows += rows;
+                        } else {
+                            unchangedRows++;
+                        }
+                    } catch (SQLException rowEx) {
+                        String msg = rowEx.getMessage() != null ? rowEx.getMessage().toLowerCase() : "";
+                        boolean likelyDuplicate = msg.contains("unique") || msg.contains("duplicate")
+                                || msg.contains("constraint") || msg.contains("primary key")
+                                || msg.contains("already exists");
+                        if (likelyDuplicate) {
+                            unchangedRows++;
+                            knLogger.debug(methodName, FLOW_TAG
+                                    + " STEP-SF2A MDN already in tracker (race). mdn=" + trimmedMdn);
+                        } else {
+                            failedRows++;
+                            knLogger.warn(methodName, FLOW_TAG
+                                    + " STEP-SF2B Tracker insert failed for mdn=" + trimmedMdn
+                                    + " cause=" + rowEx.getMessage(), rowEx);
+                        }
+                    }
                 }
-                validMdnCount++;
-                String trimmedMdn = mdn.trim();
-                if (trackerMdnSample.size() < 10) {
-                    trackerMdnSample.add(trimmedMdn);
-                }
-                pStmt.setString(1, trimmedMdn); // MDN
-                pStmt.setLong(2, now);           // LAST_NOTIFIED_TIME
-                pStmt.setString(3, trimmedMdn); // WHERE NOT EXISTS MDN check
-                pStmt.addBatch();
+            } finally {
+                KnDbUtil.closeStatement(selectStmt);
             }
 
             knLogger.info(methodName, FLOW_TAG + " STEP-SF1B Tracker MDN input snapshot. inputMdnCount="
@@ -3993,40 +4034,33 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
 
             if (validMdnCount == 0) {
                 knLogger.info(methodName, FLOW_TAG + " STEP-SF0 No valid MDNs found after filtering; tracker upsert skipped.");
+                if (ownedTxn) {
+                    rollback(persisterTxn);
+                }
                 return;
             }
 
-            int[] result = pStmt.executeBatch();
-            int affectedRows = 0;
-            int unchangedRows = 0;
-            int unknownRows = 0;
-            int failedRows = 0;
-            for (int r : result) {
-                if (r > 0) {
-                    affectedRows += r;
-                } else if (r == 0) {
-                    unchangedRows++;
-                } else if (r == Statement.SUCCESS_NO_INFO) {
-                    unknownRows++;
-                } else if (r == Statement.EXECUTE_FAILED) {
-                    failedRows++;
-                }
-            }
-            knLogger.info(methodName, "Tracker upsert executed for ", mdns.size(),
-                    " MDN(s); validMdns:", validMdnCount, " batch result length:", result.length);
-            knLogger.info(methodName, FLOW_TAG + " STEP-SF2 Tracker upsert completed. executedBatchCount="
-                    + result.length + " validMdnCount=" + validMdnCount
+            knLogger.info(methodName, FLOW_TAG + " STEP-SF2 Tracker upsert completed. validMdnCount=" + validMdnCount
                     + " affectedRows=" + affectedRows + " unchangedRows=" + unchangedRows
-                    + " unknownRows=" + unknownRows + " failedRows=" + failedRows
+                    + " failedRows=" + failedRows
                     + " sampleMdns=" + trackerMdnSample);
 
             if (ownedTxn) {
+                if (failedRows > 0 && affectedRows == 0 && unchangedRows == 0) {
+                    rollback(persisterTxn);
+                    throw new KnPersistenceException(KnErrorCodes.DAO.SQL_EXCEPTION,
+                            "All MDN tracker inserts failed. failedRows=" + failedRows);
+                }
                 persisterTxn.save();
-                knLogger.info(methodName, FLOW_TAG + " STEP-SF3 Tracker upsert committed to secondary table. committedBatchCount="
-                        + result.length + " datastore=" + KnDBConst.DataStores.XDM_SHARED_DATA.getValue());
+                knLogger.info(methodName, FLOW_TAG + " STEP-SF3 Tracker upsert committed. affectedRows="
+                        + affectedRows + " unchangedRows=" + unchangedRows + " usedSecondary=" + usedSecondary
+                        + " datastore=" + (usedSecondary
+                        ? KnDBConst.DataStores.XDM_SHARED_DATA.getValue() : "PRIMARY"));
             } else {
-                knLogger.info(methodName, FLOW_TAG + " STEP-SF3 Tracker upsert staged in caller transaction. executedBatchCount="
-                        + result.length + " datastore=" + KnDBConst.DataStores.XDM_SHARED_DATA.getValue());
+                knLogger.info(methodName, FLOW_TAG + " STEP-SF3 Tracker upsert staged in caller transaction. affectedRows="
+                        + affectedRows + " unchangedRows=" + unchangedRows + " usedSecondary=" + usedSecondary
+                        + " datastore=" + (usedSecondary
+                        ? KnDBConst.DataStores.XDM_SHARED_DATA.getValue() : "PRIMARY"));
             }
             logTrackerSnapshotForMdns("STEP-SF4", mdns, persisterTxn);
 

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/PocXDM.iml" filepath="$PROJECT_DIR$/.idea/PocXDM.iml" />
+      <module fileurl="file://$PROJECT_DIR$/xdms/server/activation/activation.iml" filepath="$PROJECT_DIR$/xdms/server/activation/activation.iml" />
+      <module fileurl="file://$PROJECT_DIR$/xdms/auditjobs/auditjobs.iml" filepath="$PROJECT_DIR$/xdms/auditjobs/auditjobs.iml" />
+      <module fileurl="file://$PROJECT_DIR$/xdms/bulkfw/bulkfw.iml" filepath="$PROJECT_DIR$/xdms/bulkfw/bulkfw.iml" />
+      <module fileurl="file://$PROJECT_DIR$/xdms/server/bulkops/bulkops.iml" filepath="$PROJECT_DIR$/xdms/server/bulkops/bulkops.iml" />
+      <module fileurl="file://$PROJECT_DIR$/xdms/server/common/common.iml" filepath="$PROJECT_DIR$/xdms/server/common/common.iml" />
+      <module fileurl="file://$PROJECT_DIR$/common/common2.iml" filepath="$PROJECT_DIR$/common/common2.iml" />
+      <module fileurl="file://$PROJECT_DIR$/xdms/server/corpmgmt/corpmgmt.iml" filepath="$PROJECT_DIR$/xdms/server/corpmgmt/corpmgmt.iml" />
+      <module fileurl="file://$PROJECT_DIR$/ggcommon/ggcommon.iml" filepath="$PROJECT_DIR$/ggcommon/ggcommon.iml" />
+      <module fileurl="file://$PROJECT_DIR$/xdms/loader/loader.iml" filepath="$PROJECT_DIR$/xdms/loader/loader.iml" />
+      <module fileurl="file://$PROJECT_DIR$/xdms/mcsnotifymgr/mcsnotifymgr.iml" filepath="$PROJECT_DIR$/xdms/mcsnotifymgr/mcsnotifymgr.iml" />
+      <module fileurl="file://$PROJECT_DIR$/xdms/mediator/mediator.iml" filepath="$PROJECT_DIR$/xdms/mediator/mediator.iml" />
+      <module fileurl="file://$PROJECT_DIR$/xdms/notificationmgr/notificationmgr.iml" filepath="$PROJECT_DIR$/xdms/notificationmgr/notificationmgr.iml" />
+      <module fileurl="file://$PROJECT_DIR$/xdms/server/pubmgmt/pubmgmt.iml" filepath="$PROJECT_DIR$/xdms/server/pubmgmt/pubmgmt.iml" />
+      <module fileurl="file://$PROJECT_DIR$/xdms/server/subsmgmt/subsmgmt.iml" filepath="$PROJECT_DIR$/xdms/server/subsmgmt/subsmgmt.iml" />
+      <module fileurl="file://$PROJECT_DIR$/tools/tools.iml" filepath="$PROJECT_DIR$/tools/tools.iml" />
+      <module fileurl="file://$PROJECT_DIR$/xdms/xdmintf/xdmintf.iml" filepath="$PROJECT_DIR$/xdms/xdmintf/xdmintf.iml" />
+    </modules>
+  </component>
+</project>

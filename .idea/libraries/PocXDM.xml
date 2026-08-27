@@ -1,0 +1,12 @@
+<component name="libraryTable">
+  <library name="PocXDM">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/common.zip!/" />
+      <root url="jar://$PROJECT_DIR$/ggcommon.zip!/" />
+      <root url="jar://$PROJECT_DIR$/xdms_test.zip!/" />
+      <root url="jar://$PROJECT_DIR$/tools.zip!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
