@@ -21,7 +21,6 @@ import java.util.stream.Collectors;
 import com.kodiak.common.commdto.common.KnNotificationParamDTO;
 import com.kodiak.common.commdto.common.KnXDMSubsProvDTO;
 import com.kodiak.common.commdto.response.KnXDMSubsProfileRespDTO;
-import com.kodiak.common.dao.KnPersistenceException;
 import com.kodiak.common.dao.KnPersisterTxn;
 import com.kodiak.common.resources.KnGDPRTemplate;
 import com.kodiak.logger.KnLogger;
@@ -37,6 +36,7 @@ import com.kodiak.xdms.server.common.business.helper.KnGenInfoUtil;
 public class KnMCSXCAPNotifyConsumer implements Runnable {
 
 	private static final KnLogger knLogger = KnLogger.getLogger(KnMCSXCAPNotifyConsumer.class);
+	private static final String FLOW_TAG = "[XCAP-DEBULK-FLOW]";
 
 	private BlockingQueue<KnMcsxcapMdnDTO> blockingQueue = null;
 	private BlockingQueue<String> suppressMdnBlockingQueue = null;
@@ -73,12 +73,27 @@ public class KnMCSXCAPNotifyConsumer implements Runnable {
 				persisterTxn = KnPersisterTxn.getPersisterTxn();
 				persisterTxn.open();
 				knLogger.debug("selectSubsProfileInfo- subsProfileRespDTO",subsProfileRespDTO);
-				Collection<KnXDMSubsProvDTO> subsRespDTO = subsProfileRespDTO.getSubsRespDTO();
-				sendMCSNotification(subsRespDTO, mcsxcapMdnDTOs, persisterTxn);
-				mcsDocChangeNotifier.sendMdnsToDB(suppressMdnList, null, persisterTxn);
+				Collection<KnXDMSubsProvDTO> subsRespDTO = subsProfileRespDTO != null ? subsProfileRespDTO.getSubsRespDTO() : null;
+				if (subsRespDTO == null || subsRespDTO.isEmpty()) {
+					knLogger.warn("KnMCSXCAPNotifyConsumer:run", FLOW_TAG
+							+ " STEP-MCS-WARN No subscriber profiles resolved for MCS UI batch. requestedMdns="
+							+ mcsxcapMdnDTOs.size() + " — queue insert skipped (check MDN / POCSUBSCRINFO)");
+				} else {
+					sendMCSNotification(subsRespDTO, mcsxcapMdnDTOs, persisterTxn);
+				}
+				if (!suppressMdnList.isEmpty()) {
+					mcsDocChangeNotifier.sendMdnsToDB(suppressMdnList, null, persisterTxn);
+				}
 				persisterTxn.save();
 			} catch (Throwable e) {
-				knLogger.error("KnMCSXCAPNotifyConsumer:run"," Throwable :",e.getMessage());
+				knLogger.error("KnMCSXCAPNotifyConsumer:run", FLOW_TAG + " STEP-MCS-ERR MCS consumer cycle failed", e);
+				if (persisterTxn != null) {
+					try {
+						persisterTxn.rollback();
+					} catch (Exception rollbackEx) {
+						knLogger.error("KnMCSXCAPNotifyConsumer:run", "Rollback failed after MCS consumer error", rollbackEx);
+					}
+				}
 			}
 		}
 	}
@@ -114,6 +129,9 @@ public class KnMCSXCAPNotifyConsumer implements Runnable {
 			KnNotificationParamDTO notificationParamDTO5 = new KnNotificationParamDTO();
 			mcsDocChangeNotifier.generateMCSNotification(mcsNotifyDTOs0, notificationParamDTO0, persisterTxn);
 			mcsDocChangeNotifier.generateMCSNotification(mcsNotifyDTOs5, notificationParamDTO5, persisterTxn);
+		} else {
+			knLogger.info("sendMCSNotification", FLOW_TAG
+					+ " STEP-MCS-WARN subsRespDTO empty inside sendMCSNotification; no MCS DTOs built");
 		}
 	}
 

@@ -1,0 +1,98 @@
+Subject: [PATCH] Test
+---
+Index: xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/impl/KnMCSXCAPNotifyConsumer.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/impl/KnMCSXCAPNotifyConsumer.java b/xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/impl/KnMCSXCAPNotifyConsumer.java
+--- a/xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/impl/KnMCSXCAPNotifyConsumer.java	(revision 45516f62e197fe195afe1e34a9158932f259873d)
++++ b/xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/impl/KnMCSXCAPNotifyConsumer.java	(date 1788151539484)
+@@ -37,6 +37,7 @@
+ public class KnMCSXCAPNotifyConsumer implements Runnable {
+ 
+ 	private static final KnLogger knLogger = KnLogger.getLogger(KnMCSXCAPNotifyConsumer.class);
++	private static final String FLOW_TAG = "[XCAP-DEBULK-FLOW]";
+ 
+ 	private BlockingQueue<KnMcsxcapMdnDTO> blockingQueue = null;
+ 	private BlockingQueue<String> suppressMdnBlockingQueue = null;
+@@ -114,6 +115,61 @@
+ 			KnNotificationParamDTO notificationParamDTO5 = new KnNotificationParamDTO();
+ 			mcsDocChangeNotifier.generateMCSNotification(mcsNotifyDTOs0, notificationParamDTO0, persisterTxn);
+ 			mcsDocChangeNotifier.generateMCSNotification(mcsNotifyDTOs5, notificationParamDTO5, persisterTxn);
++			registerOptimizedTrackerForMcsNotifications(mcsNotifyDTOs0, mcsNotifyDTOs5, persisterTxn);
++		}
++	}
++
++	/**
++	 * UI/MCS notifications save to {@code XCAP_PENDING_NOTIFYQ} via {@link KnMCSDocChangeNotifier}
++	 * but must also register watcher MDNs in {@code MDN_NOTIFY_TRACKER} when optimized mode is ON;
++	 * otherwise the epoch-gated poller never claims those queue rows.
++	 */
++	private void registerOptimizedTrackerForMcsNotifications(List<KnMCSNotifyDTO> mcsNotifyDTOs0,
++															 List<KnMCSNotifyDTO> mcsNotifyDTOs5,
++															 KnPersisterTxn persisterTxn) {
++		String methodName = "registerOptimizedTrackerForMcsNotifications";
++		KnXcapDiffNotifier xcapDiffNotifier = KnXcapDiffNotifier.getInstance();
++		if (!xcapDiffNotifier.isOptimizedNotificationEnabled()) {
++			knLogger.info(methodName, FLOW_TAG + " STEP-MCS0 Optimized mode OFF – MCS tracker upsert skipped");
++			return;
++		}
++		LinkedHashSet<String> watcherMdns = new LinkedHashSet<>();
++		extractWatcherMdnsFromMcsNotify(mcsNotifyDTOs0, watcherMdns);
++		extractWatcherMdnsFromMcsNotify(mcsNotifyDTOs5, watcherMdns);
++		if (watcherMdns.isEmpty()) {
++			knLogger.info(methodName, FLOW_TAG + " STEP-MCS0 No watcher MDNs extracted from MCS batch; tracker skipped");
++			return;
++		}
++		try {
++			xcapDiffNotifier.upsertMdnNotifyTracker(watcherMdns, null);
++			knLogger.info(methodName, FLOW_TAG + " STEP-MCS1 MCS tracker upsert completed. uniqueMdns="
++					+ watcherMdns.size());
++			xcapDiffNotifier.logTrackerSnapshotForMdns("STEP-MCS1B", watcherMdns, persisterTxn);
++		} catch (KnPersistenceException e) {
++			knLogger.warn(methodName, FLOW_TAG + " STEP-MCS1 MCS tracker upsert failed; queue rows remain saved. uniqueMdns="
++					+ watcherMdns.size(), e);
++		}
++	}
++
++	private void extractWatcherMdnsFromMcsNotify(List<KnMCSNotifyDTO> mcsNotifyDTOs, LinkedHashSet<String> watcherMdns) {
++		if (mcsNotifyDTOs == null || mcsNotifyDTOs.isEmpty()) {
++			return;
++		}
++		for (KnMCSNotifyDTO mcsNotifyDTO : mcsNotifyDTOs) {
++			if (mcsNotifyDTO == null || mcsNotifyDTO.getDocumentChange() == null) {
++				continue;
++			}
++			for (KnDocumentChangeDTO docChange : mcsNotifyDTO.getDocumentChange()) {
++				if (docChange == null) {
++					continue;
++				}
++				if (docChange.getDocType() == KnMCSNotifyConstants.DOCTYPE.MDN.value()) {
++					String mdn = docChange.getMdn();
++					if (mdn != null && !mdn.trim().isEmpty()) {
++						watcherMdns.add(mdn.trim());
++					}
++				}
++			}
+ 		}
+ 	}
+ 
+Index: xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/impl/KnXcapDiffNotifier.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/impl/KnXcapDiffNotifier.java b/xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/impl/KnXcapDiffNotifier.java
+--- a/xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/impl/KnXcapDiffNotifier.java	(revision 45516f62e197fe195afe1e34a9158932f259873d)
++++ b/xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/impl/KnXcapDiffNotifier.java	(date 1787857521433)
+@@ -4049,7 +4049,8 @@
+                 if (failedRows > 0 && affectedRows == 0 && unchangedRows == 0) {
+                     rollback(persisterTxn);
+                     throw new KnPersistenceException(KnErrorCodes.DAO.SQL_EXCEPTION,
+-                            "All MDN tracker inserts failed. failedRows=" + failedRows);
++                            "All MDN tracker inserts failed. failedRows=" + failedRows,
++                            localPttId, methodName);
+                 }
+                 persisterTxn.save();
+                 knLogger.info(methodName, FLOW_TAG + " STEP-SF3 Tracker upsert committed. affectedRows="

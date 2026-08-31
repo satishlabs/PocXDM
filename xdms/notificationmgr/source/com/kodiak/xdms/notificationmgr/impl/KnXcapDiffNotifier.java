@@ -211,8 +211,13 @@ public class KnXcapDiffNotifier {
      * Condition: elapsed time since LAST_NOTIFIED_TIME >= XCAP_NOTIFICATION_PERIOD
      */
     private final String DELETE_MDN_NOTIFY_TRACKER_STALE =
-            "DELETE FROM DG.MDN_NOTIFY_TRACKER " +
-            "WHERE (? - LAST_NOTIFIED_TIME) >= ?";
+            "DELETE FROM DG.MDN_NOTIFY_TRACKER t " +
+            "WHERE (? - t.LAST_NOTIFIED_TIME) >= ? " +
+            "AND NOT EXISTS (" +
+            "  SELECT 1 FROM DG.XCAP_PENDING_NOTIFYQ q " +
+            "  WHERE q.DEST_ID = t.MDN " +
+            "    AND q.NOTIFY_STATUS IN (?, ?)" +
+            ")";
 
     /**
      * constructor
@@ -3492,6 +3497,81 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
     }
 
     /**
+     * Reverts claimed queue rows from {@code NOTIFY_INITIATED} back to {@code PENDING}
+     * so a failed worker send can be retried on the next poll cycle.
+     */
+    public void revertRecordsToPending(List<KnNotificationKeyDTO> seqIds) {
+        String methodName = "revertRecordsToPending";
+        if (seqIds == null || seqIds.isEmpty()) {
+            return;
+        }
+        KnPersisterTxn persisterTxn = null;
+        PreparedStatement pStmt = null;
+        try {
+            persisterTxn = KnPersisterTxn.getPersisterTxn();
+            persisterTxn.open();
+            String localPttId = KnDbUtil.getDBConfigInfo().getLocalPttId();
+            Connection connection = persisterTxn.getDBConnection(localPttId, false);
+            String updateQry =
+                    "UPDATE DG.XCAP_PENDING_NOTIFYQ " +
+                    "SET NOTIFY_STATUS = ? " +
+                    "WHERE NOTIFY_STATUS = ? AND DEST_ID = ? AND INSERTION_TIME = ? AND DEST_TYPE = ?";
+            pStmt = connection.prepareStatement(updateQry);
+            for (KnNotificationKeyDTO seqId : seqIds) {
+                pStmt.setInt(1, KnXcapNotifyConstants.NOTIFYSTATUS.PENDING.value());
+                pStmt.setInt(2, KnXcapNotifyConstants.NOTIFYSTATUS.NOTIFY_INITIATED.value());
+                pStmt.setString(3, seqId.getDestId());
+                pStmt.setLong(4, seqId.getInsertionTime());
+                pStmt.setInt(5, seqId.getDestType());
+                pStmt.addBatch();
+            }
+            int[] counts = pStmt.executeBatch();
+            persisterTxn.save();
+            knLogger.info(methodName, FLOW_TAG + " STEP-12B Reverted failed rows to PENDING. rowCount="
+                    + seqIds.size() + " batchResults=" + counts.length);
+        } catch (KnPersistenceException e) {
+            rollback(persisterTxn);
+            knLogger.error(methodName, FLOW_TAG + " STEP-12B Failed to revert rows to PENDING", e);
+        } catch (Exception e) {
+            rollback(persisterTxn);
+            knLogger.error(methodName, FLOW_TAG + " STEP-12B Unexpected error reverting rows to PENDING", e);
+        } finally {
+            KnDbUtil.closeStatement(pStmt);
+        }
+    }
+
+    /**
+     * Makes watcher MDNs immediately eligible for the next optimized poll after a failed send
+     * by backing {@code LAST_NOTIFIED_TIME} by one full notification period.
+     */
+    public void resetMdnNotifyTrackerEpochForRetry(Collection<String> mdns, long periodMillis) {
+        String methodName = "resetMdnNotifyTrackerEpochForRetry";
+        if (mdns == null || mdns.isEmpty()) {
+            return;
+        }
+        long retryEligibleTs = System.currentTimeMillis() - periodMillis;
+        KnPersisterTxn persisterTxn = null;
+        try {
+            persisterTxn = KnPersisterTxn.getPersisterTxn();
+            persisterTxn.open();
+            String localPttId = KnDbUtil.getDBConfigInfo().getLocalPttId();
+            Connection connection;
+            try {
+                connection = persisterTxn.getDBConnection(localPttId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
+            } catch (Exception e) {
+                connection = persisterTxn.getDBConnection(localPttId, false);
+            }
+            updateMdnNotifyTrackerTs(connection, mdns, retryEligibleTs);
+            persisterTxn.save();
+            knLogger.info(methodName, FLOW_TAG + " STEP-12C Tracker epoch reset for retry. mdnCount="
+                    + mdns.size() + " retryEligibleTs=" + retryEligibleTs);
+        } catch (Exception e) {
+            rollback(persisterTxn);
+            knLogger.warn(methodName, FLOW_TAG + " STEP-12C Tracker epoch reset failed", e);
+        }
+    }
+
+    /**
      * Polls the {@code DG.XCAP_PENDING_NOTIFYQ} table and returns a snapshot of records
      * that are ready to be dispatched to watchers.
      *
@@ -3708,18 +3788,23 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
             try {
                 getmdnListTogetSublistInfo(record, mdnListTogetSublistInfo);
                 knLogger.debug(methodName, "mdnListTogetSublistInfo size:", mdnListTogetSublistInfo.size());
-                KnXDMSubsProfileRespDTO subsInfo =
-                        genInfoUtil.selectSubsProfileInfo(mdnListTogetSublistInfo, null);
-                if (subsInfo != null && subsInfo.getSubsRespDTO() != null
-                        && !subsInfo.getSubsRespDTO().isEmpty()) {
-                    for (KnXDMSubsProvDTO itr : subsInfo.getSubsRespDTO()) {
-                        mdnSubsInfoMap.put(itr.getMdn().trim(), itr);
+                if (!mdnListTogetSublistInfo.isEmpty()) {
+                    KnXDMSubsProfileRespDTO subsInfo =
+                            genInfoUtil.selectSubsProfileInfo(mdnListTogetSublistInfo, null);
+                    if (subsInfo != null && subsInfo.getSubsRespDTO() != null
+                            && !subsInfo.getSubsRespDTO().isEmpty()) {
+                        for (KnXDMSubsProvDTO itr : subsInfo.getSubsRespDTO()) {
+                            mdnSubsInfoMap.put(itr.getMdn().trim(), itr);
+                        }
+                        knLogger.info("mdns set in mdnSubsInfoMap size", mdnSubsInfoMap.size());
                     }
-                    knLogger.info("mdns set in mdnSubsInfoMap size", mdnSubsInfoMap.size());
+                    baseMdnMap = genInfoUtil.getBaseMdnsMap(mdnListTogetSublistInfo, null);
+                    knLogger.debug(methodName, "baseMdnMap:", baseMdnMap.size(),
+                            " mdnSubsInfoMap:", mdnSubsInfoMap.size());
+                } else {
+                    knLogger.debug(methodName, FLOW_TAG
+                            + " STEP-HG3A Skipping subscriber profile lookup — no MDNs in claimed batch");
                 }
-                baseMdnMap = genInfoUtil.getBaseMdnsMap(mdnListTogetSublistInfo, null);
-                knLogger.debug(methodName, "baseMdnMap:", baseMdnMap.size(),
-                        " mdnSubsInfoMap:", mdnSubsInfoMap.size());
             } catch (Exception e) {
                 knLogger.error(methodName, "Exception during subscriber info lookup: ", e);
                 throw new RuntimeException(e);
@@ -3727,7 +3812,8 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
 
             // ─────────────────────────────────────────────────────────────────
             // Step 5: Payload-size gating & final record assembly
-            // ─────────────────────────────────────────────────────────────────
+            // Optimized mode dispatches the full watcher bundle claimed in Step 3a (epic debulk).
+            // Legacy mode retains the original audit-interval payload-unit cap.
             int currentSize = 0;
             for (Map.Entry<KnNotificationKeyDTO, Object> entry : record.entrySet()) {
                 knLogger.debug(methodName, "Key:", entry.getKey(), " Value:", entry.getValue());
@@ -3749,7 +3835,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                     payloadSize = 1;
                 }
 
-                if (currentSize > xacpNotifyCountPerAuditInterval) {
+                if (!optimizedMode && currentSize > xacpNotifyCountPerAuditInterval) {
                     break;
                 }
                 finalSeqList.add(entry.getKey());
@@ -4049,7 +4135,8 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                 if (failedRows > 0 && affectedRows == 0 && unchangedRows == 0) {
                     rollback(persisterTxn);
                     throw new KnPersistenceException(KnErrorCodes.DAO.SQL_EXCEPTION,
-                            "All MDN tracker inserts failed. failedRows=" + failedRows);
+                            "All MDN tracker inserts failed. failedRows=" + failedRows,
+                            localPttId, methodName);
                 }
                 persisterTxn.save();
                 knLogger.info(methodName, FLOW_TAG + " STEP-SF3 Tracker upsert committed. affectedRows="
@@ -4104,7 +4191,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                                             int maxMdns) throws SQLException {
         List<String> eligibleMdns = new ArrayList<>();
         String sql =
-                "SELECT MDN FROM DG.MDN_NOTIFY_TRACKER " +
+                "SELECT FIRST " + maxMdns + " MDN FROM DG.MDN_NOTIFY_TRACKER " +
                 "WHERE (? - LAST_NOTIFIED_TIME) >= ? " +
                 "ORDER BY LAST_NOTIFIED_TIME ASC";
 
@@ -4112,7 +4199,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
             ps.setLong(1, nowMillis);
             ps.setLong(2, periodMillis);
             try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next() && eligibleMdns.size() < maxMdns) {
+                while (rs.next()) {
                     eligibleMdns.add(rs.getString(1));
                 }
             }
@@ -4167,6 +4254,8 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
         try (PreparedStatement ps = connection.prepareStatement(DELETE_MDN_NOTIFY_TRACKER_STALE)) {
             ps.setLong(1, nowMillis);
             ps.setLong(2, periodMillis);
+            ps.setInt(3, KnXcapNotifyConstants.NOTIFYSTATUS.PENDING.value());
+            ps.setInt(4, KnXcapNotifyConstants.NOTIFYSTATUS.NOTIFY_INITIATED.value());
             int deleted = ps.executeUpdate();
             knLogger.debug("cleanupMdnNotifyTracker", "Stale tracker rows deleted:", deleted);
             knLogger.info("cleanupMdnNotifyTracker", FLOW_TAG

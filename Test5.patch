@@ -1,0 +1,505 @@
+Subject: [PATCH] Test
+---
+Index: xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/impl/KnMCSXCAPNotifyConsumer.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/impl/KnMCSXCAPNotifyConsumer.java b/xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/impl/KnMCSXCAPNotifyConsumer.java
+--- a/xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/impl/KnMCSXCAPNotifyConsumer.java	(revision 45516f62e197fe195afe1e34a9158932f259873d)
++++ b/xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/impl/KnMCSXCAPNotifyConsumer.java	(date 1788154636336)
+@@ -21,7 +21,6 @@
+ import com.kodiak.common.commdto.common.KnNotificationParamDTO;
+ import com.kodiak.common.commdto.common.KnXDMSubsProvDTO;
+ import com.kodiak.common.commdto.response.KnXDMSubsProfileRespDTO;
+-import com.kodiak.common.dao.KnPersistenceException;
+ import com.kodiak.common.dao.KnPersisterTxn;
+ import com.kodiak.common.resources.KnGDPRTemplate;
+ import com.kodiak.logger.KnLogger;
+@@ -37,6 +36,7 @@
+ public class KnMCSXCAPNotifyConsumer implements Runnable {
+ 
+ 	private static final KnLogger knLogger = KnLogger.getLogger(KnMCSXCAPNotifyConsumer.class);
++	private static final String FLOW_TAG = "[XCAP-DEBULK-FLOW]";
+ 
+ 	private BlockingQueue<KnMcsxcapMdnDTO> blockingQueue = null;
+ 	private BlockingQueue<String> suppressMdnBlockingQueue = null;
+@@ -73,12 +73,27 @@
+ 				persisterTxn = KnPersisterTxn.getPersisterTxn();
+ 				persisterTxn.open();
+ 				knLogger.debug("selectSubsProfileInfo- subsProfileRespDTO",subsProfileRespDTO);
+-				Collection<KnXDMSubsProvDTO> subsRespDTO = subsProfileRespDTO.getSubsRespDTO();
+-				sendMCSNotification(subsRespDTO, mcsxcapMdnDTOs, persisterTxn);
+-				mcsDocChangeNotifier.sendMdnsToDB(suppressMdnList, null, persisterTxn);
++				Collection<KnXDMSubsProvDTO> subsRespDTO = subsProfileRespDTO != null ? subsProfileRespDTO.getSubsRespDTO() : null;
++				if (subsRespDTO == null || subsRespDTO.isEmpty()) {
++					knLogger.warn("KnMCSXCAPNotifyConsumer:run", FLOW_TAG
++							+ " STEP-MCS-WARN No subscriber profiles resolved for MCS UI batch. requestedMdns="
++							+ mcsxcapMdnDTOs.size() + " — queue insert skipped (check MDN / POCSUBSCRINFO)");
++				} else {
++					sendMCSNotification(subsRespDTO, mcsxcapMdnDTOs, persisterTxn);
++				}
++				if (!suppressMdnList.isEmpty()) {
++					mcsDocChangeNotifier.sendMdnsToDB(suppressMdnList, null, persisterTxn);
++				}
+ 				persisterTxn.save();
+ 			} catch (Throwable e) {
+-				knLogger.error("KnMCSXCAPNotifyConsumer:run"," Throwable :",e.getMessage());
++				knLogger.error("KnMCSXCAPNotifyConsumer:run", FLOW_TAG + " STEP-MCS-ERR MCS consumer cycle failed", e);
++				if (persisterTxn != null) {
++					try {
++						persisterTxn.rollback();
++					} catch (Exception rollbackEx) {
++						knLogger.error("KnMCSXCAPNotifyConsumer:run", "Rollback failed after MCS consumer error", rollbackEx);
++					}
++				}
+ 			}
+ 		}
+ 	}
+@@ -114,6 +129,9 @@
+ 			KnNotificationParamDTO notificationParamDTO5 = new KnNotificationParamDTO();
+ 			mcsDocChangeNotifier.generateMCSNotification(mcsNotifyDTOs0, notificationParamDTO0, persisterTxn);
+ 			mcsDocChangeNotifier.generateMCSNotification(mcsNotifyDTOs5, notificationParamDTO5, persisterTxn);
++		} else {
++			knLogger.info("sendMCSNotification", FLOW_TAG
++					+ " STEP-MCS-WARN subsRespDTO empty inside sendMCSNotification; no MCS DTOs built");
+ 		}
+ 	}
+ 
+Index: xdms/loader/source/com/kodiak/xdms/loader/KnXDMSLoader.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/xdms/loader/source/com/kodiak/xdms/loader/KnXDMSLoader.java b/xdms/loader/source/com/kodiak/xdms/loader/KnXDMSLoader.java
+--- a/xdms/loader/source/com/kodiak/xdms/loader/KnXDMSLoader.java	(revision 45516f62e197fe195afe1e34a9158932f259873d)
++++ b/xdms/loader/source/com/kodiak/xdms/loader/KnXDMSLoader.java	(date 1788154642154)
+@@ -71,8 +71,10 @@
+ import com.kodiak.xdms.mediator.resources.jobs.*;
+ import com.kodiak.xdms.mediator.resources.jobs.asyncframework.KnRetryUpmJobsThread;
+ import com.kodiak.xdms.mediator.resources.jobs.asyncframework.KnUPMJobMonitor;
++import com.kodiak.xdms.mcsnotifymgr.KnMCSDocChangeNotifier;
+ import com.kodiak.xdms.notificationmgr.impl.KnEtagNotificationConsumer;
+ import com.kodiak.xdms.notificationmgr.impl.KnMCSXCAPNotifyConsumer;
++import com.kodiak.xdms.notificationmgr.impl.KnXcapMcsTrackerRegistrar;
+ import com.kodiak.xdms.notificationmgr.resources.KnXcapNotifyProcessor;
+ import com.kodiak.xdms.server.common.business.KnBOException;
+ import com.kodiak.xdms.server.common.business.helper.KnGenInfoUtil;
+@@ -273,6 +275,10 @@
+             ScheduledExecutorService bulkService = KnThreadExecutors.newScheduledThreadPool(1, "BulkReqPollThread");
+             bulkService.scheduleAtFixedRate(bulkPollThread, 50, bulkReqPollTime * 60, TimeUnit.SECONDS);
+ 
++            KnMCSDocChangeNotifier.setTrackerRegistrar(KnXcapMcsTrackerRegistrar.getInstance());
++            knLogger.info("KnXDMSLoader", FLOW_TAG,
++                    "STEP-SCH0 MCS tracker registrar wired for optimized debulk pipeline");
++
+             KnMCSXCAPNotifyConsumer knMCSXCAPNotifyConsumer = new KnMCSXCAPNotifyConsumer();
+             ScheduledExecutorService mcsXcapNotifyService = KnThreadExecutors.newScheduledThreadPool(1, "mcsXcapNotifyThread");
+             mcsXcapNotifyService.scheduleAtFixedRate(knMCSXCAPNotifyConsumer, 10, 1
+Index: xdms/mcsnotifymgr/source/com/kodiak/xdms/mcsnotifymgr/KnMCSDocChangeNotifier.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/xdms/mcsnotifymgr/source/com/kodiak/xdms/mcsnotifymgr/KnMCSDocChangeNotifier.java b/xdms/mcsnotifymgr/source/com/kodiak/xdms/mcsnotifymgr/KnMCSDocChangeNotifier.java
+--- a/xdms/mcsnotifymgr/source/com/kodiak/xdms/mcsnotifymgr/KnMCSDocChangeNotifier.java	(revision 45516f62e197fe195afe1e34a9158932f259873d)
++++ b/xdms/mcsnotifymgr/source/com/kodiak/xdms/mcsnotifymgr/KnMCSDocChangeNotifier.java	(date 1788155627217)
+@@ -34,8 +34,17 @@
+ 
+ public class KnMCSDocChangeNotifier {
+ 
++    /**
++     * Optional hook registered by notificationmgr at XDM startup for optimized debulk tracker upserts.
++     */
++    public interface IMdnTrackerRegistrar {
++        void registerWatcherMdnsIfOptimized(Collection<String> watcherMdns);
++    }
++
+     private static final KnLogger knLogger = KnLogger.getLogger(KnMCSDocChangeNotifier.class);
++    private static final String FLOW_TAG = "[XCAP-DEBULK-FLOW]";
+     private static KnMCSDocChangeNotifier mcsDocChangeNotifierObj = null;
++    private static volatile IMdnTrackerRegistrar trackerRegistrar = null;
+     private KnGenInfoUtil genInfoUtil = null;
+     private KnGeneralUtil generalUtil = null;
+     private static KnGeneralCacheUtil generalCacheUtil = null;
+@@ -86,6 +95,13 @@
+         return mcsDocChangeNotifierObj;
+     }
+ 
++    /**
++     * Registers the optional tracker hook supplied by notificationmgr at XDM startup.
++     */
++    public static void setTrackerRegistrar(IMdnTrackerRegistrar registrar) {
++        trackerRegistrar = registrar;
++    }
++
+ 
+     public boolean generateMCSNotification(KnMCSNotifyDTO mcsNotifyDTO) {
+ 
+@@ -114,10 +130,16 @@
+     public boolean generateMCSNotification(List<KnMCSNotifyDTO> mcsNotifyDTOs, KnNotificationParamDTO notificationParamDTO, KnPersisterTxn persisterTxn) {
+         String methodName = "generateMCSNotification(KnMCSNotifyDTO)";
+         boolean isSuccess = false;
+-        knLogger.info(methodName);
+-        int notificationCount = 1;
++        knLogger.info(methodName, FLOW_TAG + " STEP-MCS-G0 MCS notification batch received. batchSize="
++                + (mcsNotifyDTOs != null ? mcsNotifyDTOs.size() : 0)
++                + " priority=" + (notificationParamDTO != null ? notificationParamDTO.getPriority() : null));
++        int notificationCount = mcsNotifyDTOs != null && !mcsNotifyDTOs.isEmpty() ? mcsNotifyDTOs.size() : 0;
+         boolean ownedTxn = false;
+         try {
++            if (mcsNotifyDTOs == null || mcsNotifyDTOs.isEmpty()) {
++                knLogger.info(methodName, FLOW_TAG + " STEP-MCS-SKIP Empty MCS batch; no queue insert attempted");
++                return true;
++            }
+             if (persisterTxn == null) {
+                 persisterTxn = KnPersisterTxn.getPersisterTxn();
+                 persisterTxn.open();
+@@ -127,7 +149,11 @@
+                 notificationParamDTO = new KnNotificationParamDTO();
+             }
+             if (isSaveNotification(notificationParamDTO, notificationCount, persisterTxn)) {
+-                saveNotification(mcsNotifyDTOs, notificationParamDTO, persisterTxn);
++                // Save-first: queue rows must commit independently of caller txn (epic / XCAP-DEBULK-001).
++                saveNotification(mcsNotifyDTOs, notificationParamDTO, null);
++                knLogger.info(methodName, FLOW_TAG + " STEP-MCS-SAVE Queue persist completed for MCS batch. batchSize="
++                        + mcsNotifyDTOs.size() + " priority=" + notificationParamDTO.getPriority());
++                registerWatcherMdnsAfterQueueSave(mcsNotifyDTOs);
+             } else if (isSaveSuppressNotification(persisterTxn)) {
+                 knLogger.info(methodName, "Notification get suppressed for mcsxcap notify");
+                 KnStatisticsManagerImpl.getInstance().increment(KnOMConstants.NUM_MCSXCAP_NOTIFY_SUPPRESSED);
+@@ -173,6 +199,40 @@
+         saveEtagMdnNotification(mcsNotifyDTOS, notificationParamDTO, persisterTxn);
+     }
+ 
++    private void registerWatcherMdnsAfterQueueSave(List<KnMCSNotifyDTO> mcsNotifyDTOs) {
++        if (trackerRegistrar == null) {
++            return;
++        }
++        LinkedHashSet<String> watcherMdns = extractWatcherMdnsFromMcsNotify(mcsNotifyDTOs);
++        if (!watcherMdns.isEmpty()) {
++            trackerRegistrar.registerWatcherMdnsIfOptimized(watcherMdns);
++        }
++    }
++
++    private LinkedHashSet<String> extractWatcherMdnsFromMcsNotify(List<KnMCSNotifyDTO> mcsNotifyDTOs) {
++        LinkedHashSet<String> watcherMdns = new LinkedHashSet<>();
++        if (mcsNotifyDTOs == null) {
++            return watcherMdns;
++        }
++        for (KnMCSNotifyDTO mcsNotifyDTO : mcsNotifyDTOs) {
++            if (mcsNotifyDTO == null || mcsNotifyDTO.getDocumentChange() == null) {
++                continue;
++            }
++            for (KnDocumentChangeDTO docChange : mcsNotifyDTO.getDocumentChange()) {
++                if (docChange == null) {
++                    continue;
++                }
++                if (docChange.getDocType() == KnMCSNotifyConstants.DOCTYPE.MDN.value()) {
++                    String mdn = docChange.getMdn();
++                    if (mdn != null && !mdn.trim().isEmpty()) {
++                        watcherMdns.add(mdn.trim());
++                    }
++                }
++            }
++        }
++        return watcherMdns;
++    }
++
+     private boolean isSaveNotification(KnNotificationParamDTO notificationParamDTO, int notificationCount, KnPersisterTxn persisterTxn) {
+         String methodName = "isSaveNotification";
+         boolean isSaveNotification = notificationParamDTO.getPriority() == 0 ||
+@@ -264,12 +324,15 @@
+                 if (ownedTxn) {
+                     persisterTxn.save();
+                 }
++                knLogger.info(methodName, FLOW_TAG + " STEP-MCS-SN3 MCS queue insert complete. insertedCount="
++                        + count + " priority=" + (notificationParamDTO != null ? notificationParamDTO.getPriority() : null));
+                 knLogger.exit(methodName);
+                 break;
+             } catch (KnPersistenceException e) {
+                 if (ownedTxn) {
+                     KnDbUtil.rollback(persisterTxn);
+                 }
++                knLogger.error(methodName, FLOW_TAG + " STEP-MCS-ERR MCS queue insert failed (persister)", e);
+                 knLogger.error(methodName, "Persister Txn occurred - ", e);
+                 if (attempt < MAX_RETRY) {
+                     try {
+@@ -284,6 +347,7 @@
+                 if (ownedTxn) {
+                     KnDbUtil.rollback(persisterTxn);
+                 }
++                knLogger.error(methodName, FLOW_TAG + " STEP-MCS-ERR MCS queue insert failed (unexpected)", e);
+                 knLogger.error(methodName, "Unexpected Exception occurred - ", e);
+                 break;
+             } finally {
+Index: xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/impl/KnXcapDiffNotifier.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/impl/KnXcapDiffNotifier.java b/xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/impl/KnXcapDiffNotifier.java
+--- a/xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/impl/KnXcapDiffNotifier.java	(revision 45516f62e197fe195afe1e34a9158932f259873d)
++++ b/xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/impl/KnXcapDiffNotifier.java	(date 1788154669157)
+@@ -211,8 +211,13 @@
+      * Condition: elapsed time since LAST_NOTIFIED_TIME >= XCAP_NOTIFICATION_PERIOD
+      */
+     private final String DELETE_MDN_NOTIFY_TRACKER_STALE =
+-            "DELETE FROM DG.MDN_NOTIFY_TRACKER " +
+-            "WHERE (? - LAST_NOTIFIED_TIME) >= ?";
++            "DELETE FROM DG.MDN_NOTIFY_TRACKER t " +
++            "WHERE (? - t.LAST_NOTIFIED_TIME) >= ? " +
++            "AND NOT EXISTS (" +
++            "  SELECT 1 FROM DG.XCAP_PENDING_NOTIFYQ q " +
++            "  WHERE q.DEST_ID = t.MDN " +
++            "    AND q.NOTIFY_STATUS IN (?, ?)" +
++            ")";
+ 
+     /**
+      * constructor
+@@ -3491,6 +3496,81 @@
+         }
+     }
+ 
++    /**
++     * Reverts claimed queue rows from {@code NOTIFY_INITIATED} back to {@code PENDING}
++     * so a failed worker send can be retried on the next poll cycle.
++     */
++    public void revertRecordsToPending(List<KnNotificationKeyDTO> seqIds) {
++        String methodName = "revertRecordsToPending";
++        if (seqIds == null || seqIds.isEmpty()) {
++            return;
++        }
++        KnPersisterTxn persisterTxn = null;
++        PreparedStatement pStmt = null;
++        try {
++            persisterTxn = KnPersisterTxn.getPersisterTxn();
++            persisterTxn.open();
++            String localPttId = KnDbUtil.getDBConfigInfo().getLocalPttId();
++            Connection connection = persisterTxn.getDBConnection(localPttId, false);
++            String updateQry =
++                    "UPDATE DG.XCAP_PENDING_NOTIFYQ " +
++                    "SET NOTIFY_STATUS = ? " +
++                    "WHERE NOTIFY_STATUS = ? AND DEST_ID = ? AND INSERTION_TIME = ? AND DEST_TYPE = ?";
++            pStmt = connection.prepareStatement(updateQry);
++            for (KnNotificationKeyDTO seqId : seqIds) {
++                pStmt.setInt(1, KnXcapNotifyConstants.NOTIFYSTATUS.PENDING.value());
++                pStmt.setInt(2, KnXcapNotifyConstants.NOTIFYSTATUS.NOTIFY_INITIATED.value());
++                pStmt.setString(3, seqId.getDestId());
++                pStmt.setLong(4, seqId.getInsertionTime());
++                pStmt.setInt(5, seqId.getDestType());
++                pStmt.addBatch();
++            }
++            int[] counts = pStmt.executeBatch();
++            persisterTxn.save();
++            knLogger.info(methodName, FLOW_TAG + " STEP-12B Reverted failed rows to PENDING. rowCount="
++                    + seqIds.size() + " batchResults=" + counts.length);
++        } catch (KnPersistenceException e) {
++            rollback(persisterTxn);
++            knLogger.error(methodName, FLOW_TAG + " STEP-12B Failed to revert rows to PENDING", e);
++        } catch (Exception e) {
++            rollback(persisterTxn);
++            knLogger.error(methodName, FLOW_TAG + " STEP-12B Unexpected error reverting rows to PENDING", e);
++        } finally {
++            KnDbUtil.closeStatement(pStmt);
++        }
++    }
++
++    /**
++     * Makes watcher MDNs immediately eligible for the next optimized poll after a failed send
++     * by backing {@code LAST_NOTIFIED_TIME} by one full notification period.
++     */
++    public void resetMdnNotifyTrackerEpochForRetry(Collection<String> mdns, long periodMillis) {
++        String methodName = "resetMdnNotifyTrackerEpochForRetry";
++        if (mdns == null || mdns.isEmpty()) {
++            return;
++        }
++        long retryEligibleTs = System.currentTimeMillis() - periodMillis;
++        KnPersisterTxn persisterTxn = null;
++        try {
++            persisterTxn = KnPersisterTxn.getPersisterTxn();
++            persisterTxn.open();
++            String localPttId = KnDbUtil.getDBConfigInfo().getLocalPttId();
++            Connection connection;
++            try {
++                connection = persisterTxn.getDBConnection(localPttId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
++            } catch (Exception e) {
++                connection = persisterTxn.getDBConnection(localPttId, false);
++            }
++            updateMdnNotifyTrackerTs(connection, mdns, retryEligibleTs);
++            persisterTxn.save();
++            knLogger.info(methodName, FLOW_TAG + " STEP-12C Tracker epoch reset for retry. mdnCount="
++                    + mdns.size() + " retryEligibleTs=" + retryEligibleTs);
++        } catch (Exception e) {
++            rollback(persisterTxn);
++            knLogger.warn(methodName, FLOW_TAG + " STEP-12C Tracker epoch reset failed", e);
++        }
++    }
++
+     /**
+      * Polls the {@code DG.XCAP_PENDING_NOTIFYQ} table and returns a snapshot of records
+      * that are ready to be dispatched to watchers.
+@@ -3708,18 +3788,23 @@
+             try {
+                 getmdnListTogetSublistInfo(record, mdnListTogetSublistInfo);
+                 knLogger.debug(methodName, "mdnListTogetSublistInfo size:", mdnListTogetSublistInfo.size());
+-                KnXDMSubsProfileRespDTO subsInfo =
+-                        genInfoUtil.selectSubsProfileInfo(mdnListTogetSublistInfo, null);
+-                if (subsInfo != null && subsInfo.getSubsRespDTO() != null
+-                        && !subsInfo.getSubsRespDTO().isEmpty()) {
+-                    for (KnXDMSubsProvDTO itr : subsInfo.getSubsRespDTO()) {
+-                        mdnSubsInfoMap.put(itr.getMdn().trim(), itr);
+-                    }
+-                    knLogger.info("mdns set in mdnSubsInfoMap size", mdnSubsInfoMap.size());
+-                }
+-                baseMdnMap = genInfoUtil.getBaseMdnsMap(mdnListTogetSublistInfo, null);
+-                knLogger.debug(methodName, "baseMdnMap:", baseMdnMap.size(),
+-                        " mdnSubsInfoMap:", mdnSubsInfoMap.size());
++                if (!mdnListTogetSublistInfo.isEmpty()) {
++                    KnXDMSubsProfileRespDTO subsInfo =
++                            genInfoUtil.selectSubsProfileInfo(mdnListTogetSublistInfo, null);
++                    if (subsInfo != null && subsInfo.getSubsRespDTO() != null
++                            && !subsInfo.getSubsRespDTO().isEmpty()) {
++                        for (KnXDMSubsProvDTO itr : subsInfo.getSubsRespDTO()) {
++                            mdnSubsInfoMap.put(itr.getMdn().trim(), itr);
++                        }
++                        knLogger.info("mdns set in mdnSubsInfoMap size", mdnSubsInfoMap.size());
++                    }
++                    baseMdnMap = genInfoUtil.getBaseMdnsMap(mdnListTogetSublistInfo, null);
++                    knLogger.debug(methodName, "baseMdnMap:", baseMdnMap.size(),
++                            " mdnSubsInfoMap:", mdnSubsInfoMap.size());
++                } else {
++                    knLogger.debug(methodName, FLOW_TAG
++                            + " STEP-HG3A Skipping subscriber profile lookup — no MDNs in claimed batch");
++                }
+             } catch (Exception e) {
+                 knLogger.error(methodName, "Exception during subscriber info lookup: ", e);
+                 throw new RuntimeException(e);
+@@ -3727,7 +3812,8 @@
+ 
+             // ─────────────────────────────────────────────────────────────────
+             // Step 5: Payload-size gating & final record assembly
+-            // ─────────────────────────────────────────────────────────────────
++            // Optimized mode dispatches the full watcher bundle claimed in Step 3a (epic debulk).
++            // Legacy mode retains the original audit-interval payload-unit cap.
+             int currentSize = 0;
+             for (Map.Entry<KnNotificationKeyDTO, Object> entry : record.entrySet()) {
+                 knLogger.debug(methodName, "Key:", entry.getKey(), " Value:", entry.getValue());
+@@ -3749,7 +3835,7 @@
+                     payloadSize = 1;
+                 }
+ 
+-                if (currentSize > xacpNotifyCountPerAuditInterval) {
++                if (!optimizedMode && currentSize > xacpNotifyCountPerAuditInterval) {
+                     break;
+                 }
+                 finalSeqList.add(entry.getKey());
+@@ -4049,7 +4135,8 @@
+                 if (failedRows > 0 && affectedRows == 0 && unchangedRows == 0) {
+                     rollback(persisterTxn);
+                     throw new KnPersistenceException(KnErrorCodes.DAO.SQL_EXCEPTION,
+-                            "All MDN tracker inserts failed. failedRows=" + failedRows);
++                            "All MDN tracker inserts failed. failedRows=" + failedRows,
++                            localPttId, methodName);
+                 }
+                 persisterTxn.save();
+                 knLogger.info(methodName, FLOW_TAG + " STEP-SF3 Tracker upsert committed. affectedRows="
+@@ -4104,7 +4191,7 @@
+                                             int maxMdns) throws SQLException {
+         List<String> eligibleMdns = new ArrayList<>();
+         String sql =
+-                "SELECT MDN FROM DG.MDN_NOTIFY_TRACKER " +
++                "SELECT FIRST " + maxMdns + " MDN FROM DG.MDN_NOTIFY_TRACKER " +
+                 "WHERE (? - LAST_NOTIFIED_TIME) >= ? " +
+                 "ORDER BY LAST_NOTIFIED_TIME ASC";
+ 
+@@ -4112,7 +4199,7 @@
+             ps.setLong(1, nowMillis);
+             ps.setLong(2, periodMillis);
+             try (ResultSet rs = ps.executeQuery()) {
+-                while (rs.next() && eligibleMdns.size() < maxMdns) {
++                while (rs.next()) {
+                     eligibleMdns.add(rs.getString(1));
+                 }
+             }
+@@ -4167,6 +4254,8 @@
+         try (PreparedStatement ps = connection.prepareStatement(DELETE_MDN_NOTIFY_TRACKER_STALE)) {
+             ps.setLong(1, nowMillis);
+             ps.setLong(2, periodMillis);
++            ps.setInt(3, KnXcapNotifyConstants.NOTIFYSTATUS.PENDING.value());
++            ps.setInt(4, KnXcapNotifyConstants.NOTIFYSTATUS.NOTIFY_INITIATED.value());
+             int deleted = ps.executeUpdate();
+             knLogger.debug("cleanupMdnNotifyTracker", "Stale tracker rows deleted:", deleted);
+             knLogger.info("cleanupMdnNotifyTracker", FLOW_TAG
+Index: xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/resources/KnWatcherDebulkSendNotification.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/resources/KnWatcherDebulkSendNotification.java b/xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/resources/KnWatcherDebulkSendNotification.java
+--- a/xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/resources/KnWatcherDebulkSendNotification.java	(revision 45516f62e197fe195afe1e34a9158932f259873d)
++++ b/xdms/notificationmgr/source/com/kodiak/xdms/notificationmgr/resources/KnWatcherDebulkSendNotification.java	(date 1788154685077)
+@@ -48,6 +48,7 @@
+ import java.util.List;
+ import java.util.Map;
+ import java.util.Set;
++import java.util.Collections;
+ import java.util.stream.Collectors;
+ 
+ /**
+@@ -237,9 +238,7 @@
+                 knLogger.info(methodName, FLOW_TAG + " STEP-12A Worker queue cleanup complete. cleanedRows=" + seqIds.size()
+                         + " watcher=" + safeValue(seqId != null ? seqId.getDestId() : null));
+             } else if (!isSuccess) {
+-                knLogger.warn(methodName, FLOW_TAG + " STEP-12A Cleanup skipped because send failed. watcher="
+-                        + safeValue(seqId != null ? seqId.getDestId() : null)
+-                        + " bundledCount=" + notifications.size());
++                handleRetryOnSendFailure(methodName);
+             }
+ 
+         } catch (Exception e) {
+@@ -248,6 +247,23 @@
+                     FLOW_TAG + " STEP-ERR Failed debulk send for watcher. cid="
+                             + safeValue(seqId != null ? seqId.getCid() : null)
+                             + " watcher=" + safeValue(seqId != null ? seqId.getDestId() : null), e);
++            handleRetryOnSendFailure(methodName);
++        }
++    }
++
++    private void handleRetryOnSendFailure(String callerMethod) {
++        if (seqIds == null || seqIds.isEmpty()) {
++            knLogger.warn(callerMethod, FLOW_TAG + " STEP-12B Retry skipped — no seqIds to revert");
++            return;
++        }
++        knLogger.warn(callerMethod, FLOW_TAG + " STEP-12B Send failed; reverting queue rows to PENDING. watcher="
++                + safeValue(seqId != null ? seqId.getDestId() : null)
++                + " rowCount=" + seqIds.size());
++        xcapDiffNotifier.revertRecordsToPending(seqIds);
++        if (seqId != null && seqId.getDestId() != null) {
++            long periodMillis = resolveNotificationPeriodMillis();
++            xcapDiffNotifier.resetMdnNotifyTrackerEpochForRetry(
++                    Collections.singletonList(seqId.getDestId().trim()), periodMillis);
+         }
+     }
+ 
+@@ -282,6 +298,20 @@
+         }
+     }
+ 
++    private long resolveNotificationPeriodMillis() {
++        try {
++            String clusterIdEnv = System.getenv(KnConstants.CLUSTERID_ENV_NAME);
++            int clusterId = Integer.parseInt(clusterIdEnv);
++            Map<String, String> configMap =
++                    KnGenInfoUtil.getInstance().retrieveMSSvcsCommonConfig(clusterId);
++            String raw = configMap.get(KnConstants.XCAP_NOTIFICATION_PERIOD);
++            int periodSeconds = (raw != null) ? Integer.parseInt(raw) : 120;
++            return (long) periodSeconds * 1000L;
++        } catch (Exception e) {
++            return 120_000L;
++        }
++    }
++
+     /**
+      * Computes the approximate serialized byte size of the notification list.
+      *

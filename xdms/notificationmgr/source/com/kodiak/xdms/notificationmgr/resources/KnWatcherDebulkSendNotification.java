@@ -33,7 +33,10 @@
 package com.kodiak.xdms.notificationmgr.resources;
 
 import com.kodiak.common.commdto.common.KnXDMSubsProvDTO;
+import com.kodiak.common.dao.KnDbUtil;
+import com.kodiak.common.dao.KnPersisterTxn;
 import com.kodiak.common.resources.KnConstants;
+import com.kodiak.dbmgr.KnDBConst;
 import com.kodiak.logger.KnLogger;
 import com.kodiak.xdms.notificationmgr.beans.KnXcapDiffDirChgNotifyDTO;
 import com.kodiak.xdms.notificationmgr.beans.KnXcapDiffDocDTO;
@@ -44,6 +47,9 @@ import com.kodiak.xdms.server.common.dto.common.KnNotificationKeyDTO;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -53,17 +59,6 @@ import java.util.stream.Collectors;
 /**
  * Sends one bundled XCAP watcher notification for all directory-change diffs
  * accumulated during the current epoch window for a single subscriber.
- *
- * <h3>Send-time rules</h3>
- * <ul>
- *   <li><b>Rule I – Single document, multiple diffs</b>: send the consolidated
- *       diff unless the payload exceeds {@code XCAP_DIFF_PAYLOAD_SIZE}; if it does,
- *       fall back to a directory-etag notification.</li>
- *   <li><b>Rule II – Multiple documents, multiple diffs</b>: always use the
- *       directory-etag notification path.</li>
- *   <li><b>Rule III – Core directory changes</b>: no inline diffs are emitted;
- *       always use the directory-etag notification path.</li>
- * </ul>
  */
 public class KnWatcherDebulkSendNotification implements Runnable {
 
@@ -71,47 +66,13 @@ public class KnWatcherDebulkSendNotification implements Runnable {
             KnLogger.getLogger(KnWatcherDebulkSendNotification.class);
     private static final String FLOW_TAG = "[XCAP-DEBULK-FLOW]";
 
-    // ─────────────────────────────────────────────────────────────────────────────────
-    // Constructor parameters  (immutable once assigned)
-    // ────────────────────────────────────────────────────────────────────────────────
-
-    /** Composite key that identifies the source queue row (watcher, dest-type, CID …). */
     private final KnNotificationKeyDTO seqId;
-
-    /** All queue keys consumed for this watcher bundle in the current poll cycle. */
     private final List<KnNotificationKeyDTO> seqIds;
-
-    /**
-     * All directory-change DTOs accumulated for this watcher during the current epoch.
-     * The list is expected to contain at least one element.
-     */
     private final List<KnXcapDiffDirChgNotifyDTO> notifications;
-
-    /** Subscriber profile map keyed by MDN; used by the notifier during send. */
     private final Map<String, KnXDMSubsProvDTO> mdnSubsInfoMap;
-
-    /** Base-MDN map required by the underlying notifier logic. */
     private final Map<String, Set<String>> baseMdnsMap;
-
-    /**
-     * Reference to the notifier that performs the actual DB/network send.
-     * Injected so callers can supply a mock in tests.
-     */
     private final KnXcapDiffNotifier xcapDiffNotifier;
 
-    // ─────────────────────────────────────────────────────────────────────────────────
-    // Constructor
-    // ─────────────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Constructs a new debulk send task for a single watcher.
-     *
-     * @param seqId           composite key for this watcher's queue rows
-     * @param notifications   bundled list of directory-change DTOs for the epoch
-     * @param mdnSubsInfoMap  subscriber profile lookup map
-     * @param baseMdnsMap     base-MDN lookup map
-     * @param xcapDiffNotifier notifier instance that performs the actual send
-     */
     public KnWatcherDebulkSendNotification(KnNotificationKeyDTO seqId,
                                            List<KnNotificationKeyDTO> seqIds,
                                            List<KnXcapDiffDirChgNotifyDTO> notifications,
@@ -126,27 +87,10 @@ public class KnWatcherDebulkSendNotification implements Runnable {
         this.xcapDiffNotifier = xcapDiffNotifier;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────────
-    // Runnable implementation
-    // ─────────────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Executes the bundled send for this watcher.
-     *
-     * <ol>
-     *   <li>Validate the bundle is not empty.</li>
-     *   <li>Resolve the configured payload threshold.</li>
-     *   <li>Measure the serialized bundle size.</li>
-     *   <li>Count distinct documents to select the rule path.</li>
-     *   <li>Dispatch one bundled watcher notification.</li>
-     *   <li>Log the final outcome with the watcher key and bundled row count.</li>
-     * </ol>
-     */
     @Override
     public void run() {
         String methodName = "run()";
 
-        // ── Guard: nothing to send ────────────────────────────────────────────────────
         if (notifications == null || notifications.isEmpty()) {
             knLogger.warn(methodName,
                     FLOW_TAG + " STEP-8 Empty notification bundle; nothing to send. watcher="
@@ -160,18 +104,15 @@ public class KnWatcherDebulkSendNotification implements Runnable {
                         + " bundledCount=" + notifications.size());
 
         try {
-            // ── Step 1: Resolve the configured max diff payload size ───────────────────
             int maxPayloadBytes = resolveMaxPayloadBytes();
             knLogger.info(methodName, FLOW_TAG + " STEP-9 Resolved payload threshold. maxPayloadBytes=" + maxPayloadBytes);
 
-            // ── Step 2: Measure the serialized bundle size ────────────────────────────
             long serialisedPayloadBytes = computeSerializedSize(notifications);
             knLogger.info(methodName,
                     FLOW_TAG + " STEP-10 Bundle size measured. serialisedPayloadBytes=" + serialisedPayloadBytes
                             + " maxPayloadBytes=" + maxPayloadBytes
                             + " bundledCount=" + notifications.size());
 
-            // ── Step 3: Count distinct documents in the bundle ────────────────────────
             long distinctDocCount = countDistinctDocuments(notifications);
             boolean coreDirectoryOnly = isCoreDirectoryOnlyBundle(notifications);
             int inlineDocPayloadCount = countInlineDocPayloads(notifications);
@@ -182,7 +123,6 @@ public class KnWatcherDebulkSendNotification implements Runnable {
                             + " coreDirectoryOnly=" + coreDirectoryOnly
                             + " sampleDocSelectors=" + docSelectors.stream().limit(5).collect(Collectors.toList()));
 
-            // ── Step 4: Decide the send strategy ──────────────────────────────────────
             String appliedRule;
             if (coreDirectoryOnly) {
                 appliedRule = "RULE-III-CORE-DIRECTORY";
@@ -209,21 +149,15 @@ public class KnWatcherDebulkSendNotification implements Runnable {
                                 + " -> using consolidated diff notification");
             }
 
-            // ── Step 5: Dispatch one bundled watcher notification ─────────────────────
-            // Route to the correct send path based on the chosen rule:
-            //   RULE-I-CONSOLIDATED   → inline consolidated diff notification
-            //   All other rules       → directory-etag notification (no inline payload)
             boolean isSuccess;
             if ("RULE-I-CONSOLIDATED".equals(appliedRule)) {
                 isSuccess = xcapDiffNotifier.sendXcapDiffNotifications(
                         notifications, mdnSubsInfoMap, null, baseMdnsMap);
             } else {
-                // RULE-I-OVERSIZE-FALLBACK / RULE-II-MULTI-DOC / RULE-III-CORE-DIRECTORY
                 xcapDiffNotifier.sendXcapDiffDirMicroserviceNotificationforEtagNotify(notifications);
-                isSuccess = true; // etag path does not return a boolean; treat as success
+                isSuccess = true;
             }
 
-            // ── Step 6: Log outcome ─────────────���────────────────────────────────────
             knLogger.info(methodName,
                     FLOW_TAG + " STEP-12 Worker completed. cid=" + safeValue(seqId != null ? seqId.getCid() : null)
                             + " watcher=" + safeValue(seqId != null ? seqId.getDestId() : null)
@@ -231,36 +165,119 @@ public class KnWatcherDebulkSendNotification implements Runnable {
                             + " appliedRule=" + appliedRule
                             + " isSuccess=" + isSuccess);
 
-            // Cleanup only after a successful send so failures stay eligible for retry.
             if (isSuccess && seqIds != null && !seqIds.isEmpty()) {
                 xcapDiffNotifier.cleanUpRecord(seqIds);
                 knLogger.info(methodName, FLOW_TAG + " STEP-12A Worker queue cleanup complete. cleanedRows=" + seqIds.size()
                         + " watcher=" + safeValue(seqId != null ? seqId.getDestId() : null));
             } else if (!isSuccess) {
-                knLogger.warn(methodName, FLOW_TAG + " STEP-12A Cleanup skipped because send failed. watcher="
-                        + safeValue(seqId != null ? seqId.getDestId() : null)
-                        + " bundledCount=" + notifications.size());
+                handleRetryOnSendFailure(methodName);
             }
 
         } catch (Exception e) {
-            // Catch-all: one watcher failure should not terminate the worker thread.
             knLogger.error(methodName,
                     FLOW_TAG + " STEP-ERR Failed debulk send for watcher. cid="
                             + safeValue(seqId != null ? seqId.getCid() : null)
                             + " watcher=" + safeValue(seqId != null ? seqId.getDestId() : null), e);
+            handleRetryOnSendFailure(methodName);
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────────
-    // Private helpers
-    // ─────────────────────────────────────────────────────────────────────────────────
+    private void handleRetryOnSendFailure(String callerMethod) {
+        if (seqIds == null || seqIds.isEmpty()) {
+            knLogger.warn(callerMethod, FLOW_TAG + " STEP-12B Retry skipped — no seqIds to revert");
+            return;
+        }
+        knLogger.warn(callerMethod, FLOW_TAG + " STEP-12B Send failed; reverting queue rows to PENDING. watcher="
+                + safeValue(seqId != null ? seqId.getDestId() : null)
+                + " rowCount=" + seqIds.size());
+        revertSeqIdsToPending(seqIds);
+        if (seqId != null && seqId.getDestId() != null) {
+            resetWatcherTrackerEpoch(Collections.singletonList(seqId.getDestId().trim()),
+                    resolveNotificationPeriodMillis());
+        }
+    }
 
-    /**
-     * Reads {@code XCAP_DIFF_PAYLOAD_SIZE} from microservices config.
-     * Falls back to 2048 bytes on any error.
-     *
-     * @return maximum payload size in bytes
-     */
+    private void revertSeqIdsToPending(List<KnNotificationKeyDTO> keys) {
+        KnPersisterTxn persisterTxn = null;
+        PreparedStatement pStmt = null;
+        try {
+            persisterTxn = KnPersisterTxn.getPersisterTxn();
+            persisterTxn.open();
+            Connection connection = persisterTxn.getDBConnection(
+                    KnDbUtil.getDBConfigInfo().getLocalPttId(), false);
+            String updateQry =
+                    "UPDATE DG.XCAP_PENDING_NOTIFYQ SET NOTIFY_STATUS = ? "
+                    + "WHERE NOTIFY_STATUS = ? AND DEST_ID = ? AND INSERTION_TIME = ? AND DEST_TYPE = ?";
+            pStmt = connection.prepareStatement(updateQry);
+            for (KnNotificationKeyDTO key : keys) {
+                pStmt.setInt(1, KnXcapNotifyConstants.NOTIFYSTATUS.PENDING.value());
+                pStmt.setInt(2, KnXcapNotifyConstants.NOTIFYSTATUS.NOTIFY_INITIATED.value());
+                pStmt.setString(3, key.getDestId());
+                pStmt.setLong(4, key.getInsertionTime());
+                pStmt.setInt(5, key.getDestType());
+                pStmt.addBatch();
+            }
+            pStmt.executeBatch();
+            persisterTxn.save();
+        } catch (Exception e) {
+            knLogger.warn("revertSeqIdsToPending", FLOW_TAG + " STEP-12B Queue revert failed", e);
+            if (persisterTxn != null) {
+                try {
+                    persisterTxn.rollback();
+                } catch (Exception rollbackEx) {
+                    knLogger.warn("revertSeqIdsToPending", "Rollback failed after queue revert error", rollbackEx);
+                }
+            }
+        } finally {
+            KnDbUtil.closeStatement(pStmt);
+        }
+    }
+
+    private void resetWatcherTrackerEpoch(List<String> mdns, long periodMillis) {
+        if (mdns == null || mdns.isEmpty()) {
+            return;
+        }
+        long retryEligibleTs = System.currentTimeMillis() - periodMillis;
+        KnPersisterTxn persisterTxn = null;
+        PreparedStatement pStmt = null;
+        try {
+            persisterTxn = KnPersisterTxn.getPersisterTxn();
+            persisterTxn.open();
+            String localPttId = KnDbUtil.getDBConfigInfo().getLocalPttId();
+            Connection connection;
+            try {
+                connection = persisterTxn.getDBConnection(localPttId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
+            } catch (Exception e) {
+                connection = persisterTxn.getDBConnection(localPttId, false);
+            }
+            String updateSql = "UPDATE DG.MDN_NOTIFY_TRACKER SET LAST_NOTIFIED_TIME = ? WHERE MDN = ?";
+            pStmt = connection.prepareStatement(updateSql);
+            for (String mdn : mdns) {
+                if (mdn == null || mdn.trim().isEmpty()) {
+                    continue;
+                }
+                pStmt.setLong(1, retryEligibleTs);
+                pStmt.setString(2, mdn.trim());
+                pStmt.addBatch();
+            }
+            pStmt.executeBatch();
+            persisterTxn.save();
+            knLogger.info("resetWatcherTrackerEpoch", FLOW_TAG + " STEP-12C Tracker epoch reset for retry. mdnCount="
+                    + mdns.size() + " retryEligibleTs=" + retryEligibleTs);
+        } catch (Exception e) {
+            knLogger.warn("resetWatcherTrackerEpoch", FLOW_TAG + " STEP-12C Tracker epoch reset failed", e);
+            if (persisterTxn != null) {
+                try {
+                    persisterTxn.rollback();
+                } catch (Exception rollbackEx) {
+                    knLogger.warn("resetWatcherTrackerEpoch", "Rollback failed after tracker reset error", rollbackEx);
+                }
+            }
+        } finally {
+            KnDbUtil.closeStatement(pStmt);
+        }
+    }
+
     private int resolveMaxPayloadBytes() {
         String methodName = "resolveMaxPayloadBytes";
         try {
@@ -282,17 +299,20 @@ public class KnWatcherDebulkSendNotification implements Runnable {
         }
     }
 
-    /**
-     * Computes the approximate serialized byte size of the notification list.
-     *
-     * <p>Uses Java object serialization so the result is an upper bound for network
-     * payload size purposes. The actual XML payload will be smaller; using the
-     * serialized size is a conservative (safe) choice.</p>
-     *
-     * @param notifications list to measure
-     * @return byte count, or {@code Long.MAX_VALUE} on serialization failure
-     *         (which safely triggers the fallback path)
-     */
+    private long resolveNotificationPeriodMillis() {
+        try {
+            String clusterIdEnv = System.getenv(KnConstants.CLUSTERID_ENV_NAME);
+            int clusterId = Integer.parseInt(clusterIdEnv);
+            Map<String, String> configMap =
+                    KnGenInfoUtil.getInstance().retrieveMSSvcsCommonConfig(clusterId);
+            String raw = configMap.get(KnConstants.XCAP_NOTIFICATION_PERIOD);
+            int periodSeconds = (raw != null) ? Integer.parseInt(raw) : 120;
+            return (long) periodSeconds * 1000L;
+        } catch (Exception e) {
+            return 120_000L;
+        }
+    }
+
     private long computeSerializedSize(List<KnXcapDiffDirChgNotifyDTO> notifications) {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
              ObjectOutputStream oos = new ObjectOutputStream(baos)) {
@@ -306,15 +326,6 @@ public class KnWatcherDebulkSendNotification implements Runnable {
         }
     }
 
-    /**
-     * Counts the number of distinct document selectors present across all notifications.
-     *
-     * <p>A count greater than one means the bundle spans multiple documents, so
-     * Rule II applies and the worker should fall back to the directory-etag path.</p>
-     *
-     * @param notifications notification list to inspect
-     * @return distinct document count (0 if none carry inline diffs)
-     */
     private long countDistinctDocuments(List<KnXcapDiffDirChgNotifyDTO> notifications) {
         return notifications.stream()
                 .filter(dto -> dto.getDocDiffObj() != null)
@@ -345,12 +356,6 @@ public class KnWatcherDebulkSendNotification implements Runnable {
                 .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
-    /**
-     * Normalizes a possibly null value for log output.
-     *
-     * @param value raw value
-     * @return the original value or the literal string "null"
-     */
     private String safeValue(String value) {
         return value != null ? value : "null";
     }

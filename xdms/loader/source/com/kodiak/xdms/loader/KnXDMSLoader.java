@@ -71,8 +71,10 @@ import com.kodiak.xdms.bulkfw.resources.jobs.KnBulkPollThread;
 import com.kodiak.xdms.mediator.resources.jobs.*;
 import com.kodiak.xdms.mediator.resources.jobs.asyncframework.KnRetryUpmJobsThread;
 import com.kodiak.xdms.mediator.resources.jobs.asyncframework.KnUPMJobMonitor;
+import com.kodiak.xdms.mcsnotifymgr.KnMCSDocChangeNotifier;
 import com.kodiak.xdms.notificationmgr.impl.KnEtagNotificationConsumer;
 import com.kodiak.xdms.notificationmgr.impl.KnMCSXCAPNotifyConsumer;
+import com.kodiak.xdms.notificationmgr.impl.KnXcapMcsTrackerRegistrar;
 import com.kodiak.xdms.notificationmgr.resources.KnXcapNotifyProcessor;
 import com.kodiak.xdms.server.common.business.KnBOException;
 import com.kodiak.xdms.server.common.business.helper.KnGenInfoUtil;
@@ -272,6 +274,10 @@ public class KnXDMSLoader {
             KnBulkPollThread bulkPollThread = new KnBulkPollThread();
             ScheduledExecutorService bulkService = KnThreadExecutors.newScheduledThreadPool(1, "BulkReqPollThread");
             bulkService.scheduleAtFixedRate(bulkPollThread, 50, bulkReqPollTime * 60, TimeUnit.SECONDS);
+
+            KnMCSDocChangeNotifier.setTrackerRegistrar(KnXcapMcsTrackerRegistrar.getInstance());
+            knLogger.info("KnXDMSLoader", FLOW_TAG,
+                    "STEP-SCH0 MCS tracker registrar wired for optimized debulk pipeline");
 
             KnMCSXCAPNotifyConsumer knMCSXCAPNotifyConsumer = new KnMCSXCAPNotifyConsumer();
             ScheduledExecutorService mcsXcapNotifyService = KnThreadExecutors.newScheduledThreadPool(1, "mcsXcapNotifyThread");
