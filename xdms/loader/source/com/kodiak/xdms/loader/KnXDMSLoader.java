@@ -71,10 +71,8 @@ import com.kodiak.xdms.bulkfw.resources.jobs.KnBulkPollThread;
 import com.kodiak.xdms.mediator.resources.jobs.*;
 import com.kodiak.xdms.mediator.resources.jobs.asyncframework.KnRetryUpmJobsThread;
 import com.kodiak.xdms.mediator.resources.jobs.asyncframework.KnUPMJobMonitor;
-import com.kodiak.xdms.mcsnotifymgr.KnMCSDocChangeNotifier;
 import com.kodiak.xdms.notificationmgr.impl.KnEtagNotificationConsumer;
 import com.kodiak.xdms.notificationmgr.impl.KnMCSXCAPNotifyConsumer;
-import com.kodiak.xdms.notificationmgr.impl.KnXcapMcsTrackerRegistrar;
 import com.kodiak.xdms.notificationmgr.resources.KnXcapNotifyProcessor;
 import com.kodiak.xdms.server.common.business.KnBOException;
 import com.kodiak.xdms.server.common.business.helper.KnGenInfoUtil;
@@ -275,10 +273,6 @@ public class KnXDMSLoader {
             ScheduledExecutorService bulkService = KnThreadExecutors.newScheduledThreadPool(1, "BulkReqPollThread");
             bulkService.scheduleAtFixedRate(bulkPollThread, 50, bulkReqPollTime * 60, TimeUnit.SECONDS);
 
-            KnMCSDocChangeNotifier.setTrackerRegistrar(KnXcapMcsTrackerRegistrar.getInstance());
-            knLogger.info("KnXDMSLoader", FLOW_TAG,
-                    "STEP-SCH0 MCS tracker registrar wired for optimized debulk pipeline");
-
             KnMCSXCAPNotifyConsumer knMCSXCAPNotifyConsumer = new KnMCSXCAPNotifyConsumer();
             ScheduledExecutorService mcsXcapNotifyService = KnThreadExecutors.newScheduledThreadPool(1, "mcsXcapNotifyThread");
             mcsXcapNotifyService.scheduleAtFixedRate(knMCSXCAPNotifyConsumer, 10, 1
@@ -373,7 +367,7 @@ public class KnXDMSLoader {
     /**
      * Schedules the XCAP notification poller thread.
      *
-     * <p><b>Temporal Workflow Optimization (XCAP_NOTIFICATION_OPTIMIZED=1):</b><br>
+     * <p><b>Optimized epoch-based batching (XCAP_NOTIFICATION_OPTIMIZED=1):</b><br>
      * When the optimized flag is enabled, the poller cadence is forced to <b>1 second</b>
      * so that epoch-eligibility of each watcher MDN can be evaluated quickly.
      * This is the "Hold and Gather" scheduler described in the epic.
@@ -396,7 +390,7 @@ public class KnXDMSLoader {
 
         // ---------------------------------------------------------------
         // Step 2: Determine poll interval
-        //   - When temporal-optimized mode is ON  → always 1 second
+        //   - When optimized batching mode is ON  → always 1 second
         //     (ensures epoch expiry is detected within 1 second of crossing)
         //   - When off → use legacy NOTIFYJOB_AUDIT_INTRVAL (default 1 s)
         // ---------------------------------------------------------------
@@ -407,7 +401,7 @@ public class KnXDMSLoader {
 
         int notifyJobAuditInterval;
         if (isXcapOptimized) {
-            // Temporal batching: poller MUST fire every 1 second to honour epoch windows
+            // Optimized batching: poller MUST fire every 1 second to honour epoch windows
             notifyJobAuditInterval = 1;
             knLogger.info(methodName,
                     "XCAP_NOTIFICATION_OPTIMIZED=1 → overriding poll interval to 1 second");

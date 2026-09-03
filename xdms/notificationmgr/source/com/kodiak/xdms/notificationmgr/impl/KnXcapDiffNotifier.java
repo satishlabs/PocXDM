@@ -172,7 +172,7 @@ public class KnXcapDiffNotifier {
             "WHERE NOTIFY_STATUS = ? AND DEST_TYPE = ? ORDER BY INSERTION_TIME ";
 
     // ═══════════════════════════════════════════════════════════════════════════════════
-    // SQL constants – MDN_NOTIFY_TRACKER (Temporal Workflow epoch gating)
+    // SQL constants – MDN_NOTIFY_TRACKER (epoch-based watcher gating)
     //
     // Table layout:
     //   MDN              VARCHAR(32) PK  – watcher subscriber identifier
@@ -3626,7 +3626,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                             ? microServicesParamNameValueMap.get(XCAP_NOTIFY_COUNT_PER_AUDIT_INTRVAL)
                             : "2");
 
-            // Resolve temporal-workflow feature flag and epoch duration
+            // Resolve wait-and-bundle feature flag and epoch duration
             optimizedMode = ENABLED_STRING.equals(
                     microServicesParamNameValueMap.get(XCAP_NOTIFICATION_OPTIMIZED));
 
@@ -3902,25 +3902,16 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
 
             // ─────────────────────────────────────────────────────────────────
             // Step 8: Advance tracker timestamps + housekeeping (optimized only)
-            // IMPORTANT: only advance timestamps for MDNs whose rows are in
-            // finalSeqList (i.e. rows that actually passed the payload-cap check
-            // and will be dispatched). Advancing the epoch for rows that were
-            // fetched but then dropped by the cap would cause starvation because
-            // those watchers would be silently deferred to the next epoch window.
             // ─────────────────────────────────────────────────────────────────
             if (optimizedMode) {
-                Set<String> finalClaimedMdns = finalSeqList.stream()
-                        .map(KnNotificationKeyDTO::getDestId)
-                        .filter(Objects::nonNull)
-                        .collect(Collectors.toCollection(LinkedHashSet::new));
-                if (!finalClaimedMdns.isEmpty()) {
+                if (!claimedOptimizedMdns.isEmpty()) {
                     // Advance LAST_NOTIFIED_TIME so the next epoch starts from NOW
-                    updateMdnNotifyTrackerTs(trackerConnection, finalClaimedMdns, nowMillis);
+                    updateMdnNotifyTrackerTs(trackerConnection, claimedOptimizedMdns, nowMillis);
                     knLogger.info(methodName,
-                            "Tracker updated for ", finalClaimedMdns.size(), " MDN(s) (finalSeqList-scoped)");
+                            "Tracker updated for ", claimedOptimizedMdns.size(), " MDN(s)");
                 } else {
                     knLogger.info(methodName, FLOW_TAG
-                            + " STEP-HG6A No dispatched MDNs this cycle; timestamp update skipped");
+                            + " STEP-HG6A No claimed optimized MDNs this cycle; timestamp update skipped");
                 }
 
                 // Always run cleanup in optimized mode to age out stale tracker rows.
@@ -3955,12 +3946,72 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
         return finalRecord;
     }
 
+    /**
+     * Removes {@code MDN_NOTIFY_TRACKER} rows for the given MDNs only when
+     * there are no remaining pending or in-progress queue rows for those MDNs.
+     *
+     * <p>Called by the debulk worker immediately after it successfully cleans up
+     * {@code XCAP_PENDING_NOTIFYQ}, ensuring the tracker does not accumulate stale
+     * rows between poll cycles.</p>
+     *
+     * @param mdns watcher MDNs whose tracker entry should be purged (if queue is empty)
+     */
+    public void cleanupTrackerForMdn(Collection<String> mdns) {
+        String methodName = "cleanupTrackerForMdn";
+        if (mdns == null || mdns.isEmpty()) {
+            return;
+        }
+        // No-op in legacy mode – tracker table is not used.
+        if (!isOptimizedNotificationEnabled()) {
+            return;
+        }
+        KnPersisterTxn persisterTxn = null;
+        try {
+            persisterTxn = KnPersisterTxn.getPersisterTxn();
+            persisterTxn.open();
+            String localPttId = KnDbUtil.getDBConfigInfo().getLocalPttId();
+            Connection connection;
+            try {
+                connection = persisterTxn.getDBConnection(localPttId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
+            } catch (Exception e) {
+                connection = persisterTxn.getDBConnection(localPttId, false);
+            }
+            // Delete the tracker row for each MDN only if the queue has no pending/initiated rows.
+            String deleteSql =
+                    "DELETE FROM DG.MDN_NOTIFY_TRACKER " +
+                    "WHERE MDN = ? " +
+                    "AND NOT EXISTS (" +
+                    "  SELECT 1 FROM DG.XCAP_PENDING_NOTIFYQ " +
+                    "  WHERE DEST_ID = ? AND NOTIFY_STATUS IN (?, ?)" +
+                    ")";
+            try (PreparedStatement ps = connection.prepareStatement(deleteSql)) {
+                int totalDeleted = 0;
+                for (String mdn : mdns) {
+                    if (mdn == null || mdn.trim().isEmpty()) continue;
+                    String trimmed = mdn.trim();
+                    ps.setString(1, trimmed);
+                    ps.setString(2, trimmed);
+                    ps.setInt(3, KnXcapNotifyConstants.NOTIFYSTATUS.PENDING.value());
+                    ps.setInt(4, KnXcapNotifyConstants.NOTIFYSTATUS.NOTIFY_INITIATED.value());
+                    totalDeleted += ps.executeUpdate();
+                }
+                persisterTxn.save();
+                knLogger.info(methodName, FLOW_TAG
+                        + " STEP-12B Tracker cleanup post-send complete. mdnCount=" + mdns.size()
+                        + " deletedRows=" + totalDeleted);
+            }
+        } catch (Exception e) {
+            rollback(persisterTxn);
+            knLogger.warn(methodName, FLOW_TAG + " STEP-12B Tracker cleanup post-send failed. mdnCount=" + mdns.size(), e);
+        }
+    }
+
     // ═══════════════════════════════════════════════════════════════════════════════════
     // MDN_NOTIFY_TRACKER – public API
     // ═══════════════════════════════════════════════════════════════════════════════════
 
     /**
-     * Returns {@code true} when the temporal wait-and-bundle optimisation is active.
+     * Returns {@code true} when the wait-and-bundle optimisation is active.
      *
      * <p>Runtime check against the microservices config map, allowing operators to flip the
      * feature without a restart.  On any failure the method defaults to {@code false} so
@@ -4135,8 +4186,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                 if (failedRows > 0 && affectedRows == 0 && unchangedRows == 0) {
                     rollback(persisterTxn);
                     throw new KnPersistenceException(KnErrorCodes.DAO.SQL_EXCEPTION,
-                            "All MDN tracker inserts failed. failedRows=" + failedRows,
-                            localPttId, methodName);
+                            "All MDN tracker inserts failed. failedRows=" + failedRows,localPttId, methodName);
                 }
                 persisterTxn.save();
                 knLogger.info(methodName, FLOW_TAG + " STEP-SF3 Tracker upsert committed. affectedRows="

@@ -431,6 +431,7 @@ public class KnMCSDocChangeNotifier {
                 if (ownedTxn) {
                     KnDbUtil.rollback(persisterTxn);
                 }
+                knLogger.error(methodName, FLOW_TAG + " STEP-MCS-ERR MCS queue insert failed (unexpected)", e);
                 knLogger.error(methodName, "Unexpected Exception occurred - ", e);
                 break;
             } finally {
