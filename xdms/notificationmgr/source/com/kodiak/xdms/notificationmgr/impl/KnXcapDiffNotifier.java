@@ -4104,13 +4104,28 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                         + " STEP-SF1A Secondary DB unavailable for tracker upsert; falling back to primary. localPttId="
                         + localPttId + " cause=" + e.getMessage());
             }
-            String selectExistingSql = "SELECT 1 FROM DG.MDN_NOTIFY_TRACKER WHERE MDN = ?";
+            long periodMillis = 120_000L;
+            try {
+                int clusterId = Integer.parseInt(System.getenv(CLUSTERID_ENV_NAME));
+                Map<String, String> cfg = KnGenInfoUtil.getInstance().retrieveMSSvcsCommonConfig(clusterId);
+                String rawPeriod = cfg != null ? cfg.get(XCAP_NOTIFICATION_PERIOD) : null;
+                int periodSeconds = (rawPeriod != null) ? Integer.parseInt(rawPeriod) : 120;
+                periodMillis = (long) periodSeconds * 1000L;
+            } catch (Exception periodEx) {
+                knLogger.warn(methodName, FLOW_TAG + " STEP-SF1C Failed to resolve period for tracker refresh; using default 120s. cause="
+                        + periodEx.getMessage());
+            }
+
+            String selectExistingSql = "SELECT LAST_NOTIFIED_TIME FROM DG.MDN_NOTIFY_TRACKER WHERE MDN = ?";
             PreparedStatement selectStmt = null;
+            PreparedStatement updateStmt = null;
             pStmt = connection.prepareStatement(INSERT_MDN_NOTIFY_TRACKER);
             selectStmt = connection.prepareStatement(selectExistingSql);
+            updateStmt = connection.prepareStatement(UPDATE_MDN_NOTIFY_TRACKER_TS);
 
             long now = System.currentTimeMillis();
             int affectedRows = 0;
+            int refreshedRows = 0;
             int unchangedRows = 0;
             int failedRows = 0;
 
@@ -4130,9 +4145,27 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                         selectStmt.setString(1, trimmedMdn);
                         try (ResultSet rs = selectStmt.executeQuery()) {
                             if (rs.next()) {
-                                unchangedRows++;
-                                knLogger.debug(methodName, FLOW_TAG
-                                        + " STEP-SF2A MDN already in tracker (insert-if-absent). mdn=" + trimmedMdn);
+                                long existingTs = rs.getLong(1);
+                                long elapsed = now - existingTs;
+                                if (elapsed >= periodMillis) {
+                                    updateStmt.setLong(1, now);
+                                    updateStmt.setString(2, trimmedMdn);
+                                    int updated = updateStmt.executeUpdate();
+                                    refreshedRows += updated;
+                                    if (updated > 0) {
+                                        affectedRows += updated;
+                                    } else {
+                                        unchangedRows++;
+                                    }
+                                    knLogger.info(methodName, FLOW_TAG
+                                            + " STEP-SF2A Refreshed stale tracker epoch for mdn=" + trimmedMdn
+                                            + " elapsedMs=" + elapsed + " periodMs=" + periodMillis);
+                                } else {
+                                    unchangedRows++;
+                                    knLogger.debug(methodName, FLOW_TAG
+                                            + " STEP-SF2A MDN already in tracker (insert-if-absent). mdn=" + trimmedMdn
+                                            + " elapsedMs=" + elapsed + " periodMs=" + periodMillis);
+                                }
                                 continue;
                             }
                         }
@@ -4163,6 +4196,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                 }
             } finally {
                 KnDbUtil.closeStatement(selectStmt);
+                KnDbUtil.closeStatement(updateStmt);
             }
 
             knLogger.info(methodName, FLOW_TAG + " STEP-SF1B Tracker MDN input snapshot. inputMdnCount="
@@ -4179,7 +4213,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
 
             knLogger.info(methodName, FLOW_TAG + " STEP-SF2 Tracker upsert completed. validMdnCount=" + validMdnCount
                     + " affectedRows=" + affectedRows + " unchangedRows=" + unchangedRows
-                    + " failedRows=" + failedRows
+                    + " refreshedRows=" + refreshedRows + " failedRows=" + failedRows
                     + " sampleMdns=" + trackerMdnSample);
 
             if (ownedTxn) {
@@ -4191,11 +4225,13 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                 persisterTxn.save();
                 knLogger.info(methodName, FLOW_TAG + " STEP-SF3 Tracker upsert committed. affectedRows="
                         + affectedRows + " unchangedRows=" + unchangedRows + " usedSecondary=" + usedSecondary
+                        + " refreshedRows=" + refreshedRows
                         + " datastore=" + (usedSecondary
                         ? KnDBConst.DataStores.XDM_SHARED_DATA.getValue() : "PRIMARY"));
             } else {
                 knLogger.info(methodName, FLOW_TAG + " STEP-SF3 Tracker upsert staged in caller transaction. affectedRows="
                         + affectedRows + " unchangedRows=" + unchangedRows + " usedSecondary=" + usedSecondary
+                        + " refreshedRows=" + refreshedRows
                         + " datastore=" + (usedSecondary
                         ? KnDBConst.DataStores.XDM_SHARED_DATA.getValue() : "PRIMARY"));
             }

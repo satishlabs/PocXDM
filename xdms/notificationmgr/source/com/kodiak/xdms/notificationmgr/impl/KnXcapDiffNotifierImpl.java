@@ -213,8 +213,12 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
                                     + watcherMdns.size());
                         }
 
-                        xcapDiffNotifier.sendXcapDiffDirMicroserviceNotificationforEtagNotify(initialList);
-                        knLogger.info(methodName, FLOW_TAG + " STEP-P4 Triggered microservice etag notify for DirChg batch");
+                        if (shouldTriggerImmediateEtagNotify()) {
+                            xcapDiffNotifier.sendXcapDiffDirMicroserviceNotificationforEtagNotify(initialList);
+                            knLogger.info(methodName, FLOW_TAG + " STEP-P4 Triggered microservice etag notify for DirChg batch");
+                        } else {
+                            knLogger.info(methodName, FLOW_TAG + " STEP-P4 Optimized mode ON - deferring etag notify to bundled worker path (DirChg)");
+                        }
                     } catch (Throwable postSaveEx) {
                         knLogger.error(methodName, FLOW_TAG
                                 + " STEP-ERR Post-save processing failed for DirChg; queue insert already committed", postSaveEx);
@@ -380,8 +384,12 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
                                     + watcherMdns.size());
                         }
 
-                        xcapDiffNotifier.sendXcapDiffMicroserviceNotificationforEtagNotify(initialList);
-                        knLogger.info(methodName, FLOW_TAG + " STEP-P4 Triggered microservice etag notify for DiffList batch");
+                        if (shouldTriggerImmediateEtagNotify()) {
+                            xcapDiffNotifier.sendXcapDiffMicroserviceNotificationforEtagNotify(initialList);
+                            knLogger.info(methodName, FLOW_TAG + " STEP-P4 Triggered microservice etag notify for DiffList batch");
+                        } else {
+                            knLogger.info(methodName, FLOW_TAG + " STEP-P4 Optimized mode ON - deferring etag notify to bundled worker path (DiffList)");
+                        }
                     } catch (Throwable postSaveEx) {
                         knLogger.error(methodName, FLOW_TAG
                                 + " STEP-ERR Post-save processing failed for DiffList; queue insert already committed", postSaveEx);
@@ -509,8 +517,12 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
                                     + watcherMdns.size());
                         }
 
-                        xcapDiffNotifier.sendXcapDiffMicroserviceNotificationforEtagNotify(initialList);
-                        knLogger.info(methodName, FLOW_TAG + " STEP-P4 Triggered microservice etag notify for SingleDiff batch");
+                        if (shouldTriggerImmediateEtagNotify()) {
+                            xcapDiffNotifier.sendXcapDiffMicroserviceNotificationforEtagNotify(initialList);
+                            knLogger.info(methodName, FLOW_TAG + " STEP-P4 Triggered microservice etag notify for SingleDiff batch");
+                        } else {
+                            knLogger.info(methodName, FLOW_TAG + " STEP-P4 Optimized mode ON - deferring etag notify to bundled worker path (SingleDiff)");
+                        }
                     } catch (Throwable postSaveEx) {
                         knLogger.error(methodName, FLOW_TAG
                                 + " STEP-ERR Post-save processing failed for SingleDiff; queue insert already committed", postSaveEx);
@@ -559,16 +571,36 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
 
     private boolean isSaveNotification(KnNotificationParamDTO notificationParamDTO, int notificationCount, int watcherCount) {
         String methodName = "isSaveNotification";
+
+        // In optimized mode, always persist to queue so epoch-based debulking can bundle
+        // repeated changes for the same watcher MDN.
+        if (xcapDiffNotifier.isOptimizedNotificationEnabled()) {
+            knLogger.info(methodName, FLOW_TAG
+                    + " STEP-P0A Optimized mode ON - forcing save-first enqueue. watcherCount="
+                    + watcherCount + " notificationCount=" + notificationCount);
+            return true;
+        }
+
         boolean isSaveNotification = notificationParamDTO.getPriority() == 0 ||
                 (!genInfoUtil.isSuppressWaterMark(watcherCount, xcapDiffNotifier.recordCount(null))
-                        & notificationCount < genInfoUtil.getXdmMaxNotificationCount());
+                        && notificationCount < genInfoUtil.getXdmMaxNotificationCount());
         knLogger.info(methodName, "isSaveNotification value : ", isSaveNotification);
         return isSaveNotification;
     }
 
     private boolean isSaveSuppressNotification() {
         String methodName = "isSaveSuppressNotification";
-        return xcapDiffNotifier.totalRecordCount() < genInfoUtil.getMaxPendingNotifySize() * 10;
+        boolean enabled = xcapDiffNotifier.totalRecordCount() < genInfoUtil.getMaxPendingNotifySize() * 10;
+        knLogger.info(methodName, FLOW_TAG + " STEP-P0B Save-suppress gate evaluated. enabled=" + enabled);
+        return enabled;
+    }
+
+    /**
+     * Immediate etag notification should only run in legacy mode.
+     * Optimized mode must defer send to poller/worker after epoch gating.
+     */
+    private boolean shouldTriggerImmediateEtagNotify() {
+        return !xcapDiffNotifier.isOptimizedNotificationEnabled();
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -734,12 +766,11 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
         knLogger.debug(methodName, "Splitting initialList. sublistSize - ", sublistSize);
         int noOfSublists = initialList.size() % sublistSize == 0 ? initialList.size() / sublistSize
                 : (initialList.size() / sublistSize) + 1;
-        List<List<KnXcapDiffNotifyDTO>> jobList = new ArrayList<List<KnXcapDiffNotifyDTO>>(noOfSublists);
+        List<List<KnXcapDiffNotifyDTO>> jobList = new ArrayList<>(noOfSublists);
         for (int i = 0; i < noOfSublists; i++) {
             int maxLength = ((i + 1) * sublistSize > initialList.size()) ? initialList.size()
                     : (i + 1) * sublistSize;
-            List<KnXcapDiffNotifyDTO> subList = new ArrayList<KnXcapDiffNotifyDTO>(
-                    initialList.subList(i * sublistSize, maxLength));
+            List<KnXcapDiffNotifyDTO> subList = new ArrayList<>(initialList.subList(i * sublistSize, maxLength));
             jobList.add(subList);
         }
         return jobList;
