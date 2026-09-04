@@ -71,7 +71,7 @@ public class KnContactListMemberDAO implements ITableDAO {
     public static final String QRY_SELECT_MEMBERS_IN = "SELECT " + CONTACT_LIST_ID + ", " + MEMBER_MDN
     		+","+MEMBER_NAME+ " FROM " + TABLENAME + " WHERE " + CONTACT_LIST_ID + " IN ";
     public static final String QRY_DELETE_ALL_CONTACTS = "DELETE FROM " + TABLENAME + " WHERE " +
-            CONTACT_LIST_ID + " IN ";
+            CONTACT_LIST_ID + " = ?";
     public static final String QRY_UPDATE_MEMBER = "UPDATE " + TABLENAME + " SET " + MEMBER_NAME + " = ? WHERE " +
             CONTACT_LIST_ID + " = ? AND " + MEMBER_MDN + " = ?";
 
@@ -433,21 +433,26 @@ public class KnContactListMemberDAO implements ITableDAO {
         knLogger.debug(methodName, "Entry : ", contactListIds);
 
         Connection conn;
-        Statement statement = null;
+        PreparedStatement pstmt = null;
         String query = null;
 
         try {
 
-            StringBuilder buffer = new StringBuilder(200);
-            buffer.append(QRY_DELETE_ALL_CONTACTS).append(KnDbUtil.convertListToIntBuffer(contactListIds));
-            query = buffer.toString();
+            //StringBuilder buffer = new StringBuilder(200);
+            //buffer.append(QRY_DELETE_ALL_CONTACTS).append(KnDbUtil.convertListToIntBuffer(contactListIds));
+            //query = buffer.toString();
+            query = QRY_DELETE_ALL_CONTACTS;
 
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
-            statement = conn.createStatement();
+            pstmt = conn.prepareStatement(query);
 
             knLogger.debug(methodName, "QUERY : Executing ", query, ", persisterTxn : ",
                     persisterTxn);
-            statement.execute(query);
+            for(Integer contactListId : contactListIds){
+                pstmt.setInt(1, contactListId);
+                pstmt.addBatch();
+            }
+            pstmt.executeBatch();
             knLogger.debug(methodName, "QUERY : Completed : ");
 
             knLogger.info(methodName, "Delete all contacts from contactListIds:  ", contactListIds);
@@ -457,7 +462,7 @@ public class KnContactListMemberDAO implements ITableDAO {
             throw KnDbUtil.processException(e, "Failed to Delete all contacts from contactListIds - " + e.getMessage(),
                     pttServerId, KnDAOSourceTypes.XDM_CONTACTLISTMEMBER, query);
         } finally {
-            KnDbUtil.closeStatement(statement);
+            KnDbUtil.closePreparedStatement(pstmt);
         }
     }
 

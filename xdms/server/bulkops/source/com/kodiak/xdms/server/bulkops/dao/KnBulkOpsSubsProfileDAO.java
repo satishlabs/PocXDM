@@ -5,6 +5,7 @@ import com.kodiak.common.commdto.request.KnXDMBulkSubsProvInfoDTO;
 import com.kodiak.common.dao.KnDAOException;
 import com.kodiak.common.dao.KnPersisterTxn;
 import com.kodiak.common.resources.KnConstants;
+import com.kodiak.common.resources.KnGDPRTemplate;
 import com.kodiak.common.resources.KnGeneralUtil;
 import com.kodiak.dbmgr.KnDBConst;
 import com.kodiak.logger.KnLogger;
@@ -582,12 +583,12 @@ public class KnBulkOpsSubsProfileDAO {
 
                         if (hierarchyType.equals(type)) {
                             result.addValidMdn(mdn);
-                            knLogger.debug(methodName, "MDN hierarchy validated successfully: ", mdn);
+                            knLogger.debug(methodName, "MDN hierarchy validated successfully: ", KnGDPRTemplate.mdn(mdn));
                         } else {
                             result.addInvalidMdn(mdn,
                                     KnBulkOpsErrorCodes.BOEntity.INVALID_HIERARCHY_REQUEST,
                                     "Hierarchy mismatch - Expected: " + hierarchyType + ", Found: " + type);
-                            knLogger.debug(methodName, "Hierarchy mismatch for MDN: ", mdn,
+                            knLogger.debug(methodName, "Hierarchy mismatch for MDN: ", KnGDPRTemplate.mdn(mdn),
                                     ", Expected: ", hierarchyType, ", Found: ", type);
                         }
                     }
@@ -600,7 +601,7 @@ public class KnBulkOpsSubsProfileDAO {
         // MDNs not found in DB are considered valid (assuming valid subscriber)
         for (String mdn : mdnSet) {
             result.addValidMdn(mdn);
-            knLogger.debug(methodName, "MDN not found in DB, considering valid: ", mdn);
+            knLogger.debug(methodName, "MDN not found in DB, considering valid: ", KnGDPRTemplate.mdn(mdn));
         }
 
         knLogger.debug(methodName, "Validation completed - Valid: ", result.getValidMdns().size(),

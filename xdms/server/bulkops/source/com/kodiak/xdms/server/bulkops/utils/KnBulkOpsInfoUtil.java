@@ -92,7 +92,7 @@ public class KnBulkOpsInfoUtil {
                 .filter(mdn -> mdn != null && !mdn.trim().isEmpty())
                 .map(String::trim)
                 .collect(Collectors.toList());
-        knLogger.debug(methodName, "Fetched MDN List: ", mdnList);
+        knLogger.debug(methodName, "Fetched MDN List: ", KnGDPRTemplate.mdnList(mdnList));
         return mdnList;
     }
 
@@ -114,7 +114,7 @@ public class KnBulkOpsInfoUtil {
                     return KnBulkOpsConstants.TELURI + mdn;
                 })
                 .collect(Collectors.toList());
-        knLogger.debug(methodName, "Generated MDN List With Prefix: ", mdnListWithPrefix);
+        knLogger.debug(methodName, "Generated MDN List With Prefix count: ", mdnListWithPrefix.size());
         return mdnListWithPrefix;
     }
 
@@ -354,7 +354,7 @@ public class KnBulkOpsInfoUtil {
             // Check if MDN exists in the database
             if (!subscriberServiceAuthStatusMap.containsKey(mdn)) {
                 // MDN not present in database - considered valid (no validation required)
-                knLogger.debug(methodName, "MDN not present in database, considered valid: ", mdn);
+                knLogger.debug(methodName, "MDN not present in database, considered valid: ", KnGDPRTemplate.mdn(mdn));
                 authStatusValidationResult.addValidMdn(mdn);
                 continue;
             }
@@ -365,7 +365,7 @@ public class KnBulkOpsInfoUtil {
             if (subscriberServiceAuthStatus != null
                     && KnBulkOpsConstants.SERVICE_AUTH_STATUS.MARKED_FOR_ASYNC_DELETION.value() == subscriberServiceAuthStatus) {
 
-                knLogger.error(methodName, "Inactive subscriber deletion in-progress for MDN=", mdn,
+                knLogger.error(methodName, "Inactive subscriber deletion in-progress for MDN=", KnGDPRTemplate.mdn(mdn),
                               " ServiceAuthStatus: ", subscriberServiceAuthStatus);
 
                 // Add to invalid MDN list with error details
@@ -1065,7 +1065,7 @@ public class KnBulkOpsInfoUtil {
                     final String pocHome = mdnToPocHomeMap.get(mdn);
 
                     if (pocHome == null) {
-                        knLogger.warn(methodName, "No POC home found for MDN: ", mdn);
+                        knLogger.warn(methodName, "No POC home found for MDN: ", KnGDPRTemplate.mdn(mdn));
                         // This MDN needs prefix lookup as fallback
                         mdnsNeedingPrefixLookup.add(mdn);
                         continue;
@@ -1608,7 +1608,7 @@ public class KnBulkOpsInfoUtil {
         String methodName = "validateSubAuthStatus";
 
         if (mdns != null && !mdns.isEmpty() && mdns.stream().anyMatch(Objects::nonNull)) {
-            knLogger.debug(methodName, "Validating MDNs service auth status - ", mdns);
+            knLogger.debug(methodName, "Validating MDNs service auth status - ", KnGDPRTemplate.mdnList(mdns));
 
             // Fetch the map containing MDN and service auth status
             Map<String, Integer> subscriberServiceAuthStatusMap = provClientIntf.getSubscriberServiceAuthStatus(mdns, persisterTxn);
@@ -1620,7 +1620,7 @@ public class KnBulkOpsInfoUtil {
                 // Validate the service auth status for each MDN
                 if (subscriberServiceAuthStatus != null
                         && com.kodiak.xdms.server.common.resources.KnConstants.SERVICE_AUTH_STATUS.MARKED_FOR_ASYNC_DELETION.value() == subscriberServiceAuthStatus) {
-                    knLogger.error(methodName, "Inactive subscriber deletion in-progress for MDN=",currentMdn, " ServiceAuthStatus: ", subscriberServiceAuthStatus);
+                    knLogger.error(methodName, "Inactive subscriber deletion in-progress for MDN=",KnGDPRTemplate.mdn(currentMdn), " ServiceAuthStatus: ", subscriberServiceAuthStatus);
                     throw new KnProvBOException(com.kodiak.xdms.server.subsmgmt.resources.KnErrorCodes.Validator.INACTIVE_SUBSCRIBER_DELETE_IN_PROGRESS, "Inactive subscriber deletion in-progress for MDN: " + currentMdn
                     );
                 }
@@ -1633,7 +1633,7 @@ public class KnBulkOpsInfoUtil {
         Map<String, KnBulkOpsErrorDetail> invalidAuthStatusMdns = new HashMap<>();
 
         if (mdns != null && !mdns.isEmpty() && mdns.stream().anyMatch(Objects::nonNull)) {
-            knLogger.debug(methodName, "Validating MDNs service auth status - ", mdns);
+            knLogger.debug(methodName, "Validating MDNs service auth status - ", KnGDPRTemplate.mdnList(mdns));
 
             // Fetch the map containing MDN and service auth status
             KnPOCSubscrInfoDAO knPOCSubscrInfoDAO = new KnPOCSubscrInfoDAO();
@@ -1646,7 +1646,7 @@ public class KnBulkOpsInfoUtil {
                 // Validate the service auth status for each MDN
                 if (subscriberServiceAuthStatus != null
                         && KnBulkOpsConstants.SERVICE_AUTH_STATUS.MARKED_FOR_ASYNC_DELETION.value() == subscriberServiceAuthStatus) {
-                    knLogger.error(methodName, "Inactive subscriber deletion in-progress for MDN=", currentMdn, " ServiceAuthStatus: ", subscriberServiceAuthStatus);
+                    knLogger.error(methodName, "Inactive subscriber deletion in-progress for MDN=", KnGDPRTemplate.mdn(currentMdn), " ServiceAuthStatus: ", subscriberServiceAuthStatus);
                     knBulkOpsErrorDetail.setMdn(currentMdn);
                     knBulkOpsErrorDetail.setErrorCode(INACTIVE_SUBSCRIBER_DELETE_IN_PROGRESS);
                     knBulkOpsErrorDetail.setErrorMessage("Inactive subscriber deletion in-progress for MDN: " + currentMdn);
@@ -1703,13 +1703,13 @@ public class KnBulkOpsInfoUtil {
             for (Map.Entry<String, Integer> entry : mdntoApnId.entrySet()) {
 
                 String trimmedMdn = entry.getKey().replaceAll("\\s+", "");
-                knLogger.debug(methodName, "retrieved   test - ", trimmedMdn, entry.getValue());
+                knLogger.debug(methodName, "retrieved entry for mdn - ", KnGDPRTemplate.mdn(trimmedMdn), ", apnId=", entry.getValue());
                 trimmedMdntoApnId.put(trimmedMdn, entry.getValue());
             }
             mdntoApnId = trimmedMdntoApnId;
             mdntoPv  = pocSubscrInfoDAO.selectSubscribersPV(mdns, persisterTxn);
-            knLogger.debug(methodName, "retrieved mdnapnid  test - ", mdntoApnId);
-            knLogger.debug(methodName, "retrieved mdnpv  test - ", mdntoPv);
+            knLogger.debug(methodName, "retrieved mdn->apnid map size - ", mdntoApnId.size());
+            knLogger.debug(methodName, "retrieved mdn->pv map size - ", mdntoPv.size());
 
 
 
@@ -1754,7 +1754,7 @@ public class KnBulkOpsInfoUtil {
             knLogger.error(methodName, "Un-expected exception occurred");
             throw new KnBOException(KnErrorCodes.BOEntity.INTERNAL_ERROR, "Failed to get  apn profile info  ", e);
         }
-        knLogger.debug(methodName, "retrieved xcapRootUriMap  - ", mdntoXcapUri);
+        knLogger.debug(methodName, "retrieved xcapRootUriMap size - ", mdntoXcapUri.size());
 
         return mdntoXcapUri;
 

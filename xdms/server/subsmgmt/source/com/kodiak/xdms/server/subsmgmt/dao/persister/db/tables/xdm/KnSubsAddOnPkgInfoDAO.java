@@ -123,28 +123,28 @@ public class KnSubsAddOnPkgInfoDAO implements ITableDAO {
 	}
 
     public void deleteSubAddlOnPkgs(List<String> mdnList, KnPersisterTxn persisterTxn) throws KnDAOException {
-        final String methodName="deleteSubAddlOnPkgs(String mdn, KnPersisterTxn persisterTxn)";
+        final String methodName="deleteSubAddlOnPkgs(List<String> mdnList, KnPersisterTxn persisterTxn)";
         knLogger.debug(methodName,"ENTRY: mdn ",KnGDPRTemplate.mdnList(mdnList));
         Connection conn;
         PreparedStatement pStmt = null;
         String query = null;
-        int index = 1;
         try {
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
-            query = "DELETE FROM DG.SUBSCR_ADDON_PKGINFO WHERE MDN IN (MDNLIST)";
-            query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(mdnList,query,"MDNLIST");
+            query = "DELETE FROM DG.SUBSCR_ADDON_PKGINFO WHERE MDN = ?";
+            //query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(mdnList,query,"MDNLIST");
             pStmt = conn.prepareStatement(query);
             for(String mdn : mdnList){
-                pStmt.setString(index++,mdn);
+                pStmt.setString(1, mdn);
+                pStmt.addBatch();
             }
             knLogger.debug(methodName, "QUERY: Executing the Query - ", query);
 
-            pStmt.execute();
+            pStmt.executeBatch();
             knLogger.debug(methodName, "Query: Executed ");
 
         }catch (Exception e) {
             knLogger.error(methodName, "Unexpected Exception - ", e);
-            throw KnDbUtil.processException(e, "Failed to delete Addon package - " + e.getMessage(), pttServerId, KnProvDAOSourceTypes.ADDONPKGINFO, QRY_DELETE_ADDONPACKAGES);
+            throw KnDbUtil.processException(e, "Failed to delete Addon package - " + e.getMessage(), pttServerId, KnProvDAOSourceTypes.ADDONPKGINFO, query);
         } finally {
             KnDbUtil.closePreparedStatement(pStmt);
         }

@@ -774,11 +774,15 @@ public class KnXDMCorpListMemberDAO implements ITableDAO {
         try {
             KnQueryMapper queryMapper = KnQueryMapper.getInstance();
             query = queryMapper.getQuery(DELETE_ALL_SUBLIST_MEMBERS);
-            query = replaceContactWithValue(query, SUBLISTID, formIntegerCommaSeperatedIdList(sublistIdsList));
+            //query = replaceContactWithValue(query, SUBLISTID, formIntegerCommaSeperatedIdList(sublistIdsList));
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
             pstmt = conn.prepareStatement(query);
             knLogger.debug( methodName, "Executing query - " , "'" , query , "'");
-            pstmt.executeQuery();
+            for(Integer sublistId : sublistIdsList) {
+                pstmt.setInt(1, sublistId);
+                pstmt.addBatch();
+            }
+            pstmt.executeBatch();
             knLogger.debug(methodName, "EXIT: Query executed successfully");
         } catch (KnDAOException e) {
             knLogger.error( methodName, "KnDAOException occured while deleting all members from the all sublist - " , e);
@@ -788,7 +792,7 @@ public class KnXDMCorpListMemberDAO implements ITableDAO {
             throw KnDbUtil.processException(e, "Failed while deleting members from the all sublists- " + e,
                     pttServerId, KnDAOSourceTypes.XDM_CORP_LIST_MEMBER, query);
         } finally {
-            KnDbUtil.closeStatement(pstmt);
+            KnDbUtil.closePreparedStatement(pstmt);
         }
     }
 

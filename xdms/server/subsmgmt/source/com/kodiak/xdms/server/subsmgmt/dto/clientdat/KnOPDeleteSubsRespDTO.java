@@ -28,6 +28,7 @@
 package com.kodiak.xdms.server.subsmgmt.dto.clientdat;
 
 import java.util.List;
+import java.util.Map;
 
 import com.kodiak.common.resources.KnGDPRTemplate;
 
@@ -43,6 +44,7 @@ public class KnOPDeleteSubsRespDTO extends KnOPProvDTO {
     private String password;
     private String activeFS2;
     private List<String> userProfileMdns;
+    private Map<String, List<String>> userProfileMdnMap;
     private boolean isCorporateDeleted;
 
     public int getCorpId() {
@@ -158,6 +160,14 @@ public class KnOPDeleteSubsRespDTO extends KnOPProvDTO {
 		this.userProfileMdns = userProfileMdns;
 	}
 
+    public Map<String, List<String>> getUserProfileMdnMap() {
+        return userProfileMdnMap;
+    }
+
+    public void setUserProfileMdnMap(Map<String, List<String>> userProfileMdnMap) {
+        this.userProfileMdnMap = userProfileMdnMap;
+    }
+
     public boolean isCorporateDeleted() {
         return isCorporateDeleted;
     }
@@ -178,6 +188,7 @@ public class KnOPDeleteSubsRespDTO extends KnOPProvDTO {
                 .append(", password- ").append(password)
                 .append(", activeFS2- ").append(activeFS2)
                 .append(", userProfileMdns- ").append(userProfileMdns)
+                .append(", userProfileMdnMap- ").append(userProfileMdnMap)
                 .append(", isCorporateDeleted- ").append(isCorporateDeleted)
 
                 .append("]");

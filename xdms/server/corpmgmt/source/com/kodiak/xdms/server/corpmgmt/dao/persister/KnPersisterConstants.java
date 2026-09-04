@@ -756,6 +756,8 @@ public class KnPersisterConstants {
     public static final String DELETE_HIERARCHY_FOR_DESCENDANT = "737";
     public static final String DELETE_HIERARCHY_FOR_ANCESTOR = "738";
     public static final String UPDATE_INTO_ANCHOR_INFO = "750";
+    public static final String GET_POCHOME_BY_HIERARCHYID_FROM_ANCHOR="751";
+    public static final String GET_POCHOME_BY_GEOCODES = "752";
 
     // PTT Setting
     public static final String GET_PTT_SETTING_DOC_FOR_CORP = "708";

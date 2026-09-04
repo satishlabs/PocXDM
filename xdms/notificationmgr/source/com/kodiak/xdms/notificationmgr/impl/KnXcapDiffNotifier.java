@@ -212,7 +212,7 @@ public class KnXcapDiffNotifier {
      */
     private final String DELETE_MDN_NOTIFY_TRACKER_STALE =
             "DELETE FROM DG.MDN_NOTIFY_TRACKER t " +
-            "WHERE (? - t.LAST_NOTIFIED_TIME) >= ? " +
+            "WHERE t.LAST_NOTIFIED_TIME <= ? " +
             "AND NOT EXISTS (" +
             "  SELECT 1 FROM DG.XCAP_PENDING_NOTIFYQ q " +
             "  WHERE q.DEST_ID = t.MDN " +
@@ -485,17 +485,29 @@ public class KnXcapDiffNotifier {
         KnPersisterTxn knPersisterTxn = KnPersisterTxn.getPersisterTxn();
         try {
             Map<String, String> clusterIdMap;
+            if (pttServerId == null || pttServerId.trim().isEmpty()) {
+                knLogger.warn(methodName, "Skipping cluster-id lookup because pttServerId is blank");
+                return null;
+            }
             ICacheManager cacheManager = configManager.getCacheManager();
             // Attempt to retrieve the cluster ID map from the cache
             clusterIdMap = (Map<String, String>) cacheManager.get(KnCacheKeys.CLUSTER_ID_MAP);
-            // If the cache is empty, fetch the cluster ID map from the database and update the cache
-            if (clusterIdMap == null || clusterIdMap.isEmpty()) {
+            // Refresh cache on empty map OR per-server cache miss so stale/incomplete cache
+            // does not cause persistent "clusterId is null" send failures.
+            if (clusterIdMap == null || clusterIdMap.isEmpty() || !clusterIdMap.containsKey(pttServerId)) {
                 IXDMServerDAO xdmServerDAO = KnFactorySelector.getDAOFactory(KnFactorySelector.DB).createXDMServerDAO(localClusterSiteId);
                 clusterIdMap = xdmServerDAO.getClusterId(knPersisterTxn);
                 cacheManager.put(KnCacheKeys.CLUSTER_ID_MAP, clusterIdMap);
             }
-            // Retrieve the cluster ID for the given PTT server ID, or use the default from the environment variable
-            clusterId = clusterIdMap.get(pttServerId);
+            // Retrieve the cluster ID for the given PTT server ID after cache validation/refresh.
+            clusterId = clusterIdMap != null ? clusterIdMap.get(pttServerId) : null;
+            if (clusterId == null) {
+                // Fallback to local cluster to avoid permanently blocking notification dispatch
+                // when cache/DB mapping is temporarily incomplete for a valid subscriber route.
+                clusterId = localClusterSiteId;
+                knLogger.warn(methodName, "Cluster ID not found for PTT Server ID " + pttServerId
+                        + " even after cache refresh. Falling back to localClusterSiteId=" + localClusterSiteId);
+            }
             knLogger.debug(methodName, "Cluster ID fetched for PTT Server ID ", pttServerId, " is: ", clusterId);
         } catch (KnConfigurationException e) {
             knLogger.error("fetchClusterId(), Exception in fetching cluster id for pttserverid: " + pttServerId, e);
@@ -813,11 +825,19 @@ public class KnXcapDiffNotifier {
 
                 //Populating additional DocumentType info
                 List<DocumentType> addlDocTypeInfoList = null;
+                // Use TCP path if notification capability is enabled
                 if (xcapDiffNotifyObj.isNotfnCapability()) {
+                    knLogger.debug(methodName, "Using TCP path. isNotfnCapability=", xcapDiffNotifyObj.isNotfnCapability(),
+                            ", Setting docType.newEtag=", xcapDiffNotifyObj.getDirNewEtag(),
+                            ", docType.previousEtag=", xcapDiffNotifyObj.getDirPrevEtag(),
+                            ", invoking populateNewChangeLog(), maxAllowedSize=", ALLOWED_SIPMSG_SIZE_ON_TCP);
                     docType.setNewEtag(xcapDiffNotifyObj.getDirNewEtag());
+                    // Always set previous-etag so it is included in the outgoing XCAP-DIFF XML for change notifications
+                    docType.setPreviousEtag(xcapDiffNotifyObj.getDirPrevEtag());
                     addlDocTypeInfoList = populateNewChangeLog(xcapDiffDocObsList, xcapDiffNotifyObj, protocolVersion);
                     maxAllowedSize = ALLOWED_SIPMSG_SIZE_ON_TCP;
                 } else {
+                    knLogger.debug(methodName, "Using UDP path. isNotfnCapability=", xcapDiffNotifyObj.isNotfnCapability());
                     docType.setSel(xcapDiffNotifyObj.getDirURI());
                     docType.setPreviousEtag(xcapDiffNotifyObj.getDirPrevEtag());
                     docType.setNewEtag(xcapDiffNotifyObj.getDirNewEtag());
@@ -860,8 +880,30 @@ public class KnXcapDiffNotifier {
                         docType.setDiffRemoveType(null);
                     }
                     if (docType.getDiffAddType() == null && docType.getDiffReplaceType() == null && docType.getDiffRemoveType() == null && docType.getDiffReplaceChangeType() == null) {
-                        docType.setPreviousEtag(null);
-                        knLogger.debug(methodName, " sending forceSync notification");
+                        // Requirement: whenever anything changes, both previous-etag and new-etag must be present.
+                        // Preserve the DTO's previous-etag if available; only null it out when no previous-etag exists.
+                        String dtoPrevEtag = xcapDiffNotifyObj.getDirPrevEtag();
+                        String dtoNewEtag = docType.getNewEtag();
+                        if (dtoPrevEtag != null && !dtoPrevEtag.isEmpty()) {
+                            docType.setPreviousEtag(dtoPrevEtag);
+                            knLogger.debug(methodName, "forceSync path (no diff children) BUT preserving previous-etag - ",
+                                    dtoPrevEtag, ", newEtag - ", docType.getNewEtag(), ", sel - ", docType.getSel());
+                        } else {
+                            // Calculate previous-etag as newEtag - 1
+                            String calculatedPrevEtag = null;
+                            if (dtoNewEtag != null && !dtoNewEtag.isEmpty()) {
+                                try {
+                                    int newEtagInt = Integer.parseInt(dtoNewEtag);
+                                    calculatedPrevEtag = String.valueOf(newEtagInt - 1);
+                                } catch (NumberFormatException e) {
+                                    knLogger.warn(methodName, "Unable to parse newEtag as integer: ", dtoNewEtag, " - setting previous-etag to null");
+                                }
+                            }
+                            docType.setPreviousEtag(calculatedPrevEtag);
+                            knLogger.debug(methodName, "sending forceSync notification -> calculated previous-etag - ",
+                                    calculatedPrevEtag, ", newEtag - ", docType.getNewEtag(), ", sel - ", docType.getSel(),
+                                    ", isNotfnCapability - ", xcapDiffNotifyObj.isNotfnCapability());
+                        }
                     }
                     xcapDiffTypeObj.setDocumentType(docType);
 
@@ -1381,55 +1423,56 @@ public class KnXcapDiffNotifier {
 	private String getIosMdns( Map<String, KnXDMSubsProvDTO> mdnMaps, String uri,String documentSelector,Map<String,KnXDMSubsProvDTO> mdnActiveFsMap) {
 		String methodName = "getIosMdns";
 		knLogger.debug(methodName,  KnGDPRTemplate.mdnUriTemplate(documentSelector));
-		String mdn=null;
-        if (null == documentSelector && null != uri) {
-            if (uri.contains(APP_UID_CORP_GROUP)
-                    || uri.contains(APP_UID_AUTH_LIST)
-                    || uri.contains(APP_UID_EMERG_CONFIG)) {
-			String substring = uri.substring(uri.indexOf("tel:+"));
-			 mdn = substring.substring(substring.indexOf("+") + 1, substring.indexOf("/"));
+		try {
+			String mdn = null;
+			if (null == documentSelector && null != uri) {
+				if (uri.contains(APP_UID_CORP_GROUP)
+						|| uri.contains(APP_UID_AUTH_LIST)
+						|| uri.contains(APP_UID_EMERG_CONFIG)) {
+					String substring = uri.substring(uri.indexOf("tel:+"));
+					mdn = substring.substring(substring.indexOf("+") + 1, substring.indexOf("/"));
+				}
+			}else if(documentSelector!=null) {
+				String sel = uri;
+				String substring = sel.substring(sel.indexOf("tel:+"));
+				mdn = substring.substring(substring.indexOf("+") + 1, substring.indexOf("/"));
 			}
-		}else if(documentSelector!=null) {
-			String sel = uri;
-			String substring = sel.substring(sel.indexOf("tel:+"));
-			 mdn = substring.substring(substring.indexOf("+") + 1, substring.indexOf("/"));
-		}
+
 			knLogger.info(methodName,  "MDN from doc:-",KnGDPRTemplate.mdn(mdn));
 			List<String> mdns=new ArrayList<String>();
 			if(mdn!=null) {
-			mdns.add(mdn);
-			try {
-                KnXDMSubsProvDTO sub = null;
-                if (mdnActiveFsMap != null && mdnActiveFsMap.containsKey(mdn)) {
-                    sub = mdnActiveFsMap.get(mdn);
-                    knLogger.debug("mdn found in cache");
-                } else {
-                    knLogger.debug("mdn not found in cache");
-                    KnXDMSubsProfileRespDTO subsInfo = genInfoUtil.selectSubsProfileInfo(mdns, null);
-                    if (subsInfo != null && subsInfo.getSubsRespDTO() != null && !subsInfo.getSubsRespDTO().isEmpty()) {
-                        List<KnXDMSubsProvDTO> subslist = new ArrayList<>(subsInfo.getSubsRespDTO());
-                        sub = subslist.get(0);
-                    }
-                }
-			if(sub !=null) {
-			mdnMaps.put(mdn, sub);
-			boolean isAllowedOpertion=false;
-			if(documentSelector!=null) {
-				knLogger.debug(methodName,  "Doc selector seleceted:-",KnGDPRTemplate.mdn(mdn)," selector :-",KnGDPRTemplate.mdnUriTemplate(documentSelector));
-				isAllowedOpertion= checkIfDocisAllowedChange(documentSelector,sub);
-			}else if(uri!=null) {
-				knLogger.debug(methodName,  "URI seleceted- for ",KnGDPRTemplate.mdn(mdn)," URI ",KnGDPRTemplate.mdnUriTemplate(uri));
-				isAllowedOpertion= checkIfDocisAllowedChange(uri,sub);
+				mdns.add(mdn);
+				KnXDMSubsProvDTO sub = null;
+				if (mdnActiveFsMap != null && mdnActiveFsMap.containsKey(mdn)) {
+					sub = mdnActiveFsMap.get(mdn);
+					knLogger.debug("mdn found in cache");
+				} else {
+					knLogger.debug("mdn not found in cache");
+					KnXDMSubsProfileRespDTO subsInfo = genInfoUtil.selectSubsProfileInfo(mdns, null);
+					if (subsInfo != null && subsInfo.getSubsRespDTO() != null && !subsInfo.getSubsRespDTO().isEmpty()) {
+						List<KnXDMSubsProvDTO> subslist = new ArrayList<>(subsInfo.getSubsRespDTO());
+						sub = subslist.get(0);
+					}
+				}
+				if(sub !=null) {
+					mdnMaps.put(mdn, sub);
+					boolean isAllowedOpertion=false;
+					if(documentSelector!=null) {
+						knLogger.debug(methodName,  "Doc selector seleceted:-",KnGDPRTemplate.mdn(mdn)," selector :-",KnGDPRTemplate.mdnUriTemplate(documentSelector));
+						isAllowedOpertion= checkIfDocisAllowedChange(documentSelector,sub);
+					}else if(uri!=null) {
+						knLogger.debug(methodName,  "URI seleceted- for ",KnGDPRTemplate.mdn(mdn)," URI ",KnGDPRTemplate.mdnUriTemplate(uri));
+						isAllowedOpertion= checkIfDocisAllowedChange(uri,sub);
 
+					}
+					if(isAllowedOpertion && isIosBitEnabled(mdn,sub.getActiveFS2()) ) {
+						knLogger.debug(methodName,"MDN is IOS in docselector :-",KnGDPRTemplate.mdn(mdn));
+						return mdn.trim();
+					}
+				}
 			}
-			if(isAllowedOpertion && isIosBitEnabled(mdn,sub.getActiveFS2()) ) {
-				knLogger.debug(methodName,"MDN is IOS in docselector :-",KnGDPRTemplate.mdn(mdn));
-				return mdn.trim();
-			}
-			}
-			} catch (Exception e) {
-				knLogger.error(methodName,"exception",e);
-			}
+		} catch (Exception e) {
+			knLogger.error(methodName, "exception", e);
 			}
 		return "NOTIOS";
 	}
@@ -1707,8 +1750,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                         || (xcapDiffDocObj.getModifiedGrpMembers() != null && !xcapDiffDocObj.getModifiedGrpMembers().isEmpty())
                         || (xcapDiffDocObj.getGroupName() != null && !xcapDiffDocObj.getGroupName().isEmpty())
                         || (xcapDiffDocObj.getGroupMemCount() > 0)
-                        || (xcapDiffDocObj.getAvatar() != null)
-                        || (xcapDiffDocObj.getVideoPermission() != null))) {
+                        || (xcapDiffDocObj.getAvatar() != null))) {
                     if (xcapDiffDocObj.isOsmListChanged()) {
                         knLogger.debug(methodName, "OSM list changed :", xcapDiffDocObj.isOsmListChanged());
                         oldDocType.setSel(xcapDiffNotifyObj.getDirURI());
@@ -1992,8 +2034,8 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                                 diffReplaceObj.setAvatar(avatar);
                             }
                         }
-
-                        if(xcapDiffDocObj.getVideoPermission() != null) {
+                        //Changes Not required video call permissions working fine without this
+                        /*if(xcapDiffDocObj.getVideoPermission() != null) {
                             if (protocol >= PROTOCOL_VERSION_29) {
                                 docGroupType.setSel(xcapDiffDocObj.getDocumentSelector());
                                 docGroupType.setNewEtag(xcapDiffDocObj.getDocEtag());
@@ -2014,7 +2056,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                                 knLogger.debug(methodName, "REPLACE: Setting video-call-permission for group - uri:",
                                                xcapDiffDocObj.getDocUri(), ", videoPermission:", xcapDiffDocObj.getVideoPermission());
                             }
-                        }
+                        }*/
                     }
                     docGroupType.setDocType(KnXcapNotifyConstants.DOC_TYPE.CORP_GROUP_DOC.value());
                     docTypeList.add(docGroupType);
@@ -3611,6 +3653,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
         Set<String> claimedOptimizedMdns = new LinkedHashSet<>();
         long   nowMillis    = 0L;
         long   periodMillis = 0L;
+        long   cutoffMillis = 0L;
         boolean optimizedMode = false;
 
         try {
@@ -3644,6 +3687,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                                 : "120");
                 periodMillis = (long) notificationPeriodSeconds * 1_000L;
                 nowMillis    = System.currentTimeMillis();
+                cutoffMillis = nowMillis - periodMillis;
                 knLogger.debug(methodName,
                         "Optimized mode ON - epoch period=" + notificationPeriodSeconds + "s now=" + nowMillis);
             }
@@ -3683,7 +3727,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                 // Fetch at most 100 eligible watcher MDNs from MDN_NOTIFY_TRACKER.
                 // "Eligible" means the epoch window has expired for that watcher.
                 List<String> eligibleMdns =
-                        fetchEligibleMdns(trackerConnection, nowMillis, periodMillis, 100);
+                        fetchEligibleMdns(trackerConnection, cutoffMillis, periodMillis, 100);
 
                 knLogger.debug(methodName,
                         "Eligible watcher MDN count for this cycle: " + eligibleMdns.size());
@@ -3915,7 +3959,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                 }
 
                 // Always run cleanup in optimized mode to age out stale tracker rows.
-                cleanupMdnNotifyTracker(trackerConnection, nowMillis, periodMillis);
+                cleanupMdnNotifyTracker(trackerConnection, cutoffMillis, periodMillis);
 
                 knLogger.info(methodName, FLOW_TAG
                         + " STEP-HG6 Tracker maintenance complete. updatedMdns=" + claimedOptimizedMdns.size());
@@ -4272,18 +4316,23 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
      * @throws SQLException on DB error
      */
     private List<String> fetchEligibleMdns(Connection connection,
-                                            long nowMillis,
+                                            long cutoffMillis,
                                             long periodMillis,
                                             int maxMdns) throws SQLException {
         List<String> eligibleMdns = new ArrayList<>();
         String sql =
-                "SELECT FIRST " + maxMdns + " MDN FROM DG.MDN_NOTIFY_TRACKER " +
-                "WHERE (? - LAST_NOTIFIED_TIME) >= ? " +
-                "ORDER BY LAST_NOTIFIED_TIME ASC";
+                "SELECT FIRST " + maxMdns + " t.MDN FROM DG.MDN_NOTIFY_TRACKER t " +
+                "WHERE t.LAST_NOTIFIED_TIME <= ? " +
+                "AND EXISTS (" +
+                "  SELECT 1 FROM DG.XCAP_PENDING_NOTIFYQ q " +
+                "  WHERE q.DEST_ID = t.MDN " +
+                "    AND q.NOTIFY_STATUS = ? " +
+                ") " +
+                "ORDER BY t.LAST_NOTIFIED_TIME ASC";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setLong(1, nowMillis);
-            ps.setLong(2, periodMillis);
+            ps.setLong(1, cutoffMillis);
+            ps.setInt(2, KnXcapNotifyConstants.NOTIFYSTATUS.PENDING.value());
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     eligibleMdns.add(rs.getString(1));
@@ -4291,7 +4340,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
             }
         }
         knLogger.debug("fetchEligibleMdns",
-                "Eligible MDN count (period>=" + periodMillis + "ms):" + eligibleMdns.size());
+                "Eligible MDN count (cutoff=" + cutoffMillis + ", period>=" + periodMillis + "ms):" + eligibleMdns.size());
         knLogger.info("fetchEligibleMdns", FLOW_TAG
                 + " STEP-HG2A Eligible MDNs fetched. maxMdns=" + maxMdns
                 + " eligibleCount=" + eligibleMdns.size());
@@ -4335,18 +4384,17 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
      * @throws SQLException on DB error
      */
     private void cleanupMdnNotifyTracker(Connection connection,
-                                         long nowMillis,
+                                         long cutoffMillis,
                                          long periodMillis) throws SQLException {
         try (PreparedStatement ps = connection.prepareStatement(DELETE_MDN_NOTIFY_TRACKER_STALE)) {
-            ps.setLong(1, nowMillis);
-            ps.setLong(2, periodMillis);
-            ps.setInt(3, KnXcapNotifyConstants.NOTIFYSTATUS.PENDING.value());
-            ps.setInt(4, KnXcapNotifyConstants.NOTIFYSTATUS.NOTIFY_INITIATED.value());
+            ps.setLong(1, cutoffMillis);
+            ps.setInt(2, KnXcapNotifyConstants.NOTIFYSTATUS.PENDING.value());
+            ps.setInt(3, KnXcapNotifyConstants.NOTIFYSTATUS.NOTIFY_INITIATED.value());
             int deleted = ps.executeUpdate();
             knLogger.debug("cleanupMdnNotifyTracker", "Stale tracker rows deleted:", deleted);
             knLogger.info("cleanupMdnNotifyTracker", FLOW_TAG
                     + " STEP-HG6B Tracker cleanup complete. deletedRows=" + deleted
-                    + " periodMillis=" + periodMillis);
+                    + " cutoffMillis=" + cutoffMillis + " periodMillis=" + periodMillis);
         }
     }
 

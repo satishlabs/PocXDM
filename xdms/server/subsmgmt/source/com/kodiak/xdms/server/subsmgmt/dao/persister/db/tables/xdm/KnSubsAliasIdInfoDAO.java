@@ -271,21 +271,21 @@ public class KnSubsAliasIdInfoDAO implements ITableDAO {
     }
 
     public void deleteSubsAliasId(List<String> mdnList, KnPersisterTxn persisterTxn)throws KnDAOException{
-        final String methodName = "deleteSubsAliasId(String, KnPersisterTxn persisterTxn)";
+        final String methodName = "deleteSubsAliasId(List<String>, KnPersisterTxn)";
         knLogger.debug(methodName, "ENTRY: mdn - ", KnGDPRTemplate.mdnList(mdnList));
         Connection conn;
         PreparedStatement pstmt = null;
-        int index = 1;
         try {
-            String query = "DELETE FROM DG.POCSUBSCR_ALIASIDLIST WHERE MDN IN (MDNLIST)";
-            query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(mdnList,query,"MDNLIST");
+            String query = "DELETE FROM DG.POCSUBSCR_ALIASIDLIST WHERE MDN = ?";
+            //query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(mdnList,query,"MDNLIST");
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
             knLogger.debug(methodName, "QUERY: Executing the Query - ", query);
             pstmt = conn.prepareStatement(query);
             for(String mdn : mdnList){
-                pstmt.setString(index++, mdn);
+                pstmt.setString(1, mdn);
+                pstmt.addBatch();
             }
-            int count = pstmt.executeUpdate();
+            int count = pstmt.executeBatch().length;
             knLogger.debug(methodName, "Query: Executed : Successfully ",count);
 
         } catch (Exception e) {

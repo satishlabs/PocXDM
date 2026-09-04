@@ -303,20 +303,21 @@ public class KnXDMCorpMcpttInfoDAO implements ITableDAO {
         int index = 1;
         try {
             Connection conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
-            query = "DELETE FROM DG.MCPTT_PERM_INFO WHERE AUTHORIZED_MDN IN (MDNLIST)";
-            query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(authMdn,query,"MDNLIST");
+            query = "DELETE FROM DG.MCPTT_PERM_INFO WHERE AUTHORIZED_MDN = ?";
+            //query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(authMdn,query,"MDNLIST");
             knLogger.debug(methodName, "Executing query - ", query);
             pstmt = conn.prepareStatement(query);
             for (String mdn : authMdn) {
-                pstmt.setString(index++, mdn);
+                pstmt.setString(1, mdn);
+                pstmt.addBatch();
             }
-            pstmt.executeQuery();
+            pstmt.executeBatch();
             knLogger.debug(methodName, "Exit: Query executed successfully.");
         } catch (SQLException e) {
             throw KnDbUtil.processException(e, "Failed to delete auth mcptt mapping DG.MCPTT_PERM_INFO table " + e,
                     pttServerId, KnDAOSourceTypes.XDM_CORP_AUTH_USER_PERMISSIONS, query);
         } finally {
-            KnDbUtil.closeStatement(pstmt);
+            KnDbUtil.closePreparedStatement(pstmt);
         }
     }
 
@@ -347,24 +348,24 @@ public class KnXDMCorpMcpttInfoDAO implements ITableDAO {
         knLogger.debug(methodName, "ENTRY Point : targetMdn - ", KnGDPRTemplate.mdnList(targetMdn));
         PreparedStatement pstmt = null;
         String query = null;
-        int index = 1;
         try {
             Connection conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
             KnQueryMapper queryMapper = KnQueryMapper.getInstance();
-            query = "DELETE FROM DG.MCPTT_PERM_INFO WHERE TARGET_MDN IN (MDNLIST)";
-            query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(targetMdn,query,"MDNLIST");
+            query = "DELETE FROM DG.MCPTT_PERM_INFO WHERE TARGET_MDN = ?";
+            //query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(targetMdn,query,"MDNLIST");
             knLogger.debug(methodName, "Executing query - ", query);
             pstmt = conn.prepareStatement(query);
             for(String mdn : targetMdn){
-                pstmt.setString(index++, mdn);
+                pstmt.setString(1, mdn);
+                pstmt.addBatch();
             }
-            pstmt.executeQuery();
+            pstmt.executeBatch();
             knLogger.debug(methodName, "Exit: Query executed successfully.");
         } catch (SQLException e) {
             throw KnDbUtil.processException(e, "Failed to delete target mcptt mapping DG.MCPTT_PERM_INFO table " + e,
                     pttServerId, KnDAOSourceTypes.XDM_CORP_AUTH_USER_PERMISSIONS, query);
         } finally {
-            KnDbUtil.closeStatement(pstmt);
+            KnDbUtil.closePreparedStatement(pstmt);
         }
     }
 
@@ -1099,23 +1100,23 @@ public class KnXDMCorpMcpttInfoDAO implements ITableDAO {
         knLogger.debug(methodName, "ENTRY Point : mdn - ", KnGDPRTemplate.mdnList(mdnList));
         PreparedStatement pstmt = null;
         String query = null;
-        int index = 1;
         try {
             Connection conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
-            query ="DELETE FROM DG.EMERGENCY_SUBSCR_DESTINFO WHERE MDN IN (MDNLIST)";
-            query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(mdnList,query,"MDNLIST");
+            query ="DELETE FROM DG.EMERGENCY_SUBSCR_DESTINFO WHERE MDN = ?";
+            //query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(mdnList,query,"MDNLIST");
             knLogger.debug(methodName, "Executing query - ", query);
             pstmt = conn.prepareStatement(query);
             for (String mdn : mdnList) {
-                pstmt.setString(index++, mdn);
+                pstmt.setString(1, mdn);
+                pstmt.addBatch();
             }
-            pstmt.executeQuery();
+            pstmt.executeBatch();
             knLogger.debug(methodName, "Exit: Query executed successfully.");
         } catch (SQLException e) {
             throw KnDbUtil.processException(e, "Failed to delete mcptt mapping DG.EMERGENCY_SUBSCR_DESTINFO table " + e,
                     pttServerId, KnDAOSourceTypes.XDM_CORP_EMERGENCY_ATTRIBUTES, query);
         } finally {
-            KnDbUtil.closeStatement(pstmt);
+            KnDbUtil.closePreparedStatement(pstmt);
         }
     }
 
@@ -1146,23 +1147,23 @@ public class KnXDMCorpMcpttInfoDAO implements ITableDAO {
         knLogger.debug(methodName, "ENTRY emergDest : mdn - ", KnGDPRTemplate.mdnList(emergDest));
         PreparedStatement pstmt = null;
         String query = null;
-        int index = 1;
         try {
             Connection conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
-            query = "DELETE FROM DG.EMERGENCY_SUBSCR_DESTINFO WHERE EMERGDEST IN (MDNLIST)";
-            query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(emergDest,query,"MDNLIST");
+            query = "DELETE FROM DG.EMERGENCY_SUBSCR_DESTINFO WHERE EMERGDEST = ?";
+            //query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(emergDest,query,"MDNLIST");
             knLogger.debug(methodName, "Executing query - ", query);
             pstmt = conn.prepareStatement(query);
             for(String emergDestStr : emergDest){
-                pstmt.setString(index++, emergDestStr);
+                pstmt.setString(1, emergDestStr);
+                pstmt.addBatch();
             }
-            pstmt.executeQuery();
+            pstmt.executeBatch();
             knLogger.debug(methodName, "Exit: Query executed successfully.");
         } catch (SQLException e) {
             throw KnDbUtil.processException(e, "Failed to delete mcptt mapping DG.EMERGENCY_SUBSCR_DESTINFO table " + e,
                     pttServerId, KnDAOSourceTypes.XDM_CORP_EMERGENCY_ATTRIBUTES, query);
         } finally {
-            KnDbUtil.closeStatement(pstmt);
+            KnDbUtil.closePreparedStatement(pstmt);
         }
     }
 

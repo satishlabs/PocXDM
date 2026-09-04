@@ -159,18 +159,18 @@ public class KnTPUserMDNMapDAO implements ITableDAO{
 		PreparedStatement pStmt = null;
 		int res = 0;
         String query = null;
-        int index = 1;
 		try {
 			KnTPUserPersistDTO tpUserPersistDTO = (KnTPUserPersistDTO) persistenceDTO;
 			conn = persistTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
             if(null != tpUserPersistDTO.getMdnList() && !tpUserPersistDTO.getMdnList().isEmpty()){
-                query = "DELETE FROM DG.THIRD_PARTY_USER_MDN_MAP WHERE MDN IN (MDNLIST)";
-                query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(tpUserPersistDTO.getMdnList(),query,"MDNLIST");
+                query = "DELETE FROM DG.THIRD_PARTY_USER_MDN_MAP WHERE MDN = ?";
+                //query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(tpUserPersistDTO.getMdnList(),query,"MDNLIST");
                 pStmt = conn.prepareStatement(query);
                 for(String mdn : tpUserPersistDTO.getMdnList()){
-                    pStmt.setString(index++, mdn);
+                    pStmt.setString(1, mdn);
+                    pStmt.addBatch();
                 }
-                res = pStmt.executeUpdate();
+                res = pStmt.executeBatch().length;
                 knLogger.debug(methodName, QRY_EXE_MSG, res);
             } else {
                 pStmt = conn.prepareStatement(DELETE_QUERY);

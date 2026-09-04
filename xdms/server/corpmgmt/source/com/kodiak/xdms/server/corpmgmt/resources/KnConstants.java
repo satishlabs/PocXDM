@@ -238,6 +238,7 @@ public class KnConstants {
     public static final int LARGE_GROUP_DISABLED = 0;
     public static final int DEFAULT_AUTHORIZED_LARGE_TG_VALUE = 1;
     public static final int DEFAULT_VIDEO_PERMISSION_VALUE = 0;
+    public static final int DEFAULT_VIDEO_PERMISSION_VALUE_FOR_BCG_GROUP = 1;
     //4RE get corp-resource-list details
     public static final String PROTOCOL_VERSION_22 = "22";
     public static final String INT_FAN_ID = "INT_FAN_ID";
@@ -269,6 +270,7 @@ public class KnConstants {
     public static final String PREV_DIR_ETAG = "0";
     public static final String NEW_DIR_ETAG = "1";
     public static final String HIERARCHY_NAME_MAP = "HIERARCHY_NAME_MAP";
+    public static final String DELETE_HIERARCHY_LIST = "DELETE_HIERARCHY_LIST";
 
 
     public static enum SUBSCR_CLIENT_TYPE {

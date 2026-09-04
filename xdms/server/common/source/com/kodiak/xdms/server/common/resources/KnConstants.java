@@ -513,6 +513,8 @@ public class KnConstants {
     public static final String MULTIMEDIAMSGFLAG = "MULTIMEDIAMSGFLAG";
     public static final String LOCATIONMSGFLAG = "LOCATIONMSGFLAG";
     public static final String URGENTMSGFLAG = "URGENTMSGFLAG";
+    public static final String SDSFEATUREFLAG = "SDSFEATUREFLAG";
+    public static final String FDFEATUREFLAG = "FDFEATUREFLAG";
 
     public static final int TEXTMSGFLAGBIT = 33;
     public static final int MULTIMEDIAMSGFLAGBIT = 34;

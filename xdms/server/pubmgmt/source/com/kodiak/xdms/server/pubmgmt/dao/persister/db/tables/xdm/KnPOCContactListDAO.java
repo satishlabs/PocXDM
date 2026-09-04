@@ -77,9 +77,6 @@ public class KnPOCContactListDAO implements ITableDAO {
             MDN + " = ?";
     public static final String QRY_UPDATE_MDN = "UPDATE " + TABLENAME + " SET " + MDN + " = ? WHERE " +
             MDN + " = ?";
-    public static final String QRY_DELETE_ALL_CONTACTS_4_MDNS = "DELETE FROM " + TABLENAME + " WHERE " +
-            MDN + " IN ";
-
     public static final String QRY_SELECT_UFMI_FOR_CONTACT_MDNS = "SELECT " + CONTACT_MDN + ", " + UFMI
             + " FROM " + TABLENAME + " WHERE " + CONTACT_MDN + " IN ";
 
@@ -131,7 +128,7 @@ public class KnPOCContactListDAO implements ITableDAO {
 
     /**
      * @param mdn
-     * @param contactMDNs
+     * @param members
      * @param persisterTxn
      * @throws KnDAOException
      *
@@ -676,22 +673,27 @@ public class KnPOCContactListDAO implements ITableDAO {
         String methodName = "deleteAllContacts(String, KnPersisterTxn)";
         knLogger.debug( methodName, "Entry : " + KnGDPRTemplate.mdnList(mdns));
         Connection conn;
-        Statement  statement = null;
+        PreparedStatement pstmt = null;
         ResultSet rs = null;
         String query = null;
         int count;
         try {
-            StringBuffer buffer = new StringBuffer(200);
-            buffer.append(QRY_DELETE_ALL_CONTACTS_4_MDNS).append(KnDbUtil.convertListToStringBuffer(mdns));
-            query = buffer.toString();
+            //StringBuffer buffer = new StringBuffer(200);
+            //buffer.append(QRY_DELETE_ALL_CONTACTS_4_MDNS).append(KnDbUtil.convertListToStringBuffer(mdns));
+            //query = buffer.toString();
+            query = QRY_DELETE_ALL_CONTACTS;
 
 
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
-            statement = conn.createStatement();
+            pstmt = conn.prepareStatement(query);
+            for (Object mdn : mdns) {
+                pstmt.setString(1, mdn.toString());
+                pstmt.addBatch();
+            }
 
             knLogger.debug( methodName, "QUERY : Executing " + query + ", persisterTxn : " +
                     persisterTxn);
-            count = statement.executeUpdate(query);
+            count = pstmt.executeBatch().length;
 
             knLogger.debug( methodName, "QUERY : Completed : "+ count);
 
@@ -706,7 +708,7 @@ public class KnPOCContactListDAO implements ITableDAO {
                     pttServerId, KnDAOSourceTypes.XDM_POCCONTACTLIST, query);
         } finally {
             KnDbUtil.closeResultSet(rs);
-            KnDbUtil.closeStatement(statement);
+            KnDbUtil.closePreparedStatement(pstmt);
             knLogger.debug(methodName, "EXIT");
         }
     }

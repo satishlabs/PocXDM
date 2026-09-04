@@ -446,7 +446,8 @@ public class KnBulkOpsConstants {
 
     public static enum XDMCORPFS2_SET {
         LOCATION_ENABLED(1),
-        EMERGENCY_CONF_TIMER_FEATURE(2);
+        EMERGENCY_CONF_TIMER_FEATURE(2),
+        MC_REACHABILITY_FLAG(5);
 
         int xdmCorpFS2_Bit;
 

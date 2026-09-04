@@ -125,19 +125,23 @@ public class KnCorpGroupListRefDAO implements ITableDAO {
         String methodName = "deleteAllCorpGroupListRef(Collection<Integer>,KnPersisterTxn )";
         knLogger.debug( methodName, "ENTRY : sublistIdsList size - " , getSize(sublistIdsList));
         Connection conn;
-        Statement stmt = null;
+        PreparedStatement pstmt = null;
         String query = null;
         try {
             KnQueryMapper queryMapper = KnQueryMapper.getInstance();
             query = queryMapper.getQuery(KnPersisterConstants.DELETE_GROUP_LIST_REF);
             knLogger.debug( methodName, "Executing query -  " , query);
-            query = replaceContactWithValue(query, SUBLISTID, formIntegerCommaSeperatedIdList(sublistIdsList));
-            knLogger.debug( methodName, "Executing query -  " , query);
+            //query = replaceContactWithValue(query, SUBLISTID, formIntegerCommaSeperatedIdList(sublistIdsList));
+            //knLogger.debug( methodName, "Executing query -  " , query);
              conn = persisterTxn.getDBConnection(xdmsHome, KnDBConst.DataStores.XDM_SHARED_DATA, false);
             //conn = persisterTxn.getDBConnection(xdmsHome, false);
-            stmt = conn.createStatement();
+            pstmt = conn.prepareStatement(query);
             knLogger.debug( methodName, "Executing query -  " , query);
-            stmt.executeUpdate(query);
+            for(Integer sublistId : sublistIdsList) {
+                pstmt.setInt(1, sublistId);
+                pstmt.addBatch();
+            }
+            pstmt.executeBatch();
             knLogger.debug( methodName, "Exit: Query executed successfully");
         } catch (KnDAOException e) {
             knLogger.error( methodName, "KnDAOException occured while deleting corp group list reference - " , e);
@@ -148,7 +152,7 @@ public class KnCorpGroupListRefDAO implements ITableDAO {
                     xdmsHome, KnDAOSourceTypes.XDM_CORP_GROUP_LIST_REF, query);
         }
         finally {
-            KnDbUtil.closeStatement(stmt);
+            KnDbUtil.closePreparedStatement(pstmt);
         }
     }
 

@@ -114,10 +114,14 @@ public class KnXDMCorpGroupMemberCountDAO implements ITableDAO {
             query = queryMapper.getQuery(DELETE_ALL_GROUPS_MEMBER_COUNT_ENTRY);
             //conn = persisterTxn.getDBConnection(pttServerId, false);
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
-            query = replaceContactWithValue(query, GROUPIDS, formIntegerCommaSeperatedIdList(groupIdsList));
+            //query = replaceContactWithValue(query, GROUPIDS, formIntegerCommaSeperatedIdList(groupIdsList));
             pstmt = conn.prepareStatement(query);
             knLogger.debug( methodName, "Executing query - " , "'" , query , "'");
-            pstmt.executeQuery();
+            for (Integer groupId : groupIdsList) {
+                pstmt.setInt(1, groupId);
+                pstmt.addBatch();
+            }
+            pstmt.executeBatch();
             knLogger.debug( methodName, "groupIdsList - " , groupIdsList, "EXIT: Query executed successfully");
         } catch (KnDAOException e) {
             knLogger.error( methodName, "KnDAOException occured while deleteing the corp group member count entry - " , e);
@@ -198,10 +202,17 @@ public class KnXDMCorpGroupMemberCountDAO implements ITableDAO {
             KnQueryMapper queryMapper = KnQueryMapper.getInstance();
             query = queryMapper.getQuery(UPDATE_ALL_GROUPS_MEMBER_COUNT_ENTRY);
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
-            query = replaceContactWithValue(query, GROUPIDS, formIntegerCommaSeperatedIdList(groupIdsList));
+            //query = replaceContactWithValue(query, GROUPIDS, formIntegerCommaSeperatedIdList(groupIdsList));
             pstmt = conn.prepareStatement(query);
             knLogger.debug(methodName, "Executing query - ", "'", query, "'");
-            affectedRows = pstmt.executeUpdate();
+            for(Integer groupIds: groupIdsList) {
+                pstmt.setInt(1, groupIds);
+                pstmt.addBatch();
+            }
+            int[] batchResults = pstmt.executeBatch();
+            for (int result : batchResults) {
+                affectedRows += result;
+            }
         } catch (KnDAOException e) {
             knLogger.error(methodName, "KnDAOException occurred while deleting the corp group member count entry - ", e);
             throw e;

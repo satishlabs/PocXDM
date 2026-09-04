@@ -211,17 +211,17 @@ public class KnSimulSessionDocDAO implements ITableDAO {
         PreparedStatement pStatement = null;
         ResultSet rs = null;
         String query = null;
-        int index = 1;
         try {
-            query = "DELETE FROM DG.SIMULSESSION_DOC WHERE MDN IN (MDNLIST)";
-            query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(mdnList,query,"MDNLIST");
+            query = "DELETE FROM DG.SIMULSESSION_DOC WHERE MDN = ?";
+            //query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(mdnList,query,"MDNLIST");
             conn = persistTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
             pStatement = conn.prepareStatement(query);
             for(String mdn : mdnList){
-                pStatement.setString(index++, mdn);
+                pStatement.setString(1, mdn);
+                pStatement.addBatch();
             }
             knLogger.debug(methodName, "QUERY : Executing ", query, " persisterTxn : ", persistTxn);
-            int cnt = pStatement.executeUpdate();
+            int cnt = pStatement.executeBatch().length;
             knLogger.debug(methodName, "QUERY : Completed.");
 
         } catch (KnDAOException e) {

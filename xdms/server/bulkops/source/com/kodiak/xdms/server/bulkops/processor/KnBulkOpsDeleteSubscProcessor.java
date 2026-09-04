@@ -394,8 +394,14 @@ public class KnBulkOpsDeleteSubscProcessor {
             }
 
             if(xcapMobileSync) {
+                // Notify only MDNs that passed validation and were actually deleted; the request set (existingProfilesMap) still holds failed MDNs
+                List<String> deletedMdns = bulkOpsInfoUtil.fetchMDNFromSubscriberList(bulkSubsProvInfoDTO.getSubscriberList());
                 List<KnSubscrEXDMSNotifyDto> notifyDtoList = new ArrayList<>();
-                existingProfilesMap.forEach((mdn, profile) -> {
+                for (String mdn : deletedMdns) {
+                    KnBulkSubsProfileDTO profile = existingProfilesMap.get(mdn);
+                    if (profile == null) {
+                        continue;
+                    }
                     KnSubscrEXDMSNotifyDto knSubscrEXDMSNotifyDto = new KnSubscrEXDMSNotifyDto();
                     knSubscrEXDMSNotifyDto.setCorpid(corpId);
                     knSubscrEXDMSNotifyDto.setMdn(mdn);
@@ -416,9 +422,13 @@ public class KnBulkOpsDeleteSubscProcessor {
                     knSubscrEXDMSNotifyDto.setNetworkName(profile.getNetworkName());
                     knSubscrEXDMSNotifyDto.setDeviceId(mdn);
                     notifyDtoList.add(knSubscrEXDMSNotifyDto);
-                });
-                knLogger.info(methodName, "Publishing micro service notify for user- ");
-                bulkOpsNotifyUtil.startNotifyMicroServicesJob(notifyDtoList);
+                }
+                if (!notifyDtoList.isEmpty()) {
+                    knLogger.info(methodName, "Publishing micro service notify for user- ");
+                    bulkOpsNotifyUtil.startNotifyMicroServicesJob(notifyDtoList);
+                } else {
+                    knLogger.info(methodName, "Skipping micro service notify - no successfully deleted MDNs ");
+                }
             }
 
             KnGeneralCacheUtil generalCacheUtil = new KnGeneralCacheUtil();
@@ -440,19 +450,25 @@ public class KnBulkOpsDeleteSubscProcessor {
             }
             KnStatisticsManagerImpl.getInstance().increment(successPegs);
 
-            if (!provRespDTO.getUserProfileMdns().isEmpty()) {
-                knLogger.debug(" profile Mdns are ", provRespDTO.getUserProfileMdns());
-                KnIPUserProfileDTO ipUserProfileDTO = new KnIPUserProfileDTO();
-                ipUserProfileDTO.setCorpId(String.valueOf(corpId));
-                ipUserProfileDTO.setUserProfileMdns(provRespDTO.getUserProfileMdns());
+            Map<String, List<String>> userProfileMdnMap = provRespDTO.getUserProfileMdnMap();
+            if (userProfileMdnMap != null && !userProfileMdnMap.isEmpty()) {
+                knLogger.debug(methodName, "userProfileMdnMap entries to process - ", userProfileMdnMap.size());
+                for (Map.Entry<String, List<String>> entry : userProfileMdnMap.entrySet()) {
+                    String mdn = entry.getKey();
+                    List<String> upms = entry.getValue();
+                    knLogger.debug(methodName, "User profile Mdns for mdn - ", KnGDPRTemplate.mdn(mdn), " are ", KnGDPRTemplate.mdnList(upms));
+                    KnIPUserProfileDTO ipUserProfileDTO = new KnIPUserProfileDTO();
+                    ipUserProfileDTO.setCorpId(String.valueOf(corpId));
+                    ipUserProfileDTO.setUserProfileMdns(upms);
 
-                String deleteUpmJsonString = commonInfoUtil.ObjToJson(ipUserProfileDTO);
-                Long transactionId = System.currentTimeMillis();
-                knLogger.debug(methodName, "transactionId - ", transactionId);
-                KnAsyncJobDTO knAsyncJobDTO = bulkOpsNotifyUtil.createJobNotifyDTO(String.valueOf(corpId), transactionId.toString()
-                        , null, com.kodiak.xdms.server.common.resources.KnConstants.UPM_OPERATION_TYPE.DELETE_USER_PROFILE_MDN.Value(), null,
-                        com.kodiak.xdms.server.common.resources.KnConstants.UPM_RESOURCE_TYPE.MDN.Value(), deleteUpmJsonString, com.kodiak.xdms.server.common.resources.KnConstants.UPM_JOB_STATUS.NEW.Value(), null);
-                bulkOpsNotifyUtil.addJob(knAsyncJobDTO);
+                    String deleteUpmJsonString = commonInfoUtil.ObjToJson(ipUserProfileDTO);
+                    Long transactionId = System.currentTimeMillis();
+                    knLogger.debug(methodName, "transactionId - ", transactionId);
+                    KnAsyncJobDTO knAsyncJobDTO = bulkOpsNotifyUtil.createJobNotifyDTO(String.valueOf(corpId), transactionId.toString()
+                            , null, com.kodiak.xdms.server.common.resources.KnConstants.UPM_OPERATION_TYPE.DELETE_USER_PROFILE_MDN.Value(), null,
+                            com.kodiak.xdms.server.common.resources.KnConstants.UPM_RESOURCE_TYPE.MDN.Value(), deleteUpmJsonString, com.kodiak.xdms.server.common.resources.KnConstants.UPM_JOB_STATUS.NEW.Value(), null);
+                    bulkOpsNotifyUtil.addJob(knAsyncJobDTO);
+                }
             }
 
             if (provRespDTO.isDeleteDeviceNotify()) {
@@ -545,7 +561,7 @@ public class KnBulkOpsDeleteSubscProcessor {
                                                            KnPendingTxnInfoDTO pendingTxnInfoDTO, String mdn,
                                                            String pttserverId, KnPersisterTxn persisterTxn) throws KnDAOException {
         String methodName = "populateKnPayLoadIP";
-        knLogger.debug(methodName, "ENTRY: populateKnPayLoadIP - ", mdn);
+        knLogger.debug(methodName, "ENTRY: populateKnPayLoadIP - ", KnGDPRTemplate.mdn(mdn));
         IXDMServerDAO xdmDAO = KnFactorySelector.getDAOFactory(KnFactorySelector.DB).createXDMServerDAO(pttserverId);
         if (!taskBitSet.get(KnGeneralUtil.ASYNC_TASK_ID.notifyAllGroupMembers.get()) && xdmDAO.IsMdnPresentAsGroupMember(mdn, persisterTxn)) {
             taskBitSet.set(KnGeneralUtil.ASYNC_TASK_ID.notifyAllGroupMembers.get(), true);
@@ -1107,6 +1123,7 @@ public class KnBulkOpsDeleteSubscProcessor {
         provXDMServerDAO.deleteSubsAliasId(mdnList, persisterTxn);
 
         List<String> UserProfileMdns = new ArrayList<>();
+        Map<String, List<String>> userProfileMdnMap = new HashMap<>();
         List<String> mdnListForUPM = mdnList.stream()
                 .filter(m -> {
                     KnBulkSubsProfileDTO profile = existingProfilesMap.get(m);
@@ -1119,6 +1136,7 @@ public class KnBulkOpsDeleteSubscProcessor {
             peers.remove(mdn);
             if (!peers.isEmpty()) {
                 UserProfileMdns.addAll(peers);
+                userProfileMdnMap.put(mdn, peers);
             }
         }
         if (!UserProfileMdns.isEmpty()) {
@@ -1170,7 +1188,7 @@ public class KnBulkOpsDeleteSubscProcessor {
             }
         }
         responseDTO.setDirChgDTOs(dirChgDTOList);
-        responseDTO.setUserProfileMdns(UserProfileMdns);
+        responseDTO.setUserProfileMdnMap(userProfileMdnMap);
         responseDTO.setSuccessPegs(successPegs);
 
         knLogger.debug(methodName, "EXIT: Delete Subscriber operation processed successfully");

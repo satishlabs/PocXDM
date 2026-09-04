@@ -538,15 +538,21 @@ public class KnXDMSubscriberInfoDAO implements ITableDAO {
                     String mdn = rs.getString(1).trim();
                     String addOnPackage = rs.getString(2);
                     Map<String, Object> packageMap = SubscriberPackageMap.get(mdn);
-                    if (packageMap.containsKey(mdn)) {
-                        addOnPackageList = (List<String>) packageMap.get(mdn);
+                    if (packageMap == null) {
+                        packageMap = new HashMap<>();
+                        packageMap.put("tierPackage", null);
+                        packageMap.put("addOnPackage", new ArrayList<>());
+                        SubscriberPackageMap.put(mdn, packageMap);
+                        knLogger.warn(methodName, "MDN has addon package but no tier package row, initializing empty packageMap for MDN: ", mdn);
+                    }
+                    if (packageMap.containsKey("addOnPackage")) {
+                        addOnPackageList = (List<String>) packageMap.get("addOnPackage");
                         addOnPackageList.add(addOnPackage);
                     } else {
                         addOnPackageList = new ArrayList<>();
                         addOnPackageList.add(addOnPackage);
+                        packageMap.put("addOnPackage", addOnPackageList);
                     }
-                    packageMap.put("addOnPackage", addOnPackageList);
-                    SubscriberPackageMap.put(mdn, packageMap);
                 }
             }
             knLogger.debug(methodName, "Exit: SubscriberPackageMap size", SubscriberPackageMap.size());

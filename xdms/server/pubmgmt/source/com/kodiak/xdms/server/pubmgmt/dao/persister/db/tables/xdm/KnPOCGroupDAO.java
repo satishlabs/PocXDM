@@ -71,7 +71,7 @@ public class KnPOCGroupDAO implements ITableDAO {
             + " WHERE " + OWNER_MDN + " = ?";
     public static final String QRY_SELECT_ALL_POC_GROUPS = "SELECT " + POC_GROUP_ID + ", " + LIST_SERVICE_URI
             + " FROM " + TABLENAME + " WHERE " + OWNER_MDN + " = ?";
-    public static final String QRY_DELETE_ALL_GROUPS = "DELETE FROM " + TABLENAME + " WHERE " + POC_GROUP_ID + " IN ";
+    public static final String QRY_DELETE_ALL_GROUPS = "DELETE FROM " + TABLENAME + " WHERE " + POC_GROUP_ID + " = ?";
     public static final String QRY_UPDATE_All_GROUPS_FOR_MDN = "UPDATE " + TABLENAME + " SET " + OWNER_MDN + " = ? "
             + ", " + LIST_SERVICE_URI + " = ? WHERE " + POC_GROUP_ID + " = ?";
     public static final String QRY_SELECT_POC_GROUP_IDS_4_MDNS = "SELECT " + POC_GROUP_ID + " FROM " + TABLENAME
@@ -344,20 +344,25 @@ public class KnPOCGroupDAO implements ITableDAO {
         final String methodName = "deleteAllPocGroups(Collection<Integer>, KnPersisterTxn)";
         knLogger.debug( methodName, pocGroupIds);
         Connection conn;
-        Statement statement = null;
+        PreparedStatement pstmt = null;
         ResultSet rs = null;
         String query = null;
 
         try {
-            StringBuffer buffer = new StringBuffer(200);
-            buffer.append(QRY_DELETE_ALL_GROUPS).append(KnDbUtil.convertListToIntBuffer(pocGroupIds));
-            query = buffer.toString();
+            //StringBuffer buffer = new StringBuffer(200);
+            //buffer.append(QRY_DELETE_ALL_GROUPS).append(KnDbUtil.convertListToIntBuffer(pocGroupIds));
+            //query = buffer.toString();
+            query = QRY_DELETE_ALL_GROUPS;
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
-            statement = conn.createStatement();
+            pstmt = conn.prepareStatement(query);
 
             knLogger.debug( methodName, "QUERY : Executing " + query + ", persisterTxn : " +
                     persisterTxn);
-            statement.execute(query);
+            for(Integer pocGroupId : pocGroupIds){
+                pstmt.setInt(1, pocGroupId);
+                pstmt.addBatch();
+            }
+            pstmt.executeBatch();
             knLogger.debug( methodName, "QUERY : Completed : ");
             knLogger.info( methodName, "Delete all groups :groupsIds:  " + pocGroupIds);
         } catch (SQLException e) {
@@ -370,7 +375,7 @@ public class KnPOCGroupDAO implements ITableDAO {
                     pttServerId, KnDAOSourceTypes.XDM_POCGROUP, query);
         } finally {
             KnDbUtil.closeResultSet(rs);
-            KnDbUtil.closeStatement(statement);
+            KnDbUtil.closePreparedStatement(pstmt);
             knLogger.debug(methodName, "EXIT");
         }
     }

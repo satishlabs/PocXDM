@@ -327,6 +327,7 @@ public class KnFeatureBitJobDbUtil {
                String xdmCorpfs2Set = rs.getString("XDMCORPFS2_SET");
                if (xdmCorpfs2Set == null || xdmCorpfs2Set.equals("<NULL>")) {
                    xdmCorpfs2Set = KnGeneralUtil.getDefaultXDMCorpFS2Set(KnConstants.XDMCORPFS2_SET.EMERGENCY_CONF_TIMER_FEATURE.value(),true);
+                   xdmCorpfs2Set = KnGeneralUtil.calculateXDMCorpFS2(xdmCorpfs2Set, KnConstants.XDMCORPFS2_SET.MC_REACHABILITY_FLAG.value(), true);
                }
                corpDetails.setXdmCorpfs2_set(xdmCorpfs2Set);
                corpDetailsList.add(corpDetails);

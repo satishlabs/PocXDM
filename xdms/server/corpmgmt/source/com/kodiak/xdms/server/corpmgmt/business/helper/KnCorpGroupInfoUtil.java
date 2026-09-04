@@ -575,6 +575,43 @@ public class KnCorpGroupInfoUtil {
         }
     }
 
+    public Map<Integer, Integer> getGroupTypeMap(Collection<Integer> groupIds, String xdmsHome, KnPersisterTxn persisterTxn)
+            throws KnCorpBOException {
+        final String methodName = "getGroupTypeMap(Collection<Integer>, String, KnPersisterTxn)";
+        knLogger.debug(methodName, "ENTRY : groupIds - ", groupIds);
+        KnCorpXdmDAO corpXdmDao = new KnCorpXdmDAO(xdmsHome);
+        try {
+            Map<Integer, Integer> groupTypeMap = new HashMap<Integer, Integer>();
+            for (Collection<Integer> batch : splitIntoBatches(groupIds, 100)) {
+                knLogger.debug(methodName, "Fetching group types for batch size - ", batch != null ? batch.size() : 0);
+                groupTypeMap.putAll(corpXdmDao.getGroupTypeMap(batch, persisterTxn));
+            }
+            return groupTypeMap;
+        } catch (KnDAOException e) {
+            knLogger.error(methodName, "KnDAOException occured while retrieving group type map - ", e);
+            throw new KnCorpBOException(e.getErrorCode(), e.getErrorMessage(), e);
+        }
+    }
+
+    private List<Collection<Integer>> splitIntoBatches(Collection<Integer> values, int batchSize) {
+        List<Collection<Integer>> batches = new ArrayList<Collection<Integer>>();
+        if (values == null || values.isEmpty() || batchSize <= 0) {
+            return batches;
+        }
+        List<Integer> currentBatch = new ArrayList<Integer>(batchSize);
+        for (Integer value : values) {
+            currentBatch.add(value);
+            if (currentBatch.size() == batchSize) {
+                batches.add(new ArrayList<Integer>(currentBatch));
+                currentBatch.clear();
+            }
+        }
+        if (!currentBatch.isEmpty()) {
+            batches.add(new ArrayList<Integer>(currentBatch));
+        }
+        return batches;
+    }
+
     public Map<Integer, HashMap<String, Collection<String>>> getAllSubscribersGroupList(Collection<String> mdnList, int corpId, String
             xdmsHomePttId, KnPersisterTxn persisterTxn) throws KnCorpBOException {
         final String methodName = "getAllSubscribersGroupList(Collection<String>, int, String, KnPersisterTxn)";
@@ -5476,4 +5513,15 @@ public class KnCorpGroupInfoUtil {
         return clusterId;
     }
 
+    public String getPocHomeByHierarchyId(int corpid,String hierarchyId, String xdmsHome, KnPersisterTxn persisterTxn) throws KnDAOException {
+        final String methodName = "getPocHomeByHierarchyId()";
+        knLogger.debug(methodName, "ENTRY : hierarchyId - ", hierarchyId);
+        try {
+            ICorpXdmDAO corpXdmDao = new KnCorpXdmDAO(xdmsHome);
+            return corpXdmDao.getPocHomeByHierarchyIdFromAnchor(corpid,hierarchyId, persisterTxn);
+        } catch (KnDAOException e) {
+            knLogger.error(methodName, "KnDAOException occurred while retrieving pocHome by hierarchyId - ", e);
+            throw e;
+        }
+    }
 }

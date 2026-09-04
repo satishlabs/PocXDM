@@ -152,7 +152,7 @@ public class KnXDMCorpTGSSGrpDAO implements ITableDAO {
         String methodName = "deleteTGSSGrps(List, KnPersisterTxn )";
         knLogger.debug(methodName, "ENTRY : grpIdList - ", grpIdList);
         Connection conn;
-        Statement stmt = null;
+        PreparedStatement pstmt = null;
         String query = null;
         ResultSet rs = null;
         try {
@@ -165,11 +165,15 @@ public class KnXDMCorpTGSSGrpDAO implements ITableDAO {
                 }
             }
             knLogger.debug(methodName, "grpIds - ", grpIds);
-            query = replaceContactWithValue(query, GROUPIDS, formCommaSeperatedIdList(grpIds));
+            //query = replaceContactWithValue(query, GROUPIDS, formCommaSeperatedIdList(grpIds));
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
-            stmt = conn.createStatement();
+            pstmt = conn.prepareStatement(query);
             knLogger.debug(methodName, "Exeuting query - ", query);
-            stmt.executeQuery(query);
+            for(Integer grpId: grpIdList) {
+                pstmt.setInt(1, grpId);
+                pstmt.addBatch();
+            }
+            pstmt.executeBatch();
             knLogger.debug(methodName, "Executing query - ", "'", query, "'");
 
             knLogger.debug(methodName, "Query executed successfully");
@@ -180,7 +184,7 @@ public class KnXDMCorpTGSSGrpDAO implements ITableDAO {
                     pttServerId, KnDAOSourceTypes.XDM_SSCHNLGRP, query);
         } finally {
             KnDbUtil.closeResultSet(rs);
-            KnDbUtil.closeStatement(stmt);
+            KnDbUtil.closePreparedStatement(pstmt);
             knLogger.debug(methodName, "EXIT: deleteTGSSGrps");
         }
     }

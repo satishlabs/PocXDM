@@ -1077,6 +1077,7 @@ public class KnBulkOpsCreateSubscProcessor {
 
                 String xdmCorpFS2Set = KnGeneralUtil.getDefaultXDMCorpFS2Set(KnBulkOpsConstants.XDMCORPFS2_SET.EMERGENCY_CONF_TIMER_FEATURE.value(), KnBulkOpsConstants.TRUE);
                 xdmCorpFS2Set = featureSetUtil.calculateXDMCorpFS2(xdmCorpFS2Set, KnBulkOpsConstants.XDMCORPFS2_SET.EMERGENCY_CONF_TIMER_FEATURE.value(), KnBulkOpsConstants.TRUE);
+                xdmCorpFS2Set = featureSetUtil.calculateXDMCorpFS2(xdmCorpFS2Set, KnBulkOpsConstants.XDMCORPFS2_SET.MC_REACHABILITY_FLAG.value(), KnBulkOpsConstants.TRUE);
                 corpProfileInfoDTO.setXdmCorpFS2Set(xdmCorpFS2Set);
 
                 // Set POC home for new corporate

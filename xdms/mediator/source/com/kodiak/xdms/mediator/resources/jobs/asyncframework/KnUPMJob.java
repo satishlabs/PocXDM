@@ -500,6 +500,7 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
             if (grpResponseDTO != null) {
                 if (null != upmGroups && !upmGroups.isEmpty()) {
                     knLogger.info("EntryTime::", System.currentTimeMillis());
+                    boolean isNonMcx = false;
                     for (KnCorpGroupListInfoDTO groupInfo : upmGroups) {
                         if (assignGroupTaskResult.getMcxGrpInd() == 1) {
                             knLogger.debug("InsideMCX");
@@ -510,17 +511,20 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
                                     groupInfo.getGrpMemProps().getVideoCallReceiveAllowed(),
                                     groupInfo.getGrpMemProps().getVideoInCallAllowed());
                             List<KnCorpEXDMSNotifyDto> grpNotifyDtoList = commonMediator.getModifyMcxGrpMicroSrvNotifyDto(grpResponseDTO, Integer.parseInt(corpId),
-                                    groupInfo.getGroupID(), eTagcorpResponseDTO.getUserProfileId(), memberProps, grpResponseDTO.getOldLmrInteropFlag());
+                                    groupInfo.getGroupID(), eTagcorpResponseDTO.getUserProfileId(), memberProps, grpResponseDTO.getOldLmrInteropFlag(),groupInfo.getGroupType());
                             microserviceNotify.addAll(grpNotifyDtoList);
                             knLogger.info("grpNotifyDtoList::", grpNotifyDtoList.size());
-                            if (!microserviceNotify.isEmpty()) {
-                                commonMediator.startNotifyMicroServicesJob(microserviceNotify);
-                            }
                         } else {
-                            knLogger.debug("InsideNonMCX", eTagcorpResponseDTO.getChangeLogMap());
-                            commonMediator.startNotifyMicroServicesJob(eTagcorpResponseDTO.getChangeLogMap(), Integer.parseInt(corpId), grpResponseDTO.getGroupCreatedBy(),
-                                    grpResponseDTO.getLmrIntropCapable(), grpResponseDTO.getMcxGrpInd(), grpResponseDTO.getOldLmrInteropFlag());
+                            isNonMcx = true;
                         }
+                    }
+                    if (!microserviceNotify.isEmpty()) {
+                        commonMediator.startNotifyMicroServicesJob(microserviceNotify);
+                    }
+                    if(isNonMcx){
+                        knLogger.debug("InsideNonMCX", eTagcorpResponseDTO.getChangeLogMap());
+                        commonMediator.startNotifyMicroServicesJob(eTagcorpResponseDTO.getChangeLogMap(), Integer.parseInt(corpId), grpResponseDTO.getGroupCreatedBy(),
+                                grpResponseDTO.getLmrIntropCapable(), grpResponseDTO.getMcxGrpInd(), grpResponseDTO.getOldLmrInteropFlag());
                     }
                 }
             }

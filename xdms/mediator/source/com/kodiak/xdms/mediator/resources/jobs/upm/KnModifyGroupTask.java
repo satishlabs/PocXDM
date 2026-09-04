@@ -417,6 +417,9 @@ public class KnModifyGroupTask extends KnAbstractTask {
                     contact.setCallInitiatePermission(mem.getCallInitiatePermission());
                     contact.setCallReceivePermission(mem.getCallReceivePermission());
                     contact.setInCallPermission(mem.getInCallPermission());
+                    contact.setVideoCallInitiatePermission(mem.getVideoCallInitiatePermission());
+                    contact.setVideoCallReceivePermission(mem.getVideoCallReceivePermission());
+                    contact.setVideoInCallPermission(mem.getVideoInCallPermission());
                     contact.setLocWatcher(mem.getLocWatcher());
                     contact.setIsOSMAuthorize(mem.getIsOSMAuthorize());
                     modifiedGrpMembers.add(contact);

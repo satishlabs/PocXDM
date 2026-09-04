@@ -1071,6 +1071,14 @@ public class KnPubMCPTTController implements IPubMCPTTController {
                                 }
                             }
                         }
+                        if ((protocolVersion >= KnConstants.PROTOCOL_VERSION_29) && isKodiakClient) {
+                            gpType = Integer.parseInt(groupInfo.getGroupType());
+                            knLogger.debug(methodName, "Group Type is ", String.valueOf(gpType));
+                            if (gpType != 2 && groupInfo.getVideoPermission() != null) {
+                                xdmMdnInfoDTO2.setGroupLevelVideoCallPermExtM(groupInfo.getVideoPermission());
+                            }
+                        }
+
                         if (null != xdmMdnInfoDTO2.getOnNetworkMcPttGroupInfoIsAbdgGroupExtM() && (xdmMdnInfoDTO2.getOnNetworkMcPttGroupInfoIsAbdgGroupExtM() == 1)) {
                             abdgMDNInfoDTOList.add(xdmMdnInfoDTO2);
                         } else if((null != xdmMdnInfoDTO2.getIsTgssGroupExtM()) && (xdmMdnInfoDTO2.getIsTgssGroupExtM() == 1)) {
@@ -1191,7 +1199,18 @@ public class KnPubMCPTTController implements IPubMCPTTController {
             knLogger.debug(" pttSettingFlag ",pttSettingFlag);
             if ( protocolVersion >= PROTOCOL_VERSION_29 && pttSettingFlag) {
                 String templateDocId = subsAddlInfo.getPttSettingDocId();
-                templateDocId = genInfoUtil.getDefaultPTTSettingDocValue(subsProfilePublic.getCorpId(),subsProfilePublic.getHierarchyId(),subsAddlInfo.getPttSettingDocId(),persisterTxn);
+                if (templateDocId == null) {
+                    ArrayList<String> newMdnList = new ArrayList<>();
+                    newMdnList.add(reqMdn);
+                    List<String> realMdnForProfileMdn = genInfoUtil.getBaseMdn(newMdnList, persisterTxn);
+                    if (realMdnForProfileMdn != null && !realMdnForProfileMdn.isEmpty()) {
+                        KnPocSubsAddlInfoDTO subsAddlInfo1 = pubInfoUtil.getSubsAddlDetails(realMdnForProfileMdn.getFirst(), persisterTxn);
+                        if (subsAddlInfo1 != null && subsAddlInfo1.getPttSettingDocId() != null) {
+                            templateDocId = subsAddlInfo1.getPttSettingDocId();
+                        }
+                    }
+                }
+                templateDocId = genInfoUtil.getDefaultPTTSettingDocValue(subsProfilePublic.getCorpId(),subsProfilePublic.getHierarchyId(),templateDocId,persisterTxn);
                 knLogger.debug(methodName, "started PTT Setting config doc -",templateDocId);
                 Integer apnid = xdmDAO.getSubsApnId(reqMdn, persisterTxn);
                 String xcapRootUri = genInfoUtil.getXCAPRootURI(apnid, persisterTxn, false);
@@ -1212,7 +1231,7 @@ public class KnPubMCPTTController implements IPubMCPTTController {
                 resourceListUri.append(CLIENTSUPPORT_PTTSETTING_DOC_CONTEXT);
                 resourceListUri.append("/").append(templateDocId);
                 result.setPttSettingUri(resourceListUri.toString());
-                result.setPttEtag(subsProfilePublic.getProfileLastUpdated());
+                result.setPttEtag(System.currentTimeMillis());
                 knLogger.debug(methodName, "PttSetting URL - ", resourceListUri.toString(),", etag: ", subsProfilePublic.getProfileLastUpdated());
 
             }

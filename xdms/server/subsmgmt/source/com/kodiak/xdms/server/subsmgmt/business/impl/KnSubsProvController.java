@@ -43,6 +43,7 @@ import com.kodiak.utilities.featuresetupgrade.util.KnUpgardeFS;
 import com.kodiak.utilities.featuresetupgrade.util.KnUpgardeFSConfig;
 import com.kodiak.utilities.kuidgenerator.KnKUIDConstants;
 import com.kodiak.utilities.kuidgenerator.KnKUIDGenerator;
+import com.kodiak.vault.KnVaultCacheManager;
 import com.kodiak.xdms.server.common.dto.common.KnRecordingTargetInfoDTO;
 import com.kodiak.xdms.server.common.dto.persistdat.KnDeviceAddlInfoPersistDTO;
 import com.kodiak.xdms.server.common.resources.KnConstants.SUBSCRIBERS_CLIENT_TYPE;
@@ -7391,13 +7392,7 @@ public class KnSubsProvController implements ISubsProvController {
             KnSubsConfigParams subsConfigParams = new KnSubsConfigParams();
             //Map<String, Map<String, String>> Ver1Keys = subsConfigParams.getVersion1Ids(mapIds);
             Map<String, Map<String, String>> Ver1Keys = subsConfigParams.getParamKeys(String.valueOf(subsProfileRespDTO.getClientPVmajorVer()), mapIds);
-            String googleMapsApiKeyValue = KnCommonVaultUtil.getKeyFromVault(GOOGLE_MAPS_API_PATH, GOOGLE_MAPS_API_KEY);
             loaderResponse = loader.getCongiurationParamValues(Ver1Keys);
-            if (Ver1Keys.containsKey(KnSubConfigConstants.G_API_KEY)) {
-                loaderResponse.put(KnSubConfigConstants.G_API_KEY, googleMapsApiKeyValue);
-            }
-            loaderResponse.put(KnSubConfigConstants.G_API_KEY, googleMapsApiKeyValue);
-            knLogger.info("loaderResponse ---- ", loaderResponse);
             String corpFS2 = null;
             String activeFS2 = null;
             //retrieving the Ext CorpId and calcluating activeFS.
@@ -7422,6 +7417,40 @@ public class KnSubsProvController implements ISubsProvController {
             subsConfigDTO.setActiveFS2(newActiveFS2);
             subsConfigDTO.setOldActiveFS2(subsProfileRespDTO.getActiveFS2());
             subsConfigDTO.setSubscriberFS2(subsFS2);
+
+            boolean iosClient = KnGeneralUtil.getFeatureBitValue(newActiveFS2, com.kodiak.common.resources.KnConstants.FEATURE_SET.REMOTEPUSHNOTIFICATION.value());
+            boolean iosHybrid= KnGeneralUtil.getFeatureBitValue(newActiveFS2, com.kodiak.common.resources.KnConstants.FEATURE_SET.HYBRID_IOS_BIT.value());
+            if (clientPVMajorVersion >= PV_35) {
+                if (subsConfigDTO.getClientType() == SUBSCRIBERS_CLIENT_TYPE.DISPATCH.value()) {
+                    knLogger.debug(methodName, "Dispatch Client detected, Adding Google Maps API Key for WDS");
+                    String googleMapsAndroidValue = KnVaultCacheManager.getInstance().getValueFromVault(
+                            GOOGLE_MAPS_API_WDS_KEY_PATH, GOOGLE_MAPS_API_WDS_KEY);
+                    if (googleMapsAndroidValue != null && !googleMapsAndroidValue.isEmpty()) {
+                        loaderResponse.put(KnSubConfigConstants.G_API_KEY, googleMapsAndroidValue);
+                    }
+                } else if (iosClient || iosHybrid) {
+                    knLogger.debug(methodName, "iOS detected. Adding Google Maps API Key to loaderResponse.");
+                    String googleMapsIosValue = KnVaultCacheManager.getInstance().getValueFromVault(
+                            GOOGLE_MAPS_IOS_API_PATH, GOOGLE_MAPS_IOS_API_KEY);
+                    if (googleMapsIosValue != null && !googleMapsIosValue.isEmpty()) {
+                        loaderResponse.put(KnSubConfigConstants.G_API_KEY, googleMapsIosValue);
+                    }
+                } else {
+                    knLogger.debug(methodName, "Android OS detected. Adding Google Maps API Key to loaderResponse.");
+                    String googleMapsAndroidValue = KnVaultCacheManager.getInstance().getValueFromVault(
+                            GOOGLE_MAPS_ANDROID_API_PATH, GOOGLE_MAPS_ANDROID_API_KEY);
+                    if (googleMapsAndroidValue != null && !googleMapsAndroidValue.isEmpty()) {
+                        loaderResponse.put(KnSubConfigConstants.G_API_KEY, googleMapsAndroidValue);
+                    }
+                }
+            } else if (Ver1Keys != null && Ver1Keys.containsKey(KnSubConfigConstants.G_API_KEY)) {
+                String googleMapsApiKeyValue = KnVaultCacheManager.getInstance().getValueFromVault(GOOGLE_MAPS_API_PATH, GOOGLE_MAPS_API_KEY);
+                knLogger.debug(methodName, "Adding Google Maps API Key to loaderResponse from Vault.");
+                if (googleMapsApiKeyValue != null && !googleMapsApiKeyValue.isEmpty()) {
+                    loaderResponse.put(KnSubConfigConstants.G_API_KEY, googleMapsApiKeyValue);
+                }
+            }
+            knLogger.info("loaderResponse ---- ", loaderResponse);
             boolean cleanUpTGSData = false;
 
             Map<String, KnOPSubsProfileInfoDTO> mdnUpmFsMap = null;
@@ -9700,6 +9729,7 @@ public class KnSubsProvController implements ISubsProvController {
             corpProfilePersistDTO.setHierarchyType(corpProfileInfoDTO.getHierarchyType());
             String xdmCorpFS2Set = KnGeneralUtil.getDefaultXDMCorpFS2Set(XDMCORPFS2_SET.EMERGENCY_CONF_TIMER_FEATURE.value(), com.kodiak.common.resources.KnConstants.TRUE);
             xdmCorpFS2Set = featureSetUtil.calculateXDMCorpFS2(xdmCorpFS2Set, XDMCORPFS2_SET.EMERGENCY_CONF_TIMER_FEATURE.value(), com.kodiak.common.resources.KnConstants.TRUE);
+            xdmCorpFS2Set = featureSetUtil.calculateXDMCorpFS2(xdmCorpFS2Set, XDMCORPFS2_SET.MC_REACHABILITY_FLAG.value(), com.kodiak.common.resources.KnConstants.TRUE);
             corpProfilePersistDTO.setXdmCorpFS2Set(xdmCorpFS2Set);
 
             corpId = provXDMServerDAO.createCorporateProfile(corpProfilePersistDTO, persisterTxn);

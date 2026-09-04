@@ -128,7 +128,8 @@ public class KnCorpGroupInfoDAO implements ITableDAO {
                 }
                 pstmt.setInt(17, groupPersistDTO.getGroupCreatedBy());
                 pstmt.setString(18, groupPersistDTO.getTpGroupOwner());
-                if(groupPersistDTO.isLargeGroup()){
+                if (groupPersistDTO.isLargeGroup() && (groupPersistDTO.getMcxGrpInd() == null || groupPersistDTO.getMcxGrpInd()
+                        != KnConstants.MCX_GROUP_INDICATOR)) {
                     pstmt.setInt(19, 1);
                 }else if ( groupPersistDTO.getMcxGrpInd() != null &&  groupPersistDTO.getMcxGrpInd() == KnConstants.MCX_GROUP_INDICATOR){
                     pstmt.setInt(19, 2);

@@ -73,6 +73,7 @@ import com.kodiak.xdms.mediator.resources.jobs.asyncframework.KnUPMJobScheduler;
 import com.kodiak.xdms.mediator.util.KnNotificationService;
 import com.kodiak.xdms.notificationmgr.IXcapDiffNotifierIntf;
 import com.kodiak.xdms.notificationmgr.beans.*;
+import com.kodiak.xdms.notificationmgr.impl.KnMCSXCAPNotifier;
 import com.kodiak.xdms.notificationmgr.impl.KnXcapDiffNotifier;
 import com.kodiak.xdms.notificationmgr.impl.KnXcapDiffNotifierImpl;
 import com.kodiak.xdms.server.common.KnXDMServerException;
@@ -88,6 +89,7 @@ import com.kodiak.xdms.server.common.framework.validator.KnValidationException;
 import com.kodiak.xdms.server.common.resources.KnConstants;
 import com.kodiak.xdms.server.common.resources.KnProfileTypes;
 import com.kodiak.xdms.server.common.util.KnSMSUtil;
+import com.kodiak.xdms.server.corpmgmt.business.KnCorpBOException;
 import com.kodiak.xdms.server.corpmgmt.business.helper.KnCorpCommonInfoUtil;
 import com.kodiak.xdms.server.corpmgmt.business.helper.KnCorpContactInfoUtil;
 import com.kodiak.xdms.server.corpmgmt.business.helper.KnCorpSublistInfoUtil;
@@ -12248,6 +12250,26 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             persisterTxn.save();
             KnStatisticsManagerImpl.getInstance().increment(KnOMConstants.NUM_MODIFY_SUBSCR_PROFILE_SUCC_RESP);
             Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = commonMediator.prepareNotification(corpResponseDTO);
+            knLogger.debug(methodName, "Profile notification xcapDiffList - ", xcapDiffList);
+            LinkedHashSet<KnMcsxcapMdnDTO> mdns = new LinkedHashSet<>();
+            String currentMdn = reqDto.getSubscriberMdn() != null ? reqDto.getSubscriberMdn().trim() : null;
+            if (xcapDiffList != null && !xcapDiffList.isEmpty()) {
+                for (KnXcapDiffDirChgNotifyDTO xcapDiffNotifyDTO : xcapDiffList) {
+                    String mdn = commonMediator.getMDNFromURI(xcapDiffNotifyDTO.getDirURI());
+                    if (mdn != null && !mdn.trim().isEmpty() && !mdn.trim().equals(currentMdn)) {
+                        KnMcsxcapMdnDTO mcsxcapMdnDTO = new KnMcsxcapMdnDTO();
+                        mcsxcapMdnDTO.setMdn(mdn.trim());
+                        mdns.add(mcsxcapMdnDTO);
+                    }
+                }
+            }
+            knLogger.debug(methodName, "Current MDN excluded from profile notification queue - ", KnGDPRTemplate.mdn(currentMdn));
+            knLogger.debug(methodName, "Profile notification MDN queue - ", mdns);
+            if (!mdns.isEmpty()) {
+                //Skipping last profile update time since client will call get once the notification is recevied
+                knLogger.debug(methodName, "Sending profile notifications for queued MDNs - ", mdns.size());
+                KnMCSXCAPNotifier.getInstance().sendMCSXCAPNotification(mdns);
+            }
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
@@ -12311,7 +12333,6 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                         knLogger.debug(methodName, "Successfully sent the notification");
                     }
                 }
-
                 if (null != corpResponseDTO.getProfileMdnDirChgDTOs() && !corpResponseDTO.getProfileMdnDirChgDTOs().isEmpty()) {
                     for (KnOPDirChgDTO opDirChgDTO : corpResponseDTO.getProfileMdnDirChgDTOs()) {
                         Collection<KnXcapDiffDocDTO> xcapDocList = new ArrayList<KnXcapDiffDocDTO>();
@@ -12380,6 +12401,27 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             respDto = populateResponse(e, respDto);
         }
         return respDto;
+    }
+
+    private void updateLastProfileUpdateTimeForMdns(Collection<KnMcsxcapMdnDTO> mdns, String xdmsHome, KnPersisterTxn persisterTxn) throws KnCorpBOException, KnCorpBOException {
+        String methodName = "updateLastProfileUpdateTimeForMdns(Collection<KnMcsxcapMdnDTO>, String, KnPersisterTxn)";
+        knLogger.debug(methodName, "ENTRY mdns - ", mdns, "xdmsHome - ", xdmsHome);
+        if (mdns == null || mdns.isEmpty()) {
+            return;
+        }
+        List<String> mdnList = new ArrayList<>();
+        for (KnMcsxcapMdnDTO mdnDto : mdns) {
+            if (mdnDto != null && mdnDto.getMdn() != null && !mdnDto.getMdn().trim().isEmpty()) {
+                mdnList.add(mdnDto.getMdn().trim());
+            }
+        }
+        if (mdnList.isEmpty()) {
+            knLogger.debug(methodName, "No valid MDNs found for timestamp refresh");
+            return;
+        }
+        knLogger.debug(methodName, "Updating last profile update time for mdns - ", KnGDPRTemplate.mdnList(mdnList));
+        commonInfoUtil.updateBulkSubsTS(new HashSet<>(mdnList), persisterTxn, xdmsHome);
+        knLogger.debug(methodName, "EXIT mdns - ", KnGDPRTemplate.mdnList(mdnList));
     }
 
     /**

@@ -112,28 +112,28 @@ public class KnXDMCorpChannelGrpDAO implements ITableDAO {
     }
 
     public void cleanUpSubsChannelGrps(List<String> mdnList, KnPersisterTxn persisterTxn) throws KnDAOException {
-        String methodName = "cleanUpSubsChannelGrps(String, KnPersisterTxn)";
+        String methodName = "cleanUpSubsChannelGrps(List<String>, KnPersisterTxn)";
         knLogger.debug(methodName, "ENTRY: mdn ", KnGDPRTemplate.mdnList(mdnList));
         Connection conn;
         PreparedStatement pstmt = null;
         String query = null;
-        int index =1;
         try {
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
-            query = "DELETE FROM DG.CHANNELGROUPINFO WHERE MDN IN (MDNLIST)";
-            query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(mdnList,query,"MDNLIST");
+            query = "DELETE FROM DG.CHANNELGROUPINFO WHERE MDN = ?";
+            //query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(mdnList,query,"MDNLIST");
             pstmt = conn.prepareStatement(query);
             for(String mdn : mdnList) {
-                pstmt.setString(index++, mdn);
+                pstmt.setString(1, mdn);
+                pstmt.addBatch();
             }
             knLogger.debug(methodName, "Executing query - ", query);
-            pstmt.executeUpdate();
+            pstmt.executeBatch();
             knLogger.debug(methodName, "Exit: Query executed successfully");
         } catch (SQLException e) {
             throw KnDbUtil.processException(e, "Failed while deleting entries from DG.CHANNELGROUPINFO", pttServerId,
                     KnDAOSourceTypes.CHANNELGROUPINFO, query);
         } finally {
-            KnDbUtil.closeStatement(pstmt);
+            KnDbUtil.closePreparedStatement(pstmt);
         }
     }
 
@@ -141,22 +141,26 @@ public class KnXDMCorpChannelGrpDAO implements ITableDAO {
         String methodName = "deleteChannelGrps(String, int KnPersisterTxn)";
         knLogger.debug(methodName, "ENTRY: mdn ", KnGDPRTemplate.mdn(mdn));
         Connection conn;
-        Statement st = null;
+        PreparedStatement pstmt = null;
         String query = null;
         try {
             KnQueryMapper queryMapper = KnQueryMapper.getInstance();
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
             query = queryMapper.getQuery(KnPersisterConstants.DELETE_CHANNEL_GROUP_FOR_MDNLIST);
-            query = replaceContactWithValue(query, KnPersisterConstants.GROUPIDS, formIntegerCommaSeperatedIdList(grpIdList));
-            st = conn.createStatement();
+            //query = replaceContactWithValue(query, KnPersisterConstants.GROUPIDS, formIntegerCommaSeperatedIdList(grpIdList));
+            pstmt = conn.prepareStatement(query);
             knLogger.debug(methodName, "Executing query - ", query);
-            st.executeUpdate(query);
+            for(Integer grpId : grpIdList) {
+                pstmt.setInt(1, grpId);
+                pstmt.addBatch();
+            }
+            pstmt.executeBatch();
             knLogger.debug(methodName, "Exit: Query executed successfully");
         } catch (SQLException e) {
             throw KnDbUtil.processException(e, "Failed while deleting entries from DG.CHANNELGROUPINFO", pttServerId,
                     KnDAOSourceTypes.CHANNELGROUPINFO, query);
         } finally {
-            KnDbUtil.closeStatement(st);
+            KnDbUtil.closePreparedStatement(pstmt);
         }
     }
 

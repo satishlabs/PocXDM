@@ -3,6 +3,7 @@ package com.kodiak.xdms.server.bulkops.dao;
 import com.kodiak.common.dao.KnDAOException;
 import com.kodiak.common.dao.KnPersisterTxn;
 import com.kodiak.common.resources.KnConstants;
+import com.kodiak.common.resources.KnGDPRTemplate;
 import com.kodiak.common.resources.KnGeneralUtil;
 import com.kodiak.dbmgr.KnDBConst;
 import com.kodiak.logger.KnLogger;
@@ -72,7 +73,7 @@ public class KnBulkOpsXDMServerDAO {
                 KnDBConst.DataStores.XDM_SHARED_DATA
         );
 
-        knLogger.debug(methodName, "Fetched APN IDs for ", apnIdMap.size(), " MDNs map" ,apnIdMap );
+        knLogger.debug(methodName, "Fetched APN IDs for ", apnIdMap.size(), " MDNs");
         return apnIdMap;
     }
 
@@ -905,7 +906,7 @@ public class KnBulkOpsXDMServerDAO {
             KnDBXDMServerDAO dbXdmServerDAO = new KnDBXDMServerDAO(xdmPttServerId);
             for (String mdn : mdnsToInsert) {
                 dbXdmServerDAO.addMdnToCorpResourceListIndexDoc(mdn, persisterTxn);
-                knLogger.debug(methodName, "Inserted MDN: ", mdn, " to Corp Resource List Index Doc");
+                knLogger.debug(methodName, "Inserted MDN: ", KnGDPRTemplate.mdn(mdn), " to Corp Resource List Index Doc");
             }
 
             knLogger.info(methodName, "EXIT: Successfully added ", mdnsToInsert.size(),
@@ -1006,7 +1007,7 @@ public class KnBulkOpsXDMServerDAO {
                 contactListPersistDTO.setMdn(mdn);
                 int contactListDocId = dbXdmServerDAO.addMdnToXDMContactListDocMap(contactListPersistDTO, persisterTxn);
                 existingMdnMap.put(mdn, contactListDocId);
-                knLogger.debug(methodName, "Inserted MDN: ", mdn, " with contactListDocId: ", contactListDocId);
+                knLogger.debug(methodName, "Inserted MDN: ", KnGDPRTemplate.mdn(mdn), " with contactListDocId: ", contactListDocId);
             }
 
             // Build the result list in the same order as the input mdnList
@@ -1182,7 +1183,7 @@ public class KnBulkOpsXDMServerDAO {
             KnDBXDMServerDAO dbXdmServerDAO = new KnDBXDMServerDAO(xdmPttServerId);
             for (String mdn : newMdnList) {
                 dbXdmServerDAO.addMdnToXDMDirectory(mdn, persisterTxn);
-                knLogger.debug(methodName, "Inserted MDN: ", mdn, " to XDM Directory");
+                knLogger.debug(methodName, "Inserted MDN: ", KnGDPRTemplate.mdn(mdn), " to XDM Directory");
             }
 
             knLogger.info(methodName, "EXIT: Successfully processed ", mdnList.size(), " MDNs (inserted: ", newMdnList.size(), ", existing: ", existingMdns.size(), ")");
@@ -1456,12 +1457,12 @@ public class KnBulkOpsXDMServerDAO {
 
                         if (hierarchyType.equals(type)) {
                             result.addValidMdn(mdn);
-                            knLogger.debug(methodName, "MDN hierarchy validated successfully: ", mdn);
+                            knLogger.debug(methodName, "MDN hierarchy validated successfully: ", KnGDPRTemplate.mdn(mdn));
                         } else {
                             result.addInvalidMdn(mdn,
                                 KnBulkOpsErrorCodes.BOEntity.INVALID_HIERARCHY_REQUEST,
                                 "Hierarchy mismatch - Expected: " + hierarchyType + ", Found: " + type);
-                            knLogger.debug(methodName, "Hierarchy mismatch for MDN: ", mdn,
+                            knLogger.debug(methodName, "Hierarchy mismatch for MDN: ", KnGDPRTemplate.mdn(mdn),
                                     ", Expected: ", hierarchyType, ", Found: ", type);
                         }
                     }
@@ -1474,7 +1475,7 @@ public class KnBulkOpsXDMServerDAO {
         // MDNs not found in DB are considered valid (assuming valid subscriber)
         for (String mdn : mdnSet) {
             result.addValidMdn(mdn);
-            knLogger.debug(methodName, "MDN not found in DB, considering valid: ", mdn);
+            knLogger.debug(methodName, "MDN not found in DB, considering valid: ", KnGDPRTemplate.mdn(mdn));
         }
 
         knLogger.debug(methodName, "Validation completed - Valid: ", result.getValidMdns().size(),
@@ -1860,7 +1861,7 @@ public class KnBulkOpsXDMServerDAO {
                 pStmt.setString(3, mdn);
                 pStmt.addBatch();
 
-                knLogger.debug(methodName, "Adding batch: MDN=", mdn, ", NetworkName=", newNetworkName);
+                knLogger.debug(methodName, "Adding batch: MDN=", KnGDPRTemplate.mdn(mdn), ", NetworkName=", newNetworkName);
             }
 
             // Execute batch update
@@ -2388,7 +2389,7 @@ public class KnBulkOpsXDMServerDAO {
                 // Validation failed for this MDN - fail the entire batch
                 result.setSuccess(false);
                 result.setErrorMessage("PkgIdMap validation failed for MDN " + mdn + ": " + processResult.getErrorMessage());
-                knLogger.error(methodName, "PkgIdMap validation failed for MDN ", mdn, ": ", processResult.getErrorMessage());
+                knLogger.error(methodName, "PkgIdMap validation failed for MDN ", KnGDPRTemplate.mdn(mdn), ": ", processResult.getErrorMessage());
                 return result;
             }
 
@@ -2413,7 +2414,7 @@ public class KnBulkOpsXDMServerDAO {
             perMdnTierPkgCode.put(mdn, finalTierPkgCode);
             perMdnAddonPkgCodes.put(mdn, finalAddonPkgCodes);
 
-            knLogger.debug(methodName, "MDN ", mdn, " - Final tier: ", finalTierPkgCode, ", Final addons: ", finalAddonPkgCodes);
+            knLogger.debug(methodName, "MDN ", KnGDPRTemplate.mdn(mdn), " - Final tier: ", finalTierPkgCode, ", Final addons: ", finalAddonPkgCodes);
         }
 
         if (!anyChanged) {
@@ -2490,7 +2491,7 @@ public class KnBulkOpsXDMServerDAO {
                 perMdnDataPkgId.put(mdn, dataPkgId);
                 perMdnQppPkgId.put(mdn, qppPkgId);
 
-                knLogger.debug(methodName, "MDN ", mdn, " - dataPkgId: ", dataPkgId, ", qppPkgId: ", qppPkgId);
+                knLogger.debug(methodName, "MDN ", KnGDPRTemplate.mdn(mdn), " - dataPkgId: ", dataPkgId, ", qppPkgId: ", qppPkgId);
             }
         } catch (Exception e) {
             knLogger.error(methodName, "Error calculating DATA_PKG_ID/QPPPACKID: ", e);
@@ -2872,7 +2873,7 @@ public class KnBulkOpsXDMServerDAO {
                 // Get this MDN's final packages
                 Map<String, Integer> finalPkgIds = perMdnFinalPkgIds.get(mdn);
                 if (finalPkgIds == null || finalPkgIds.isEmpty()) {
-                    knLogger.debug(methodName, "No final packages for MDN ", mdn, ", skipping FeatureSet recalculation");
+                    knLogger.debug(methodName, "No final packages for MDN ", KnGDPRTemplate.mdn(mdn), ", skipping FeatureSet recalculation");
                     continue;
                 }
 
@@ -2907,7 +2908,7 @@ public class KnBulkOpsXDMServerDAO {
                                 publicType, corpType, clientType, basePkgCode, xdmPttServerId);
                         java.util.BitSet basePkgCodeBitSet = featureSetUtil.convertHexStringToBitSet(basePkgCodeFS);
                         finalFSBitSet.or(basePkgCodeBitSet);
-                        knLogger.debug(methodName, "Base pkg FS applied for MDN ", mdn, ": ", basePkgCodeFS);
+                        knLogger.debug(methodName, "Base pkg FS applied for MDN ", KnGDPRTemplate.mdn(mdn), ": ", basePkgCodeFS);
                     }
 
                     // Step 2: Get default FS for NEW package codes (after ADD/REMOVE)
@@ -2915,7 +2916,7 @@ public class KnBulkOpsXDMServerDAO {
                             publicType, corpType, clientType, finalPkgIds, xdmPttServerId);
                     java.util.BitSet pkgCodeBitSet = featureSetUtil.convertHexStringToBitSet(pkgCodeFS);
                     finalFSBitSet.or(pkgCodeBitSet);
-                    knLogger.debug(methodName, "Pkg codes FS applied for MDN ", mdn, ": ", pkgCodeFS);
+                    knLogger.debug(methodName, "Pkg codes FS applied for MDN ", KnGDPRTemplate.mdn(mdn), ": ", pkgCodeFS);
 
                     // === LMR BIT STATUS HANDLING ===
                     // Preserve manual operator overrides for LMR (InterOP) bit
@@ -2929,12 +2930,12 @@ public class KnBulkOpsXDMServerDAO {
                         lmrBitStatus == com.kodiak.xdms.server.common.resources.KnConstants.LMR_BIT_STATUS.MANUALLY_DISABLED.Value()) {
                         // New packages enable LMR, but it was manually disabled - keep it disabled
                         finalFSBitSet.clear(LMR_BIT);
-                        knLogger.debug(methodName, "LMR bit cleared for MDN ", mdn, " - was manually disabled");
+                        knLogger.debug(methodName, "LMR bit cleared for MDN ", KnGDPRTemplate.mdn(mdn), " - was manually disabled");
                     } else if (!finalFSBitSet.get(LMR_BIT) &&
                                lmrBitStatus == com.kodiak.xdms.server.common.resources.KnConstants.LMR_BIT_STATUS.MANUALLY_ENABLED.Value()) {
                         // New packages disable LMR, but it was manually enabled - keep it enabled
                         finalFSBitSet.set(LMR_BIT);
-                        knLogger.debug(methodName, "LMR bit set for MDN ", mdn, " - was manually enabled");
+                        knLogger.debug(methodName, "LMR bit set for MDN ", KnGDPRTemplate.mdn(mdn), " - was manually enabled");
                     }
                     // === END LMR BIT STATUS HANDLING ===
 
@@ -2972,20 +2973,20 @@ public class KnBulkOpsXDMServerDAO {
                     }
                     
                     if (pocPttId == null || pocPttId.isEmpty() || "0".equals(pocPttId)) {
-                        knLogger.debug(methodName, "Invalid pocPttId [", pocPttId, "] for MDN ", mdn, ", using fallback [", effectiveFallbackPttId, "]");
+                        knLogger.debug(methodName, "Invalid pocPttId [", pocPttId, "] for MDN ", KnGDPRTemplate.mdn(mdn), ", using fallback [", effectiveFallbackPttId, "]");
                         pocPttId = effectiveFallbackPttId;
                     }
                     if (presencePttId == null || presencePttId.isEmpty() || "0".equals(presencePttId)) {
-                        knLogger.debug(methodName, "Invalid presencePttId [", presencePttId, "] for MDN ", mdn, ", using fallback [", effectiveFallbackPttId, "]");
+                        knLogger.debug(methodName, "Invalid presencePttId [", presencePttId, "] for MDN ", KnGDPRTemplate.mdn(mdn), ", using fallback [", effectiveFallbackPttId, "]");
                         presencePttId = effectiveFallbackPttId;
                     }
                     if (xdmsPttId == null || xdmsPttId.isEmpty() || "0".equals(xdmsPttId)) {
-                        knLogger.debug(methodName, "Invalid xdmsPttId [", xdmsPttId, "] for MDN ", mdn, ", using fallback [", effectiveFallbackPttId, "]");
+                        knLogger.debug(methodName, "Invalid xdmsPttId [", xdmsPttId, "] for MDN ", KnGDPRTemplate.mdn(mdn), ", using fallback [", effectiveFallbackPttId, "]");
                         xdmsPttId = effectiveFallbackPttId;
                     }
                     
                     // Log original values from profile object (before applying defaults)
-                    knLogger.debug(methodName, "Original profile FS values for MDN ", mdn, ":",
+                    knLogger.debug(methodName, "Original profile FS values for MDN ", KnGDPRTemplate.mdn(mdn), ":",
                             " pocHome=", profile.getPocHome(), " (effective=", pocPttId, ")",
                             ", presenceHome=", profile.getPresenceHome(), " (effective=", presencePttId, ")",
                             ", xdmsHome=", profile.getXdmsHome(), " (effective=", xdmsPttId, ")",
@@ -3004,35 +3005,35 @@ public class KnBulkOpsXDMServerDAO {
                     String clientFS2 = profile.getClientFS2();
                     if (clientFS2 == null) {
                         clientFS2 = featureSetUtil.getDefFinalClientFS(clientCapOverrideBitMask);
-                        knLogger.debug(methodName, "Applied default clientFS2 for MDN ", mdn, ": ", clientFS2);
+                        knLogger.debug(methodName, "Applied default clientFS2 for MDN ", KnGDPRTemplate.mdn(mdn), ": ", clientFS2);
                     }
                     
                     String opsFS2 = profile.getOpsFS2();
                     if (opsFS2 == null) {
                         opsFS2 = featureSetUtil.getDefFinalOpsFS();
-                        knLogger.debug(methodName, "Applied default opsFS2 for MDN ", mdn, ": ", opsFS2);
+                        knLogger.debug(methodName, "Applied default opsFS2 for MDN ", KnGDPRTemplate.mdn(mdn), ": ", opsFS2);
                     }
                     
                     String corpAdminFS2 = profile.getCorpAdminFS2();
                     if (corpAdminFS2 == null) {
                         corpAdminFS2 = featureSetUtil.getDefFinalCorpAdminFS();
-                        knLogger.debug(methodName, "Applied default corpAdminFS2 for MDN ", mdn, ": ", corpAdminFS2);
+                        knLogger.debug(methodName, "Applied default corpAdminFS2 for MDN ", KnGDPRTemplate.mdn(mdn), ": ", corpAdminFS2);
                     }
                     
                     String userProfileFS2 = profile.getUserProfileFS2();
                     if (userProfileFS2 == null) {
                         userProfileFS2 = featureSetUtil.getDefFinalUserProfileFS();
-                        knLogger.debug(methodName, "Applied default userProfileFS2 for MDN ", mdn, ": ", userProfileFS2);
+                        knLogger.debug(methodName, "Applied default userProfileFS2 for MDN ", KnGDPRTemplate.mdn(mdn), ": ", userProfileFS2);
                     }
                     
                     // Ensure xdmsFs2 has a default if null
                     if (xdmsFs2 == null) {
                         xdmsFs2 = featureSetUtil.getDefFinalXdmsFS();
-                        knLogger.debug(methodName, "Applied default xdmsFs2 for MDN ", mdn, ": ", xdmsFs2);
+                        knLogger.debug(methodName, "Applied default xdmsFs2 for MDN ", KnGDPRTemplate.mdn(mdn), ": ", xdmsFs2);
                     }
 
                     // Log final FS values before generating activeFS2
-                    knLogger.debug(methodName, "Final FS values for MDN ", mdn, " before activeFS2 generation:",
+                    knLogger.debug(methodName, "Final FS values for MDN ", KnGDPRTemplate.mdn(mdn), " before activeFS2 generation:",
                             " pocPttId=", pocPttId,
                             ", presencePttId=", presencePttId,
                             ", xdmsPttId=", xdmsPttId,
@@ -3055,14 +3056,14 @@ public class KnBulkOpsXDMServerDAO {
                         if (corpFS2 == null) {
                             corpFS2 = featureSetUtil.getDefFinalCorpFS();
                         }
-                        knLogger.debug(methodName, "corpFS2 for MDN ", mdn, ": ", corpFS2);
+                        knLogger.debug(methodName, "corpFS2 for MDN ", KnGDPRTemplate.mdn(mdn), ": ", corpFS2);
                         activeFS2 = featureSetUtil.generateActiveFeatBitSet(pocPttId, presencePttId, xdmsPttId,
                                 clientFS2, subsFS2, corpFS2, opsFS2, corpAdminFS2, clientCapOverrideBitMask,
                                 xdmsFs2, userProfileFS2);
                     }
 
                     mdnFeatureSetMap.put(mdn, new String[]{subsFS2, activeFS2, xdmsFs2});
-                    knLogger.debug(methodName, "Calculated FS for MDN ", mdn,
+                    knLogger.debug(methodName, "Calculated FS for MDN ", KnGDPRTemplate.mdn(mdn),
                                   " - subsFS2: ", subsFS2, ", activeFS2: ", activeFS2);
                     
                     // Populate result with updated FeatureSets for notifications
@@ -3072,7 +3073,7 @@ public class KnBulkOpsXDMServerDAO {
                     }
 
                 } catch (KnFeatureSetException e) {
-                    knLogger.error(methodName, "FeatureSet calculation failed for MDN ", mdn, ": ", e);
+                    knLogger.error(methodName, "FeatureSet calculation failed for MDN ", KnGDPRTemplate.mdn(mdn), ": ", e);
                     // Fail the batch - invalid package codes should not be allowed
                     // This aligns with Single MDN flow which throws PKG_NOT_FOUND for invalid packages
                     //throw new KnDAOException(KnBulkOpsErrorCodes.BOEntity.PKG_NOT_FOUND,
@@ -3129,12 +3130,12 @@ public class KnBulkOpsXDMServerDAO {
             // Get the existing subsFS2 from the profile
             String existingSubsFS2 = profile.getSubsFS2();
             if (existingSubsFS2 == null || existingSubsFS2.isEmpty()) {
-                knLogger.debug(methodName, "No existing subsFS2 for MDN ", profile.getMdn());
+                knLogger.debug(methodName, "No existing subsFS2 for MDN ", KnGDPRTemplate.mdn(profile.getMdn()));
                 return com.kodiak.xdms.server.common.resources.KnConstants.LMR_BIT_STATUS.NO_CHANGE.Value();
             }
 
             java.util.BitSet existingFSBitSet = featureSetUtil.convertHexStringToBitSet(existingSubsFS2);
-            knLogger.debug(methodName, "Existing subsFS BitSet for MDN ", profile.getMdn(), ": ", existingFSBitSet.toString());
+            knLogger.debug(methodName, "Existing subsFS BitSet for MDN ", KnGDPRTemplate.mdn(profile.getMdn()), ": ", existingFSBitSet.toString());
 
             // Calculate what the default FS would be based on existing packages
             java.util.BitSet defaultFSBitSet = new java.util.BitSet(Long.SIZE);
@@ -3149,7 +3150,7 @@ public class KnBulkOpsXDMServerDAO {
                 defaultFSBitSet = featureSetUtil.convertHexStringToBitSet(pkgCodeFS);
             }
 
-            knLogger.debug(methodName, "Default FS BitSet based on packages for MDN ", profile.getMdn(), ": ", defaultFSBitSet.toString());
+            knLogger.debug(methodName, "Default FS BitSet based on packages for MDN ", KnGDPRTemplate.mdn(profile.getMdn()), ": ", defaultFSBitSet.toString());
 
             // Determine LMR bit status
             int status = com.kodiak.xdms.server.common.resources.KnConstants.LMR_BIT_STATUS.NO_CHANGE.Value();
@@ -3158,19 +3159,19 @@ public class KnBulkOpsXDMServerDAO {
                 // Current FS has LMR enabled, but default based on packages would have it disabled
                 // This means operator MANUALLY ENABLED it
                 status = com.kodiak.xdms.server.common.resources.KnConstants.LMR_BIT_STATUS.MANUALLY_ENABLED.Value();
-                knLogger.debug(methodName, "LMR bit was MANUALLY_ENABLED for MDN ", profile.getMdn());
+                knLogger.debug(methodName, "LMR bit was MANUALLY_ENABLED for MDN ", KnGDPRTemplate.mdn(profile.getMdn()));
             } else if (!existingFSBitSet.get(LMR_BIT) && defaultFSBitSet.get(LMR_BIT)) {
                 // Current FS has LMR disabled, but default based on packages would have it enabled
                 // This means operator MANUALLY DISABLED it
                 status = com.kodiak.xdms.server.common.resources.KnConstants.LMR_BIT_STATUS.MANUALLY_DISABLED.Value();
-                knLogger.debug(methodName, "LMR bit was MANUALLY_DISABLED for MDN ", profile.getMdn());
+                knLogger.debug(methodName, "LMR bit was MANUALLY_DISABLED for MDN ", KnGDPRTemplate.mdn(profile.getMdn()));
             }
 
-            knLogger.debug(methodName, "LMR bit status for MDN ", profile.getMdn(), ": ", status);
+            knLogger.debug(methodName, "LMR bit status for MDN ", KnGDPRTemplate.mdn(profile.getMdn()), ": ", status);
             return status;
 
         } catch (KnFeatureSetException e) {
-            knLogger.error(methodName, "Error determining LMR bit status for MDN ", profile.getMdn(), ": ", e);
+            knLogger.error(methodName, "Error determining LMR bit status for MDN ", KnGDPRTemplate.mdn(profile.getMdn()), ": ", e);
             // Return NO_CHANGE on error to avoid disrupting the flow
             return com.kodiak.xdms.server.common.resources.KnConstants.LMR_BIT_STATUS.NO_CHANGE.Value();
         }
@@ -3214,7 +3215,7 @@ public class KnBulkOpsXDMServerDAO {
                 pStmt.setString(5, mdn);
                 pStmt.addBatch();
 
-                knLogger.debug(methodName, "Adding batch: MDN=", mdn);
+                knLogger.debug(methodName, "Adding batch: MDN=", KnGDPRTemplate.mdn(mdn));
             }
 
             int[] batchResults = pStmt.executeBatch();
@@ -3370,7 +3371,7 @@ public class KnBulkOpsXDMServerDAO {
                         }
 
                         clientTypeUpgrades.put(mdn, newClientType);
-                        knLogger.info(methodName, "MDN ", mdn, " eligible for client type upgrade from ",
+                        knLogger.info(methodName, "MDN ", KnGDPRTemplate.mdn(mdn), " eligible for client type upgrade from ",
                                      currentClientType, " to ", newClientType);
                     }
                 } catch (Exception e) {
@@ -3876,7 +3877,7 @@ public class KnBulkOpsXDMServerDAO {
             // Only assign for subscribers with valid original client types
             // (the profile still has original type since DB update happens in batch)
             if (originalClientType != HANDSET && originalClientType != POC_WIFIONLY && originalClientType != CROSSCARRIER) {
-                knLogger.debug(methodName, "MDN ", mdn, " has client type ", originalClientType, " - not eligible for zone/channel assignment");
+                knLogger.debug(methodName, "MDN ", KnGDPRTemplate.mdn(mdn), " has client type ", originalClientType, " - not eligible for zone/channel assignment");
                 continue;
             }
 
@@ -3884,7 +3885,7 @@ public class KnBulkOpsXDMServerDAO {
                 // Get corp groups for this MDN
                 List<Integer> groupIds = getGroupIdsForMdn(mdn, persisterTxn);
                 if (groupIds == null || groupIds.isEmpty()) {
-                    knLogger.debug(methodName, "MDN ", mdn, " has no group memberships, skipping zone/channel assignment");
+                    knLogger.debug(methodName, "MDN ", KnGDPRTemplate.mdn(mdn), " has no group memberships, skipping zone/channel assignment");
                     continue;
                 }
 
@@ -3895,11 +3896,11 @@ public class KnBulkOpsXDMServerDAO {
                 boolean assigned = assignZonesAndChannelsForMdn(mdn, groupIds, extCorpId, persisterTxn);
                 if (assigned) {
                     assignedCount++;
-                    knLogger.debug(methodName, "Zone/Channel assigned for MDN ", mdn);
+                    knLogger.debug(methodName, "Zone/Channel assigned for MDN ", KnGDPRTemplate.mdn(mdn));
                 }
 
             } catch (Exception e) {
-                knLogger.warn(methodName, "Failed to assign zones/channels for MDN ", mdn, ": ", e.getMessage());
+                knLogger.warn(methodName, "Failed to assign zones/channels for MDN ", KnGDPRTemplate.mdn(mdn), ": ", e.getMessage());
                 // Continue with other MDNs
             }
         }
@@ -3972,9 +3973,9 @@ public class KnBulkOpsXDMServerDAO {
                     }
                 }
             }
-            knLogger.debug(methodName, "Found ", groupIds.size(), " corp groups for MDN ", mdn);
+            knLogger.debug(methodName, "Found ", groupIds.size(), " corp groups for MDN ", KnGDPRTemplate.mdn(mdn));
         } catch (Exception e) {
-            knLogger.warn(methodName, "Failed to get corp group IDs for MDN ", mdn, ": ", e.getMessage());
+            knLogger.warn(methodName, "Failed to get corp group IDs for MDN ", KnGDPRTemplate.mdn(mdn), ": ", e.getMessage());
         }
 
         // Get shared group IDs - Same as single MDN flow in KnPOCSubscrInfoDAO.getSharedGroupList()
@@ -3992,9 +3993,9 @@ public class KnBulkOpsXDMServerDAO {
                     }
                 }
             }
-            knLogger.debug(methodName, "Total groups (corp + shared) for MDN ", mdn, ": ", groupIds.size());
+            knLogger.debug(methodName, "Total groups (corp + shared) for MDN ", KnGDPRTemplate.mdn(mdn), ": ", groupIds.size());
         } catch (Exception e) {
-            knLogger.warn(methodName, "Failed to get shared group IDs for MDN ", mdn, ": ", e.getMessage());
+            knLogger.warn(methodName, "Failed to get shared group IDs for MDN ", KnGDPRTemplate.mdn(mdn), ": ", e.getMessage());
         }
 
         return new ArrayList<>(groupIds);
@@ -4102,7 +4103,7 @@ public class KnBulkOpsXDMServerDAO {
             }
 
             if (!assigned) {
-                knLogger.warn(methodName, "No more zone/channel slots available for MDN ", mdn, ", groupId ", groupId);
+                knLogger.warn(methodName, "No more zone/channel slots available for MDN ", KnGDPRTemplate.mdn(mdn), ", groupId ", groupId);
                 break;
             }
         }
@@ -4110,7 +4111,7 @@ public class KnBulkOpsXDMServerDAO {
         // Insert assignments into database
         if (!assignments.isEmpty()) {
             insertZoneChannelAssignments(mdn, assignments, persisterTxn);
-            knLogger.debug(methodName, "Assigned ", assignments.size(), " zone/channels for MDN ", mdn);
+            knLogger.debug(methodName, "Assigned ", assignments.size(), " zone/channels for MDN ", KnGDPRTemplate.mdn(mdn));
             return true;
         }
 
@@ -4255,7 +4256,7 @@ public class KnBulkOpsXDMServerDAO {
                 }
 
                 pStmt.executeBatch();
-                knLogger.debug(methodName, "Inserted ", assignments.size(), " zone/channel assignments for MDN ", mdn);
+                knLogger.debug(methodName, "Inserted ", assignments.size(), " zone/channel assignments for MDN ", KnGDPRTemplate.mdn(mdn));
             }
         } catch (Exception e) {
             knLogger.error(methodName, "Exception inserting zone/channel assignments: ", e);
@@ -4315,7 +4316,7 @@ public class KnBulkOpsXDMServerDAO {
                 continue;
             }
 
-            knLogger.debug(methodName, "Checking MCPTT feature bits for MDN ", mdn, " activeFS2: ", activeFS2);
+            knLogger.debug(methodName, "Checking MCPTT feature bits for MDN ", KnGDPRTemplate.mdn(mdn), " activeFS2: ", activeFS2);
 
             // Check all MCPTT feature bits (aligned with Single MDN flow)
             boolean ambientListenerBit = com.kodiak.common.resources.KnGeneralUtil.getFeatureBitValue(activeFS2, AMBIENTLISTENING_BIT);
@@ -4323,7 +4324,7 @@ public class KnBulkOpsXDMServerDAO {
             boolean userCheckBit = com.kodiak.common.resources.KnGeneralUtil.getFeatureBitValue(activeFS2, USERCHECK_BIT);
             boolean userEnableDisableBit = com.kodiak.common.resources.KnGeneralUtil.getFeatureBitValue(activeFS2, USERENABLEDISABLE_BIT);
 
-            knLogger.debug(methodName, "MCPTT bits for MDN ", mdn, ": ambientListener=", ambientListenerBit,
+            knLogger.debug(methodName, "MCPTT bits for MDN ", KnGDPRTemplate.mdn(mdn), ": ambientListener=", ambientListenerBit,
                     ", discreetListener=", discreetListenerBit, ", userCheck=", userCheckBit, 
                     ", userEnableDisable=", userEnableDisableBit);
 
@@ -4332,7 +4333,7 @@ public class KnBulkOpsXDMServerDAO {
             try {
                 deleteMcpttPermInfoWithZeroBitset(mdn, persisterTxn);
             } catch (Exception e) {
-                knLogger.warn(methodName, "Failed to delete MCPTT perm info with zero bitset for MDN ", mdn, ": ", e.getMessage());
+                knLogger.warn(methodName, "Failed to delete MCPTT perm info with zero bitset for MDN ", KnGDPRTemplate.mdn(mdn), ": ", e.getMessage());
             }
 
             // Step 2: If discreet listener bit is disabled, track for batch update
@@ -4402,7 +4403,7 @@ public class KnBulkOpsXDMServerDAO {
 
             if (!targetMdnsToDelete.isEmpty()) {
                 knLogger.debug(methodName, "Deleting ", targetMdnsToDelete.size(), 
-                        " MCPTT_PERM_INFO entries with zero bitset for MDN ", mdn);
+                        " MCPTT_PERM_INFO entries with zero bitset for MDN ", KnGDPRTemplate.mdn(mdn));
                 deleteStmt = conn.prepareStatement(deleteQuery);
                 for (String targetMdn : targetMdnsToDelete) {
                     deleteStmt.setString(1, targetMdn);
@@ -4410,11 +4411,11 @@ public class KnBulkOpsXDMServerDAO {
                     deleteStmt.addBatch();
                 }
                 deleteStmt.executeBatch();
-                knLogger.debug(methodName, "Deleted MCPTT_PERM_INFO entries for MDN ", mdn);
+                knLogger.debug(methodName, "Deleted MCPTT_PERM_INFO entries for MDN ", KnGDPRTemplate.mdn(mdn));
             }
 
         } catch (Exception e) {
-            knLogger.error(methodName, "Exception deleting MCPTT perm info for MDN ", mdn, ": ", e);
+            knLogger.error(methodName, "Exception deleting MCPTT perm info for MDN ", KnGDPRTemplate.mdn(mdn), ": ", e);
             //throw new KnDAOException(KnBulkOpsErrorCodes.Validator.ERROR_CODE_INTERNAL_ERROR,
             //        "Failed to delete MCPTT perm info: " + e.getMessage(), e);
             throw new KnDAOException(KnBulkOpsErrorCodes.Validator.ERROR_CODE_INTERNAL_ERROR,

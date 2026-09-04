@@ -288,7 +288,7 @@ public class KnBulkOpsNotifyUtil {
                 dirChgDTO.setClientType(subsInfo.getSubsClientType());
                 opProv.setDirChgDTO(dirChgDTO);
             } catch (Exception e) {
-                knLogger.error(methodName, "Failed to build DirChgDTO for mdn ", mdn, e);
+                knLogger.error(methodName, "Failed to build DirChgDTO for mdn ", KnGDPRTemplate.mdn(mdn), e);
             }
             resultMap.put(mdn, opProv);
         }

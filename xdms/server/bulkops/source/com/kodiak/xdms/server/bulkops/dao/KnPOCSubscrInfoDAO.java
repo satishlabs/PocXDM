@@ -361,7 +361,7 @@ public class KnPOCSubscrInfoDAO {
                         for (String mdn : mdnList) {
                             successResults.put(mdn, dto);
                         }
-                        knLogger.debug(methodName, "Successfully updated ", rowsAffected, " rows for MDN list ", mdnList);
+                        knLogger.debug(methodName, "Successfully updated ", rowsAffected, " rows for MDN list ", KnGDPRTemplate.mdnList(mdnList));
                     } else {
                         String msg = "Bulk update failed for MDN list " + mdnList + " with result code 0";
                         for (String mdn : mdnList) {
@@ -495,7 +495,7 @@ public class KnPOCSubscrInfoDAO {
         for (String mdn : allMdns) {
             Map<String, Object> subsData = subsInfoMap.get(mdn);
             if (subsData == null) {
-                knLogger.warn(methodName, "No subscriber data found for MDN: ", mdn);
+                knLogger.warn(methodName, "No subscriber data found for MDN: ", KnGDPRTemplate.mdn(mdn));
                 continue;
             }
 
@@ -856,6 +856,5 @@ public class KnPOCSubscrInfoDAO {
         return mdnsInDb;
     }
 }
-
 
 

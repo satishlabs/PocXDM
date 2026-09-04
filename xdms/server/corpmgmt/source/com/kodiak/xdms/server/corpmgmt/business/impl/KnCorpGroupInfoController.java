@@ -849,7 +849,7 @@ public class KnCorpGroupInfoController implements ICorpGroupInfoController {
             }
             int localClusterId = Integer.parseInt(System.getenv(CLUSTERID_ENV_NAME));
             boolean validCorpPocHome = pocHome != null && !pocHome.trim().isEmpty() && !pocHome.trim().equals("0");
-            knLogger.debug(methodName, " createGroup: corpPocHome=", pocHome, " validCorpPocHome=", validCorpPocHome, " memberCount=", memberCount, " pochomeAutoAssignFlag=", pochomeAutoAssignFlag);
+            knLogger.debug(methodName, " createGroup: corpPocHome=", pocHome, " validCorpPocHome=", validCorpPocHome, " memberCount=", memberCount, " pochomeAutoAssignFlag=", pochomeAutoAssignFlag," isPreConfiguredGroup ",groupInfoDTO.getIsPreConfiguredGroup());
             if(!pochomeAutoAssignFlag){
                 if (groupInfoDTO.getGroupCreatedBy() == CREATED_BY.ABDG.value()) {
                     List<String> groupOwner = new ArrayList<>();
@@ -858,6 +858,22 @@ public class KnCorpGroupInfoController implements ICorpGroupInfoController {
                     pocHome = (String) pocHomeMap.get(POCHOME);
                     groupInfoPersistDTO.setPocHome(pocHome);
                     groupInfoPersistDTO.setClusterId((Integer) pocHomeMap.get(CLUSTERID));
+                }else if(groupInfoDTO.getIsPreConfiguredGroup() != null && groupInfoDTO.getIsPreConfiguredGroup() == 1){
+                    if(validCorpPocHome){
+                        String clusterIdValue = groupInfoUtil.fetchClusterId(pocHome, String.valueOf(localClusterId));
+                        groupInfoPersistDTO.setPocHome(pocHome);
+                        if (clusterIdValue != null) {
+                            groupInfoPersistDTO.setClusterId(Integer.valueOf(clusterIdValue));
+                        }
+                    }else{
+                        pocHome = groupInfoUtil.getPocHomeByHierarchyId(corpId,hierarchyId,xdmsHome,persisterTxn);
+                        groupInfoPersistDTO.setPocHome(pocHome);
+                        String clusterIdValue = null;
+                        if(pocHome!=null)clusterIdValue = groupInfoUtil.fetchClusterId(pocHome, String.valueOf(localClusterId));
+                        if (clusterIdValue != null) {
+                            groupInfoPersistDTO.setClusterId(Integer.valueOf(clusterIdValue));
+                        }
+                    }
                 }else{
                     if(memberCount == 0){
                         if (validCorpPocHome) {
@@ -3772,7 +3788,7 @@ public class KnCorpGroupInfoController implements ICorpGroupInfoController {
             respDto.setLiEventList(liEventList);
             respDto.setEtag(String.valueOf(groupEtagMap.get(grpId)));
             respDto.setTgsModeChgMap(corpInOutParamDTO.getTgsModeChgMap());
-            respDto.setMdnCorpId(corpId);
+            respDto.setMdnCorpId(grpBasicInfo.getGroupCorpId()); // Provides the CorpId of the Group owner.
             respDto.setGroupCreatedBy(grpBasicInfo.getGroupCreatedBy());
             respDto.setNewGroupDisplayName(groupPersistDTO.getGroupDisplayName());
             populate(respDto);
@@ -9254,6 +9270,22 @@ public class KnCorpGroupInfoController implements ICorpGroupInfoController {
                         pocHome = (String) pocHomeMap.get(POCHOME);
                         groupInfoPersistDTO.setPocHome(pocHome);
                         groupInfoPersistDTO.setClusterId((Integer) pocHomeMap.get(CLUSTERID));
+                    }else if(groupInfoDTO.getIsPreConfiguredGroup() != null && groupInfoDTO.getIsPreConfiguredGroup() == 1){
+                        if(validCorpPocHome){
+                            String clusterIdValue = groupInfoUtil.fetchClusterId(pocHome, String.valueOf(localClusterId));
+                            groupInfoPersistDTO.setPocHome(pocHome);
+                            if (clusterIdValue != null) {
+                                groupInfoPersistDTO.setClusterId(Integer.valueOf(clusterIdValue));
+                            }
+                        }else{
+                            pocHome = groupInfoUtil.getPocHomeByHierarchyId(corpId,hierarchyId,xdmsHome,persisterTxn);
+                            groupInfoPersistDTO.setPocHome(pocHome);
+                            String clusterIdValue = null;
+                            if(pocHome!=null)clusterIdValue = groupInfoUtil.fetchClusterId(pocHome, String.valueOf(localClusterId));
+                            if (clusterIdValue != null) {
+                                groupInfoPersistDTO.setClusterId(Integer.valueOf(clusterIdValue));
+                            }
+                        }
                     }else{
                         if(allDistinceMembers.size() == 0){
                             if (validCorpPocHome) {
@@ -9300,9 +9332,9 @@ public class KnCorpGroupInfoController implements ICorpGroupInfoController {
                 }
                 //
 
-                if (groupInfoDTO.getVideoPermission() != null) {
-                    groupInfoPersistDTO.setVideoPermission(groupInfoDTO.getVideoPermission());
-                }
+
+                    groupInfoPersistDTO.setVideoPermission(DEFAULT_VIDEO_PERMISSION_VALUE_FOR_BCG_GROUP);
+
 //                groupInfoPersistDTO.setVideoPermission(groupInfoDTO.getVideoPermission());
 
 
@@ -11514,7 +11546,7 @@ public class KnCorpGroupInfoController implements ICorpGroupInfoController {
             respDto.setChangeLogMap(etagMap);
             respDto.setLiEventList(liEventList);
             respDto.setEtag(String.valueOf(groupEtagMap.get(grpId)));
-            respDto.setMdnCorpId(corpId);
+            respDto.setMdnCorpId(grpBasicInfo.getGroupCorpId()); // Provides the CorpId of the Group owner.
             respDto.setGroupCreatedBy(grpBasicInfo.getGroupCreatedBy());
             respDto.setNewGroupDisplayName(groupInfoDTO.getGroupDisplayName());
             respDto.setActualDeletedBroadcaster(actualDeletedBrdstr);
@@ -14852,7 +14884,7 @@ public class KnCorpGroupInfoController implements ICorpGroupInfoController {
                 }
             }
 
-            respDto.setMdnCorpId(corpId);
+            respDto.setMdnCorpId(grpBasicInfo.getGroupCorpId()); // Provides the CorpId of the Group owner.
             respDto.setGroupCreatedBy(grpBasicInfo.getGroupCreatedBy());
             respDto.setNewGroupDisplayName(groupInfoDTO.getGroupDisplayName());
             knLogger.debug(methodName, "ModifyMcxGroup -etag- ", KnGDPRTemplate.mapKeyMdn(etagMap));
@@ -20487,6 +20519,9 @@ public class KnCorpGroupInfoController implements ICorpGroupInfoController {
                                 memberDTO.setCallInitiatePermission(dto.getCallInitiatePermission());
                                 memberDTO.setCallReceivePermission(dto.getCallReceivePermission());
                                 memberDTO.setInCallPermission(dto.getInCallPermission());
+                                memberDTO.setVideoCallInitiatePermission(groupContactDTO.getVideoCallInitiateAllowed());
+                                memberDTO.setVideoCallReceivePermission(groupContactDTO.getVideoCallReceiveAllowed());
+                                memberDTO.setVideoInCallPermission(groupContactDTO.getVideoInCallAllowed());
                                 memberDTO.setIsOSMAuthorize(dto.getIsOSMAuthorize());
                                 if (dto.getIsOSMAuthorize() == 1) {
                                     isOsmChanged = true;
@@ -20688,6 +20723,9 @@ public class KnCorpGroupInfoController implements ICorpGroupInfoController {
                                 memberDTO.setCallInitiatePermission(dto.getCallInitiatePermission());
                                 memberDTO.setCallReceivePermission(dto.getCallReceivePermission());
                                 memberDTO.setInCallPermission(dto.getInCallPermission());
+                                memberDTO.setVideoCallInitiatePermission(groupContactDTO.getVideoCallInitiateAllowed());
+                                memberDTO.setVideoCallReceivePermission(groupContactDTO.getVideoCallReceiveAllowed());
+                                memberDTO.setVideoInCallPermission(groupContactDTO.getVideoInCallAllowed());
                                 memberDTO.setIsOSMAuthorize(dto.getIsOSMAuthorize());
                                 if (dto.getIsOSMAuthorize() == 1) {
                                     isOsmChanged = true;
@@ -20907,6 +20945,9 @@ public class KnCorpGroupInfoController implements ICorpGroupInfoController {
                                 memberDTO.setCallInitiatePermission(dto.getCallInitiatePermission());
                                 memberDTO.setCallReceivePermission(dto.getCallReceivePermission());
                                 memberDTO.setInCallPermission(dto.getInCallPermission());
+                                memberDTO.setVideoCallInitiatePermission(groupContactDTO.getVideoCallInitiateAllowed());
+                                memberDTO.setVideoCallReceivePermission(groupContactDTO.getVideoCallReceiveAllowed());
+                                memberDTO.setVideoInCallPermission(groupContactDTO.getVideoInCallAllowed());
                                 memberDTO.setIsOSMAuthorize(dto.getIsOSMAuthorize());
                                 if (dto.getIsOSMAuthorize() == 1) {
                                     isOsmChanged = true;

@@ -114,20 +114,20 @@ public class KnClientSuppVocodersDAO implements ITableDAO{
         String query = null;
         Connection conn;
         PreparedStatement pStmt = null;
-        int index = 1;
         knLogger.debug(methodName, "ENTRY: delete MDN's existing vocoder ", KnGDPRTemplate.mdnList(mdnList), " Persist ", persisterTxn);
         try {
-            query = "DELETE FROM DG.CLIENTSUPPORTEDVOCODERS WHERE MDN IN (MDNLIST)";
-            query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(mdnList,query,"MDNLIST");
+            query = "DELETE FROM DG.CLIENTSUPPORTEDVOCODERS WHERE MDN = ?";
+            //query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(mdnList,query,"MDNLIST");
             knLogger.debug(methodName, " Data Store before - ", KnDBConst.DataStores.XDM_SHARED_DATA, KnGDPRTemplate.mdnList(mdnList));
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, true);
             knLogger.debug(methodName, " Connection .. ", conn);
             pStmt = conn.prepareStatement(query);
             for(String mdn : mdnList){
-                pStmt.setString(index++,mdn);
+                pStmt.setString(1,mdn);
+                pStmt.addBatch();
             }
             knLogger.debug(methodName, "Query: Executing - ", query, ", mdn - ", KnGDPRTemplate.mdnList(mdnList));
-            pStmt.executeUpdate();
+            pStmt.executeBatch();
             knLogger.debug(methodName, "Query: Executed ");
         }catch (Exception e) {
             knLogger.error(methodName, "Unexpected Exception - ", e);

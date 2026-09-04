@@ -5679,6 +5679,7 @@ public class KnCorpGenericInfoController implements ICorpGenericInfoController {
         String methodName = "deleteHierarchy(corpId, removedHierarchy, persisterTxn)";
         knLogger.info(methodName, " ENTRY : corpId - ", corpId, " removedHierarchy - ", removedHierarchy);
         KnCorpResponseDTO respDto = new KnCorpResponseDTO();
+        Map<String, Object> additionalHierarchyInfo = new HashMap<>();
         try {
             String xdmsHome = KnGeneralUtil.getXDMServerPttServerId();
             commonInfoUtil.getProfileDetails(String.valueOf(corpId), CORP_PROFILE, false, persisterTxn);
@@ -5712,6 +5713,9 @@ public class KnCorpGenericInfoController implements ICorpGenericInfoController {
             }
 
             commonInfoUtil.deleteHierarchyInfo(corpId, removedHierarchy, persisterTxn);
+            // Sending Hierarchies in response for delete from AUTHZ
+            additionalHierarchyInfo.put(KnConstants.DELETE_HIERARCHY_LIST, removedHierarchy);
+            respDto.setAdditionalInfo(additionalHierarchyInfo);
             KnHierarchyDepthInfoDTO rootDepthInfo = hierarchyInfoUtil.getRootNodeBasedOnCorpId(Integer.valueOf(corpId), xdmsHome, persisterTxn);
             knLogger.debug(methodName, "Root node info after deletion - ", rootDepthInfo);
             if(rootDepthInfo != null && rootDepthInfo.getDescendantHierId() != null) {

@@ -81,7 +81,7 @@ public class KnPOCGroupDocMapDAO implements ITableDAO {
             + " WHERE " + POC_GROUP_ID + " = ?" + " AND " + OWNER_MDN + " = ?";
     public static final String QRY_UPDATE_ALL_ETAGS = "UPDATE " + TABLENAME + " SET " + GROUP_DOC_ETAG + " = "
             + "(" + GROUP_DOC_ETAG + "+1)" + " WHERE " + OWNER_MDN + " = ?";
-    public static final String QRY_DELTE_ALL_GROUP_DOCS = "DELETE FROM " + TABLENAME + " WHERE " + POC_GROUP_ID + " IN ";
+    public static final String QRY_DELTE_ALL_GROUP_DOCS = "DELETE FROM " + TABLENAME + " WHERE " + POC_GROUP_ID + " = ?";
     public static final String QRY_UPDATE_MDN = "UPDATE " + TABLENAME + " SET " + OWNER_MDN + " = ? , " + GROUP_DOC_ETAG
             + " = (" + GROUP_DOC_ETAG + "+1)" + " WHERE " + OWNER_MDN + " = ?";
     public static final String QRY_SELECT_POC_GROUP_ID = "SELECT " + POC_GROUP_ID + " FROM " + TABLENAME
@@ -709,21 +709,26 @@ public class KnPOCGroupDocMapDAO implements ITableDAO {
         final String methodName = "deleteAllPocGroupDocMaps(Collection<Integer>, KnPersisterTxn)";
         knLogger.debug( methodName, pocGroupIds);
         Connection conn;
-        Statement statement = null;
+        PreparedStatement pstmt = null;
         ResultSet rs = null;
         String query = null;
 
         try {
-            StringBuffer buffer = new StringBuffer(200);
-            buffer.append(QRY_DELTE_ALL_GROUP_DOCS).append(KnDbUtil.convertListToIntBuffer(pocGroupIds));
-            query = buffer.toString();
+            //StringBuffer buffer = new StringBuffer(200);
+            //buffer.append(QRY_DELTE_ALL_GROUP_DOCS).append(KnDbUtil.convertListToIntBuffer(pocGroupIds));
+            //query = buffer.toString();
+            query = QRY_DELTE_ALL_GROUP_DOCS;
 
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
-            statement = conn.createStatement();
+            pstmt = conn.prepareStatement(query);
 
             knLogger.debug( methodName, "QUERY : Executing " , query , ", persisterTxn : " ,
                     persisterTxn);
-            statement.execute(query);
+            for(Integer pocGroupId : pocGroupIds){
+                pstmt.setInt(1, pocGroupId);
+                pstmt.addBatch();
+            }
+            pstmt.executeBatch();
             knLogger.debug( methodName, "QUERY : Completed : ");
             knLogger.info( methodName, "Delete members from all groups :groupsIds:  " , pocGroupIds);
         } catch (SQLException e) {
@@ -736,7 +741,7 @@ public class KnPOCGroupDocMapDAO implements ITableDAO {
                     pttServerId, KnDAOSourceTypes.XDM_POCGROUPDOCMAP, query);
         } finally {
             KnDbUtil.closeResultSet(rs);
-            KnDbUtil.closeStatement(statement);
+            KnDbUtil.closePreparedStatement(pstmt);
             knLogger.debug(methodName, "EXIT");
         }
     }

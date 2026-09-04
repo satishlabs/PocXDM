@@ -711,17 +711,17 @@ public class KnXDMCorpListInfoDAO implements ITableDAO {
         Connection conn;
         PreparedStatement pstmt = null;
         String query = null;
-        int index = 1;
         try {
-            query = "DELETE FROM DG.CORPLISTINFO WHERE CORPLISTID IN (SUBLISTID)";
-            query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks("SUBLISTID",sublistId,query);
+            query = "DELETE FROM DG.CORPLISTINFO WHERE CORPLISTID = ?";
+            //query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks("SUBLISTID",sublistId,query);
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
             pstmt = conn.prepareStatement(query);
             for (Integer val : sublistId) {
-                pstmt.setInt(index++, val);
+                pstmt.setInt(1, val);
+                pstmt.addBatch();
             }
             knLogger.debug(methodName, "Executing query - ", "'", query, "'");
-            pstmt.executeUpdate();
+            pstmt.executeBatch();
             knLogger.debug(methodName, "EXIT: Query executed successfully");
         } catch (KnDAOException e) {
             knLogger.error(methodName, "KnDAOException occured while deleting Sublist - ",
@@ -889,11 +889,15 @@ public class KnXDMCorpListInfoDAO implements ITableDAO {
         try {
             KnQueryMapper queryMapper = KnQueryMapper.getInstance();
             query = queryMapper.getQuery(DELETE_ALL_SUBLISTS_INFO);
-            query = replaceContactWithValue(query, SUBLISTID, formIntegerCommaSeperatedIdList(sublistIdsList));
+            //query = replaceContactWithValue(query, SUBLISTID, formIntegerCommaSeperatedIdList(sublistIdsList));
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
             pstmt = conn.prepareStatement(query);
             knLogger.debug(methodName, "Executing query - ", "'", query, "'");
-            pstmt.executeUpdate();
+            for(Integer sublistIds : sublistIdsList){
+                pstmt.setInt(1, sublistIds);
+                pstmt.addBatch();
+            }
+            pstmt.executeBatch();
             knLogger.debug(methodName, "EXIT: Query executed successfully");
         } catch (KnDAOException e) {
             knLogger.error(methodName, "KnDAOException occured while deleting Sublist list - ", sublistIdsList + ", " + e);

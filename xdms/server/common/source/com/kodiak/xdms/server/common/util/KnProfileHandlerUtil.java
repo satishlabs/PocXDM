@@ -459,13 +459,21 @@ public class KnProfileHandlerUtil {
                 knLogger.warn(methodName, "MICROSVCS SERVICE CONFIG map is null or empty for clusterId - ", clusterId);
                 return;
             }
-            if (getFeatureBitValue(opsCorpFs2, TEXTMSGFLAGBIT) && parseIntSafe(msSvcConfigDocMap.get(TEXTMSGFLAG), 0) == 1) {
+            Map<String, String> microServicesParamNameValueMap = genInfoUtil.retrieveMSSvcsCommonConfig(clusterId, persisterTxn);
+            if (microServicesParamNameValueMap == null || microServicesParamNameValueMap.isEmpty()) {
+                knLogger.warn(methodName, "MICROSVCOMM Config map is null or empty for clusterId - ", clusterId);
+                return;
+            }
+            if (getFeatureBitValue(opsCorpFs2, TEXTMSGFLAGBIT) && (parseIntSafe(msSvcConfigDocMap.get(TEXTMSGFLAG), 0) == 1
+                    || parseIntSafe(microServicesParamNameValueMap.get(SDSFEATUREFLAG), 0) == 1)) {
                 corpProfileDTO.setTextMsgFlag(1);
             }
-            if (getFeatureBitValue(opsCorpFs2, MULTIMEDIAMSGFLAGBIT) && parseIntSafe(msSvcConfigDocMap.get(MULTIMEDIAMSGFLAG), 0) == 1) {
+            if (getFeatureBitValue(opsCorpFs2, MULTIMEDIAMSGFLAGBIT) && (parseIntSafe(msSvcConfigDocMap.get(MULTIMEDIAMSGFLAG),
+                    0) == 1 || parseIntSafe(microServicesParamNameValueMap.get(FDFEATUREFLAG), 0) == 1)) {
                 corpProfileDTO.setMultiMediaMsgFlag(1);
             }
-            if (getFeatureBitValue(opsCorpFs2, LOCATIONMSGFLAGBIT) && parseIntSafe(msSvcConfigDocMap.get(LOCATIONMSGFLAG), 0) == 1) {
+            if (getFeatureBitValue(opsCorpFs2, LOCATIONMSGFLAGBIT) && (parseIntSafe(msSvcConfigDocMap.get(LOCATIONMSGFLAG),
+                    0) == 1 || parseIntSafe(microServicesParamNameValueMap.get(SDSFEATUREFLAG), 0) == 1)) {
                 corpProfileDTO.setLocationMsgFlag(1);
             }
             if (getFeatureBitValue(opsCorpFs2, URGENTMSGFLAGBIT) && parseIntSafe(msSvcConfigDocMap.get(URGENTMSGFLAG), 0) == 1) {

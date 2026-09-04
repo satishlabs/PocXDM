@@ -1228,14 +1228,15 @@ public class KnXDMCorpContactListDAO implements ITableDAO {
         int index = 1;
         try {
             Connection conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
-            query = "DELETE FROM DG.CORPCONTACTLIST WHERE MDN IN (MDNLIST)";
-            query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(mdnList,query,"MDNLIST");
+            query = "DELETE FROM DG.CORPCONTACTLIST WHERE MDN = ?";
+            //query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(mdnList,query,"MDNLIST");
             knLogger.debug( methodName, "Executing query - ", query);
             pstmt = conn.prepareStatement(query);
             for(String mdn : mdnList){
-                pstmt.setString(index++, mdn);
+                pstmt.setString(1, mdn);
+                pstmt.addBatch();
             }
-            pstmt.executeQuery();
+            pstmt.executeBatch();
             knLogger.debug(methodName, "EXIT: Query executed successfully");
         } catch (KnDAOException e) {
             knLogger.error( methodName, "KnDAOException occured while deleting from subscriber contact list table-  ", e);
@@ -1245,7 +1246,7 @@ public class KnXDMCorpContactListDAO implements ITableDAO {
             throw KnDbUtil.processException(e, "Failed to addGroupMembers in  groupmemberlist table " + e,
                     pttServerId, KnDAOSourceTypes.XDM_CORP_CONTACT_LIST, query);
         } finally {
-            KnDbUtil.closeStatement(pstmt);
+            KnDbUtil.closePreparedStatement(pstmt);
         }
     }
 
@@ -1388,4 +1389,74 @@ public class KnXDMCorpContactListDAO implements ITableDAO {
 
         return hierarchyMappedGeocode;
     }
+
+    public String getPocHomeByHierarchyIdFromAnchor(String hierarchyId, KnPersisterTxn persisterTxn) throws KnDAOException {
+        String methodName = "getPocHomeByHierarchyIdFromAnchor(String, KnPersisterTxn)";
+        knLogger.debug(methodName, "ENTRY: hierarchyId - ", hierarchyId);
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        String query = null;
+        String pocHome = null;
+        try {
+            Connection conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, true);
+            KnQueryMapper queryMapper = KnQueryMapper.getInstance();
+            query = queryMapper.getQuery(GET_POCHOME_BY_HIERARCHYID_FROM_ANCHOR);
+            pstmt = conn.prepareStatement(query);
+            pstmt.setString(1, hierarchyId);
+            rs = pstmt.executeQuery();
+            while(rs.next()){
+                pocHome = rs.getString("POCHOME");
+                if (pocHome != null && !pocHome.isEmpty() && !pocHome.trim().equals("0"))break; // Exit loop if a non-null POC home is found
+            }
+            knLogger.debug(methodName, "Exit: pocHome - ", pocHome);
+        } catch (SQLException e) {
+            throw KnDbUtil.processException(e, "Failed to fetch PocHome for HierarchyId: " + hierarchyId,
+                    pttServerId, KnDAOSourceTypes.ANCHOR_POC_INFO, query);
+        } finally {
+            KnDbUtil.closeResultSet(rs);
+            KnDbUtil.closePreparedStatement(pstmt);
+        }
+        return pocHome;
+
+    }
+
+
+    public String getPocHomeByGeocodes(Set<String> geocodes, KnPersisterTxn persisterTxn) throws KnDAOException {
+        String methodName = "getPocHomeByGeocodes(Set<String>, KnPersisterTxn)";
+        knLogger.debug(methodName, "ENTRY: geocodes - ", geocodes);
+        List<String> geocodeList = geocodes == null ? Collections.<String>emptyList() : new ArrayList<>(geocodes);
+        if (geocodeList.isEmpty()) {
+            return null;
+        }
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        String query = null;
+        String pocHome = null;
+        try {
+            Connection conn = persisterTxn.getDBConnection(pttServerId, true);
+            KnQueryMapper queryMapper = KnQueryMapper.getInstance();
+            query = queryMapper.getQuery(GET_POCHOME_BY_GEOCODES);
+            query = replaceContactWithValue(query, GEOCODELIST, formCommaSeperatedQuesMarks(geocodeList));
+            knLogger.debug(methodName, "Executing query - ", "'", query, "'");
+            pstmt = conn.prepareStatement(query);
+            int paramIndex = 1;
+            for (String geocode : geocodeList) {
+                pstmt.setString(paramIndex++, geocode);
+            }
+            rs = pstmt.executeQuery();
+            while (rs.next()) {
+                pocHome = rs.getString("POCHOME");
+                if (pocHome != null && !pocHome.isEmpty() && !pocHome.trim().equals("0")) break; // Exit loop if a non-null POC home is found
+            }
+            knLogger.debug(methodName, "Exit: pocHome - ", pocHome);
+        } catch (SQLException e) {
+            throw KnDbUtil.processException(e, "Failed to fetch PocHome for Geocodes: " + geocodes,
+                    pttServerId, KnDAOSourceTypes.ANCHOR_POC_INFO, query);
+        } finally {
+            KnDbUtil.closeResultSet(rs);
+            KnDbUtil.closePreparedStatement(pstmt);
+        }
+        return pocHome;
+    }
+
 }

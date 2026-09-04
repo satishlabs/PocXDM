@@ -9,6 +9,7 @@ import com.kodiak.common.dao.KnDAOException;
 import com.kodiak.common.dao.KnDbUtil;
 import com.kodiak.common.dao.KnPersisterTxn;
 import com.kodiak.common.resources.KnConstants;
+import com.kodiak.common.resources.KnGDPRTemplate;
 import com.kodiak.frameworks.statisticalmgr.KnOMConstants;
 import com.kodiak.frameworks.statisticalmgr.KnStatisticsManagerImpl;
 import com.kodiak.logger.KnLogger;
@@ -289,7 +290,7 @@ public class KnBulkOpsUpdateSubscProcessor {
             partialRespDTO.setCorpId(firstExistingProfile.getCorpId());
 
             // 5. Validate MDNs exist and mark non-existing ones as failures
-            knLogger.info(methodName," Validating existing subscriber profiles for MDNs", existingProfilesMap.keySet());
+            knLogger.info(methodName," Validating existing subscriber profiles for MDNs", KnGDPRTemplate.mdnList(new ArrayList<>(existingProfilesMap.keySet())));
             List<String> mdnsToUpdate = new ArrayList<>();
             for (String mdn : validMdnList) {
                 if (existingProfilesMap.containsKey(mdn)) {
@@ -299,7 +300,7 @@ public class KnBulkOpsUpdateSubscProcessor {
                             "Subscriber not found: " + mdn);
                 }
             }
-            knLogger.info(methodName, "MDNs to be updated after validation: ", mdnsToUpdate);
+            knLogger.info(methodName, "MDNs to be updated after validation: ", KnGDPRTemplate.mdnList(mdnsToUpdate));
 
             // 5a. Build MDN to NetworkName map by comparing input with existing DB values
             //     Only include MDNs where networkName is ACTUALLY DIFFERENT from existing value
@@ -315,7 +316,7 @@ public class KnBulkOpsUpdateSubscProcessor {
                 List<String> accountIdMismatchMdns = validateAccountIdNotChanged(
                         requestAccountId.trim(), existingProfilesMap, mdnsToUpdate);
                 if (!accountIdMismatchMdns.isEmpty()) {
-                    knLogger.error(methodName, "Account ID mismatch for MDNs: ", accountIdMismatchMdns);
+                    knLogger.error(methodName, "Account ID mismatch for MDNs: ", KnGDPRTemplate.mdnList(accountIdMismatchMdns));
                     for (String mdn : accountIdMismatchMdns) {
                         partialRespDTO.addFailure(mdn, KnBulkOpsErrorCodes.BOEntity.ACCOUNT_ID_CHANGE_NOT_ALLOWED,
                                 "Account ID change not allowed");
@@ -333,7 +334,7 @@ public class KnBulkOpsUpdateSubscProcessor {
                 List<String> extCorpIdMismatchMdns = validateExtCorpIdMatches(
                         requestExtCorpId.trim(), existingProfilesMap, mdnsToUpdate, corpProfileDAO, persisterTxn);
                 if (!extCorpIdMismatchMdns.isEmpty()) {
-                    knLogger.error(methodName, "ExtCorpId mismatch for MDNs: ", extCorpIdMismatchMdns);
+                    knLogger.error(methodName, "ExtCorpId mismatch for MDNs: ", KnGDPRTemplate.mdnList(extCorpIdMismatchMdns));
                     for (String mdn : extCorpIdMismatchMdns) {
                         partialRespDTO.addFailure(mdn, KnBulkOpsErrorCodes.BOEntity.EXTCORPID_MISMATCH,
                                 "ExtCorpId does not match subscriber's corporate association");
@@ -347,7 +348,7 @@ public class KnBulkOpsUpdateSubscProcessor {
             //    Standalone camera restrictions apply
             List<String> restrictedClientTypeMdns = validateClientTypeRestrictions(existingProfilesMap, mdnsToUpdate);
             if (!restrictedClientTypeMdns.isEmpty()) {
-                knLogger.error(methodName, "Restricted client type for MDNs: ", restrictedClientTypeMdns);
+                knLogger.error(methodName, "Restricted client type for MDNs: ", KnGDPRTemplate.mdnList(restrictedClientTypeMdns));
                 for (String mdn : restrictedClientTypeMdns) {
                     partialRespDTO.addFailure(mdn, KnBulkOpsErrorCodes.BOEntity.RESTRICTED_CLIENT_TYPE,
                             "Client type not supported for bulk update");
@@ -368,7 +369,7 @@ public class KnBulkOpsUpdateSubscProcessor {
             // Note: Unlike Single MDN which throws error for no change, Bulk should still process
             // as other MDNs may have changes. Log warning but don't fail.
             if (!noChangeMdns.isEmpty()) {
-                knLogger.warn(methodName, "No changes detected for MDNs (will still update profile time): ", noChangeMdns);
+                knLogger.warn(methodName, "No changes detected for MDNs (will still update profile time): ", KnGDPRTemplate.mdnList(noChangeMdns));
             }
 
             knLogger.info(methodName, "MDNs to be updated after all validations: ", mdnsToUpdate.size());
@@ -625,7 +626,7 @@ public class KnBulkOpsUpdateSubscProcessor {
                 for (String mdn : updatedMdns) {
                     if (mdnNetworkNameMap.containsKey(mdn)) {
                         mdnNameChanged.put(mdn, true);
-                        knLogger.debug(methodName, "NetworkName changed for MDN ", mdn);
+                        knLogger.debug(methodName, "NetworkName changed for MDN ", KnGDPRTemplate.mdn(mdn));
                     }
                 }
             }
@@ -639,7 +640,7 @@ public class KnBulkOpsUpdateSubscProcessor {
                         String oldActiveFS2 = profile.getActiveFS2();
                         if (newActiveFS2 != null && !newActiveFS2.equals(oldActiveFS2)) {
                             mdnActiveFSChanged.put(mdn, true);
-                            knLogger.debug(methodName, "ActiveFS2 changed for MDN ", mdn);
+                            knLogger.debug(methodName, "ActiveFS2 changed for MDN ", KnGDPRTemplate.mdn(mdn));
                         }
                     }
                 }
@@ -654,7 +655,7 @@ public class KnBulkOpsUpdateSubscProcessor {
             for (String mdn : updatedMdns) {
                 KnBulkSubsProfileDTO profile = existingProfilesMap.get(mdn);
                 if (profile == null) {
-                    knLogger.warn(methodName, "No profile found for MDN ", mdn, ", skipping notification");
+                    knLogger.warn(methodName, "No profile found for MDN ", KnGDPRTemplate.mdn(mdn), ", skipping notification");
                     continue;
                 }
                 
@@ -698,7 +699,7 @@ public class KnBulkOpsUpdateSubscProcessor {
                     knSubscrEXDMSNotifyDto.setDeviceId(mdn);
                     
                     notifyDtoList.add(knSubscrEXDMSNotifyDto);
-                    knLogger.debug(methodName, "Added MODIFY_SUBSCRIBER notification for MDN ", mdn, 
+                    knLogger.debug(methodName, "Added MODIFY_SUBSCRIBER notification for MDN ", KnGDPRTemplate.mdn(mdn), 
                             " (activeFSChanged=", isActiveFSChanged, ", nameChanged=", isNameChanged, 
                             ", clientTypeUpgraded=", isClientTypeUpgraded, ")");
                 }
@@ -828,14 +829,14 @@ public class KnBulkOpsUpdateSubscProcessor {
             
             KnBulkSubsProfileDTO profile = existingProfilesMap.get(mdn);
             if (profile == null) {
-                knLogger.warn(methodName, "No profile found for MDN ", mdn, ", skipping");
+                knLogger.warn(methodName, "No profile found for MDN ", KnGDPRTemplate.mdn(mdn), ", skipping");
                 continue;
             }
             
             // Get updated activeFS2 value
             String newActiveFS2 = updatedActiveFS2Map != null ? updatedActiveFS2Map.get(mdn) : null;
             if (newActiveFS2 == null) {
-                knLogger.warn(methodName, "No updated activeFS2 for MDN ", mdn, ", skipping");
+                knLogger.warn(methodName, "No updated activeFS2 for MDN ", KnGDPRTemplate.mdn(mdn), ", skipping");
                 continue;
             }
             
@@ -845,7 +846,7 @@ public class KnBulkOpsUpdateSubscProcessor {
             int clientPVmajorVer = profile.getClientPVmajorVer();
             
             if (!(xcapCouchClientBit || clientPVmajorVer >= PROTOCOL_VERSION_18)) {
-                knLogger.debug(methodName, "MDN ", mdn, " does not support FEATURE_BIT_CHANGE (xcapCouchClient=", 
+                knLogger.debug(methodName, "MDN ", KnGDPRTemplate.mdn(mdn), " does not support FEATURE_BIT_CHANGE (xcapCouchClient=", 
                         xcapCouchClientBit, ", PV=", clientPVmajorVer, "), skipping");
                 continue;
             }
@@ -864,7 +865,7 @@ public class KnBulkOpsUpdateSubscProcessor {
             subscrEXDMSNotifyDto.setLastProfileUpdateTime(lastProfileUpdateTime);
             
             featureBitChangeList.add(subscrEXDMSNotifyDto);
-            knLogger.debug(methodName, "Added FEATURE_BIT_CHANGE notification for MDN ", mdn);
+            knLogger.debug(methodName, "Added FEATURE_BIT_CHANGE notification for MDN ", KnGDPRTemplate.mdn(mdn));
         }
         
         if (!featureBitChangeList.isEmpty()) {
@@ -949,11 +950,11 @@ public class KnBulkOpsUpdateSubscProcessor {
                 
                 if (isActiveFSChanged) {
                     profileNotifyDTO.setActiveFeatureSetChange(mdn);
-                    knLogger.debug(methodName, "Setting activeFeatureSetChange for MDN ", mdn);
+                    knLogger.debug(methodName, "Setting activeFeatureSetChange for MDN ", KnGDPRTemplate.mdn(mdn));
                 }
                 if (isNameChanged) {
                     profileNotifyDTO.setSubscriberNameChange(mdn);
-                    knLogger.debug(methodName, "Setting subscriberNameChange for MDN ", mdn);
+                    knLogger.debug(methodName, "Setting subscriberNameChange for MDN ", KnGDPRTemplate.mdn(mdn));
                 }
                 
                 profileNotifyDTO.setMdn(mdn);
@@ -966,7 +967,7 @@ public class KnBulkOpsUpdateSubscProcessor {
                 xcapDiffNotifyDTO.setProfileNotify(true);
                 xcapDiffNotifyDTO.setProfileNotifyDTO(profileNotifyDTO);
                 
-                knLogger.debug(methodName, "Profile notification included for MDN ", mdn, 
+                knLogger.debug(methodName, "Profile notification included for MDN ", KnGDPRTemplate.mdn(mdn), 
                         " - activeFSChanged: ", isActiveFSChanged, ", nameChanged: ", isNameChanged);
             }
             
@@ -992,7 +993,7 @@ public class KnBulkOpsUpdateSubscProcessor {
             return xcapDiffNotifyDTO;
             
         } catch (Exception e) {
-            knLogger.warn(methodName, "Failed to build XCAP Diff DTO for MDN ", mdn, ": ", e.getMessage());
+            knLogger.warn(methodName, "Failed to build XCAP Diff DTO for MDN ", KnGDPRTemplate.mdn(mdn), ": ", e.getMessage());
             return null;
         }
     }
@@ -1178,7 +1179,7 @@ public class KnBulkOpsUpdateSubscProcessor {
      */
     private void sendSMSNotification(Integer subsClientType, String mdn, int messageId) {
         String methodName = "sendSMSNotification()";
-        knLogger.info(methodName, "Sending WELCOME SMS NOTIFICATION ", subsClientType, " MDN: ", mdn, " messageId: ", messageId);
+        knLogger.info(methodName, "Sending WELCOME SMS NOTIFICATION ", subsClientType, " MDN: ", KnGDPRTemplate.mdn(mdn), " messageId: ", messageId);
         KnProvSMSDTO provSMSDTO = new KnProvSMSDTO();
         provSMSDTO.setMdn(mdn);
         provSMSDTO.setMsgNotificationId(messageId);
@@ -1278,7 +1279,7 @@ public class KnBulkOpsUpdateSubscProcessor {
                     if (!profileMdnList.isEmpty()) {
                         profileMdnEtagMap.put(baseMdn, profileMdnList);
                         totalProfileMdns += profileMdnList.size();
-                        knLogger.debug(methodName, "Base MDN ", baseMdn, " has ", profileMdnList.size(), " profile MDNs");
+                        knLogger.debug(methodName, "Base MDN ", KnGDPRTemplate.mdn(baseMdn), " has ", profileMdnList.size(), " profile MDNs");
                     }
                 }
             }
@@ -1489,10 +1490,10 @@ public class KnBulkOpsUpdateSubscProcessor {
 
             if (isChanged) {
                 networkNameChangesMap.put(mdn, inputNetworkName);
-                knLogger.debug(methodName, "NetworkName change detected for MDN ", mdn, 
+                knLogger.debug(methodName, "NetworkName change detected for MDN ", KnGDPRTemplate.mdn(mdn), 
                         ": existing='", existingNetworkName, "' -> new='", inputNetworkName, "'");
             } else {
-                knLogger.debug(methodName, "No networkName change for MDN ", mdn, 
+                knLogger.debug(methodName, "No networkName change for MDN ", KnGDPRTemplate.mdn(mdn), 
                         " (existing='", existingNetworkName, "', input='", inputNetworkName, "')");
             }
         }
@@ -1599,7 +1600,7 @@ public class KnBulkOpsUpdateSubscProcessor {
             // Account ID change is not allowed
             if (existingAccountId != null && !existingAccountId.isEmpty()) {
                 if (!requestAccountId.equalsIgnoreCase(existingAccountId)) {
-                    knLogger.debug(methodName, "Account ID mismatch for MDN ", mdn,
+                    knLogger.debug(methodName, "Account ID mismatch for MDN ", KnGDPRTemplate.mdn(mdn),
                             ": request=", requestAccountId, ", existing=", existingAccountId);
                     mismatchMdns.add(mdn);
                 }
@@ -1662,7 +1663,7 @@ public class KnBulkOpsUpdateSubscProcessor {
                 // Non-corporate subscriber - extCorpId should not be provided
                 // or subscriber should be corporate type
                 if (profile.getCorporateSubscriptionType() == com.kodiak.xdms.server.common.resources.KnConstants.CORP_SUBSCRIPTION_TYPE.CORPORATE.value()) {
-                    knLogger.debug(methodName, "MDN ", mdn, " is corporate but has no corpId");
+                    knLogger.debug(methodName, "MDN ", KnGDPRTemplate.mdn(mdn), " is corporate but has no corpId");
                     mismatchMdns.add(mdn);
                 }
                 continue;
@@ -1676,7 +1677,7 @@ public class KnBulkOpsUpdateSubscProcessor {
             // ExtCorpId must match
             if (existingExtCorpId != null && !existingExtCorpId.isEmpty()) {
                 if (!requestExtCorpId.equalsIgnoreCase(existingExtCorpId)) {
-                    knLogger.debug(methodName, "ExtCorpId mismatch for MDN ", mdn,
+                    knLogger.debug(methodName, "ExtCorpId mismatch for MDN ", KnGDPRTemplate.mdn(mdn),
                             ": request=", requestExtCorpId, ", existing=", existingExtCorpId);
                     mismatchMdns.add(mdn);
                 }
@@ -1716,7 +1717,7 @@ public class KnBulkOpsUpdateSubscProcessor {
 
             // PDV client type is not supported (Single MDN: line 1927-1930)
             if (clientType == PDV_CLIENT_TYPE) {
-                knLogger.debug(methodName, "MDN ", mdn, " has PDV client type which is not supported");
+                knLogger.debug(methodName, "MDN ", KnGDPRTemplate.mdn(mdn), " has PDV client type which is not supported");
                 restrictedMdns.add(mdn);
                 continue;
             }
@@ -1726,7 +1727,7 @@ public class KnBulkOpsUpdateSubscProcessor {
             // can only have networkName and pkgIdMap updates
             // This is allowed, but log for awareness
             if (clientType == STANDALONECAMERA_CLIENT_TYPE) {
-                knLogger.debug(methodName, "MDN ", mdn, " is standalone camera - limited updates allowed");
+                knLogger.debug(methodName, "MDN ", KnGDPRTemplate.mdn(mdn), " is standalone camera - limited updates allowed");
                 // Don't add to restricted list - allow limited updates
             }
         }
@@ -1764,14 +1765,14 @@ public class KnBulkOpsUpdateSubscProcessor {
             // (compared against DB in buildMdnNetworkNameMap, gated by nameChangeAllowed flag)
             if (networkNameMap != null && networkNameMap.containsKey(mdn)) {
                 hasChanges = true;
-                knLogger.debug(methodName, "NetworkName change detected for MDN ", mdn);
+                knLogger.debug(methodName, "NetworkName change detected for MDN ", KnGDPRTemplate.mdn(mdn));
                 KnStatisticsManagerImpl.getInstance().increment(KnOMConstants.XDM_NUM_BULK_SUBSCR_NAME_CHANGE);
             }
 
             // Check pkgIdMap changes (applies to all MDNs if provided)
             if (hasPkgIdMapChanges) {
                 hasChanges = true;
-                knLogger.debug(methodName, "PkgIdMap changes will be applied to MDN ", mdn);
+                knLogger.debug(methodName, "PkgIdMap changes will be applied to MDN ", KnGDPRTemplate.mdn(mdn));
             }
 
             changeMap.put(mdn, hasChanges);
@@ -1780,4 +1781,3 @@ public class KnBulkOpsUpdateSubscProcessor {
         return changeMap;
     }
 }
-

@@ -319,6 +319,7 @@ public class KnBulkSubsProvController implements IBulkSubsProvController {
                     corpProfilePersistDTO.setFeatureRelVersion(currentFsVersion);
                     String xdmCorpFS2Set = KnGeneralUtil.getDefaultXDMCorpFS2Set(com.kodiak.common.resources.KnConstants.XDMCORPFS2_SET.EMERGENCY_CONF_TIMER_FEATURE.value(), com.kodiak.common.resources.KnConstants.TRUE);
                     xdmCorpFS2Set = featureSetUtil.calculateXDMCorpFS2(xdmCorpFS2Set, com.kodiak.common.resources.KnConstants.XDMCORPFS2_SET.EMERGENCY_CONF_TIMER_FEATURE.value(), com.kodiak.common.resources.KnConstants.TRUE);
+                    xdmCorpFS2Set = featureSetUtil.calculateXDMCorpFS2(xdmCorpFS2Set, com.kodiak.common.resources.KnConstants.XDMCORPFS2_SET.MC_REACHABILITY_FLAG.value(), com.kodiak.common.resources.KnConstants.TRUE);
                     corpProfilePersistDTO.setXdmCorpFS2Set(xdmCorpFS2Set);
                     provXDMServerDAO.createCorporateProfile(corpProfilePersistDTO, persisterTxn);
                     knLogger.debug(methodName, "created the corporate profile for extCorpId - ", extCorpId);

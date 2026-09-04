@@ -60,7 +60,7 @@ public class KnXDMDirectoryDAO {
      */
     public Map<String, Integer> getCurrentEtagsForDirDoc(List<String> mdns, KnPersisterTxn persisterTxn) throws KnDAOException {
         String methodName = "getCurrentEtagsForDirDoc(List<String>, KnPersisterTxn)";
-        knLogger.debug(methodName, "Entry : mdns -> ", mdns);
+        knLogger.debug(methodName, "Entry : mdns -> ", KnGDPRTemplate.mdnList(mdns));
         Map<String, Integer> etagMap = new HashMap<>();
         if (mdns == null || mdns.isEmpty()) {
             return etagMap;

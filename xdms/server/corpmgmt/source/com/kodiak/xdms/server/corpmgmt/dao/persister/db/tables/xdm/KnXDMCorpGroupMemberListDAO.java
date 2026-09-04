@@ -647,10 +647,14 @@ public class KnXDMCorpGroupMemberListDAO implements ITableDAO {
             Connection conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
             KnQueryMapper queryMapper = KnQueryMapper.getInstance();
             query = queryMapper.getQuery(DELETE_GROUP_MEMBER_LIST_FOR_A_GROUP);
-            query = replaceContactWithValue(query, GROUPIDS, formIntegerCommaSeperatedIdList(groupIdList));
+            //query = replaceContactWithValue(query, GROUPIDS, formIntegerCommaSeperatedIdList(groupIdList));
             knLogger.debug(methodName, "Executing query - ", "'", query, "'");
             pstmt = conn.prepareStatement(query);
-            pstmt.executeQuery();
+            for(Integer groupId: groupIdList){
+                pstmt.setInt(1, groupId);
+                pstmt.addBatch();
+            }
+            pstmt.executeBatch();
             knLogger.debug(methodName, "EXIT: Query executed successfully");
         } catch (KnDAOException e) {
             knLogger.error(methodName, "KnDAOException occured while deleting from corp group member list table-  ", e);
@@ -660,7 +664,7 @@ public class KnXDMCorpGroupMemberListDAO implements ITableDAO {
             throw KnDbUtil.processException(e, "Failed to addGroupMembers in  groupmemberlist table " + e,
                     pttServerId, KnDAOSourceTypes.XDM_CORP_GROUP_MEMBER_LIST, query);
         } finally {
-            KnDbUtil.closeStatement(pstmt);
+            KnDbUtil.closePreparedStatement(pstmt);
         }
     }
 

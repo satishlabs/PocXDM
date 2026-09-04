@@ -2664,6 +2664,13 @@ public class KnCorpXdmDAO implements ICorpXdmDAO {
         return groupInfoDAO.getGroupBasicInfo(groupId, readonly, persisterTxn);
     }
 
+    public Map<Integer, Integer> getGroupTypeMap(Collection<Integer> groupIds, KnPersisterTxn persisterTxn)
+            throws KnDAOException {
+        KnXDMCorpGroupInfoDAO groupInfoDAO =
+                KnCorpDBTablesRegistry.getDBXdmTableRegistry().createXDMCorpGroupInfoDAO(pttServerId);
+        return groupInfoDAO.getGroupTypeMap(groupIds, persisterTxn);
+    }
+
     public Integer getMemberCountFromMemberList(int groupId, boolean readonly, KnPersisterTxn persisterTxn) throws KnDAOException {
         KnXDMCorpGroupInfoDAO groupInfoDAO =
                 KnCorpDBTablesRegistry.getDBXdmTableRegistry().createXDMCorpGroupInfoDAO(pttServerId);
@@ -9918,5 +9925,17 @@ public class KnCorpXdmDAO implements ICorpXdmDAO {
         Set<String> hierarchyIds = new HashSet<>();
         hierarchyIds.add(hierarchyId);
         return corpContactListDAO.getHierarchyMappedGeocode(corpId, hierarchyIds, persisterTxn);
+    }
+
+    @Override
+    public String getPocHomeByHierarchyIdFromAnchor(int corpid,String hierarchyId, KnPersisterTxn persisterTxn) throws KnDAOException {
+        KnXDMCorpContactListDAO xdmDao = KnCorpDBTablesRegistry.getDBXdmTableRegistry().createXDMCorpContactListDAO(pttServerId);
+        String pochome = xdmDao.getPocHomeByHierarchyIdFromAnchor(hierarchyId, persisterTxn);
+        if(pochome != null && !pochome.isEmpty() && !pochome.trim().equals("0"))return pochome;
+        Set<String> geoCodes = getHierarchyMappedGeocode(corpid, hierarchyId, persisterTxn).get(hierarchyId);
+        if(geoCodes != null && !geoCodes.isEmpty()){
+            pochome = xdmDao.getPocHomeByGeocodes(geoCodes,persisterTxn);
+        }
+        return pochome;
     }
 }

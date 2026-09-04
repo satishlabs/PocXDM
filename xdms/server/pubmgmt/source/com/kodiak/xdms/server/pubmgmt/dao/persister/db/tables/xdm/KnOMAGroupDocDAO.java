@@ -111,7 +111,7 @@ public class KnOMAGroupDocDAO implements ITableDAO {
     public static final String QRY_UPDATE_ALL_DOCS = "UPDATE " + TABLENAME + " SET " + MDN  + " = ? " + ", " +
             LIST_SERVICE_URI + " = ? " + ", " + DOC_URI + " = ? " + ", " + XML_DOC + " = ? "
             + ", " + ETAG + " = " + (ETAG + "+ 1") + " WHERE " + GROUP_DOC_ID + " = ?";
-    public static final String QRY_DELETE_ALL_GROUPS_FOR_MDNS = "DELETE FROM " + TABLENAME + " WHERE " + MDN + " IN ";
+    public static final String QRY_DELETE_ALL_GROUPS_FOR_MDNS = "DELETE FROM " + TABLENAME + " WHERE " + MDN + " = ?";
 
     public static final String QRY_UPDATE_GRUP_DETAIL = "UPDATE " + TABLENAME + " SET " + LIST_SERVICE_URI + " = ? " +
             ", " + DOC_URI + " = ? " + ", " + DISPLAY_NAME + " = ? " + " WHERE " + GROUP_DOC_ID + " = ?";
@@ -1507,7 +1507,7 @@ public class KnOMAGroupDocDAO implements ITableDAO {
 
         boolean ownedTxn = false;
         Connection conn;
-        Statement statement= null;
+        PreparedStatement pstmt = null;
         ResultSet rs = null;
         String query = null;
 
@@ -1520,15 +1520,19 @@ public class KnOMAGroupDocDAO implements ITableDAO {
             }
 
 
-            StringBuffer buffer = new StringBuffer(200);
-            buffer.append(QRY_DELETE_ALL_GROUPS_FOR_MDNS).append(KnDbUtil.convertListToStringBuffer(mdns));
-            query = buffer.toString();
-
+            //StringBuffer buffer = new StringBuffer(200);
+            //buffer.append(QRY_DELETE_ALL_GROUPS_FOR_MDNS).append(KnDbUtil.convertListToStringBuffer(mdns));
+            //query = buffer.toString();
+            query = QRY_DELETE_ALL_GROUPS_FOR_MDNS;
             conn = persisterTxn.getDBConnection(pttServerId, false);
-            statement = conn.createStatement();
             knLogger.debug( methodName, "QUERY : Executing " + query + ", persisterTxn : " +
                     persisterTxn);
-            statement.executeUpdate(query);
+            pstmt = conn.prepareStatement(query);
+            for (Object mdn : mdns) {
+                pstmt.setString(1, mdn.toString());
+                pstmt.addBatch();
+            }
+            pstmt.executeBatch();
             knLogger.debug( methodName, "QUERY : Completed.");
 
             if (ownedTxn) {
@@ -1557,7 +1561,7 @@ public class KnOMAGroupDocDAO implements ITableDAO {
                     pttServerId, KnDAOSourceTypes.XDM_OMAGROUPDOC, query);
         } finally {
             KnDbUtil.closeResultSet(rs);
-            KnDbUtil.closeStatement(statement);
+            KnDbUtil.closePreparedStatement(pstmt);
             knLogger.debug( methodName, "EXIT : MDN ->" + KnGDPRTemplate.mdnList(mdns));
         }
     }

@@ -52,7 +52,7 @@ Motorola Solutions Confidential Restricted
         </query-string>
     </query>
     <query id="13">
-        <query-string>DELETE FROM DG.CORPLISTDISTINFO WHERE RECIPIENTMDN IN (MDNLIST) AND CORPLISTID IN (SUBLISTID)
+        <query-string>DELETE FROM DG.CORPLISTDISTINFO WHERE RECIPIENTMDN = ? AND CORPLISTID = ?
         </query-string>
     </query>
     <query id="16">
@@ -409,28 +409,28 @@ Motorola Solutions Confidential Restricted
         <query-string>SELECT MEMBERMDN FROM DG.CORPGROUPMEMBERLIST WHERE CORPGROUPID=?</query-string>
     </query>
     <query id="143">
-        <query-string>DELETE FROM DG.CORPGROUP_LISTREF WHERE CORPGROUPID IN (GROUPIDS)</query-string>
+        <query-string>DELETE FROM DG.CORPGROUP_LISTREF WHERE CORPGROUPID = ?</query-string>
     </query>
     <query id="144">
-        <query-string>DELETE FROM DG.CORPGROUPDISTINFO WHERE CORPGROUPID IN (GROUPIDS)</query-string>
+        <query-string>DELETE FROM DG.CORPGROUPDISTINFO WHERE CORPGROUPID = ?</query-string>
     </query>
     <query id="146">
-        <query-string>DELETE FROM DG.CORPGROUPMEMBERCOUNT WHERE CORPGROUPID IN (GROUPIDS)</query-string>
+        <query-string>DELETE FROM DG.CORPGROUPMEMBERCOUNT WHERE CORPGROUPID = ?</query-string>
     </query>
     <query id="147">
-        <query-string>DELETE FROM DG.CORPGROUPINFO WHERE CORPGROUPID IN (GROUPIDS)</query-string>
+        <query-string>DELETE FROM DG.CORPGROUPINFO WHERE CORPGROUPID = ?</query-string>
     </query>
     <query id="148">
         <query-string>SELECT CORPLISTID FROM DG.CORPLISTINFO WHERE CORPID = ?</query-string>
     </query>
     <query id="149">
-        <query-string>DELETE FROM DG.CORPLISTMEMBER WHERE CORPLISTID IN (SUBLISTID)</query-string>
+        <query-string>DELETE FROM DG.CORPLISTMEMBER WHERE CORPLISTID = ?</query-string>
     </query>
     <query id="150">
-        <query-string>DELETE FROM DG.CORPLISTDISTINFO WHERE CORPLISTID IN (SUBLISTID)</query-string>
+        <query-string>DELETE FROM DG.CORPLISTDISTINFO WHERE CORPLISTID = ?</query-string>
     </query>
     <query id="151">
-        <query-string>DELETE FROM DG.CORPLISTINFO WHERE CORPLISTID IN (SUBLISTID)</query-string>
+        <query-string>DELETE FROM DG.CORPLISTINFO WHERE CORPLISTID = ?</query-string>
     </query>
     <query id="152">
         <query-string>DELETE FROM DG.EXTCORPCONTACT WHERE CORPID = ?</query-string>
@@ -480,7 +480,7 @@ Motorola Solutions Confidential Restricted
         </query-string>
     </query>
     <query id="165">
-        <query-string>DELETE FROM DG.CORPGROUPMEMBERLIST WHERE CORPGROUPID IN (GROUPIDS)</query-string>
+        <query-string>DELETE FROM DG.CORPGROUPMEMBERLIST WHERE CORPGROUPID = ?</query-string>
     </query>
     <query id="166">
         <query-string>UPDATE DG.CORPCONTACTLIST SET MDN= ? WHERE MDN =?</query-string>
@@ -700,7 +700,7 @@ Motorola Solutions Confidential Restricted
         <query-string>SELECT MDN,SUBSCRNAME FROM DG.POCSUBSCRINFO WHERE MDN IN (MDNLIST);</query-string>
     </query>
     <query id="219">
-        <query-string>DELETE FROM DG.CORPGROUP_LISTREF WHERE CORPLISTID IN (SUBLISTID)</query-string>
+        <query-string>DELETE FROM DG.CORPGROUP_LISTREF WHERE CORPLISTID = ?</query-string>
     </query>
     <query id="220">
         <query-string>SELECT CORPID FROM DG.EXTCORPCONTACT WHERE CONTACTMDN=?</query-string>
@@ -894,7 +894,7 @@ Motorola Solutions Confidential Restricted
         <query-string>SELECT CORPID FROM DG.EXTCORPCONTACT WHERE CONTACTMDN IN (MDNLIST)</query-string>
     </query>
     <query id="266">
-        <query-string>DELETE FROM DG.CAMPEDGROUPINFO WHERE GROUPID IN (GROUPIDS)</query-string>
+        <query-string>DELETE FROM DG.CAMPEDGROUPINFO WHERE GROUPID = ?</query-string>
     </query>
     <query id="267">
         <query-string>INSERT INTO DG.CAMPEDGROUPINFO (MDN, GROUPURI, GROUPID, CAMPED_BY, PRIORITY) VALUES (?, ?, ?, ?,
@@ -1261,7 +1261,7 @@ Motorola Solutions Confidential Restricted
         <query-string>SELECT MDN FROM DG.CHANNELGROUPINFO WHERE GROUPID=?</query-string>
     </query>
     <query id="371">
-        <query-string>DELETE FROM DG.CHANNELGROUPINFO WHERE GROUPID IN (GROUPIDS)</query-string>
+        <query-string>DELETE FROM DG.CHANNELGROUPINFO WHERE GROUPID = ?</query-string>
     </query>
     <query id="372">
         <query-string>DELETE FROM DG.CHANNELGROUPINFO WHERE MDN = ?</query-string>
@@ -1641,7 +1641,7 @@ Motorola Solutions Confidential Restricted
         <query-string>SELECT MDN FROM DG.SSCHANNELGROUPINFO WHERE GROUPID = ?</query-string>
     </query>
     <query id="461">
-        <query-string>DELETE FROM DG.SSCHANNELGROUPINFO WHERE GROUPID IN (GROUPIDS)</query-string>
+        <query-string>DELETE FROM DG.SSCHANNELGROUPINFO WHERE GROUPID = ?</query-string>
     </query>
     <query id="462">
         <query-string>SELECT MDN, ETAG FROM DG.SIMULSESSION_DOC WHERE MDN IN (MDNLIST)</query-string>
@@ -2468,7 +2468,7 @@ Motorola Solutions Confidential Restricted
         </query-string>
     </query>
     <query id="639">
-        <query-string>UPDATE DG.CORPGROUPMEMBERCOUNT SET MEMBERCOUNT = 0 WHERE CORPGROUPID IN (GROUPIDS);</query-string>
+        <query-string>UPDATE DG.CORPGROUPMEMBERCOUNT SET MEMBERCOUNT = 0 WHERE CORPGROUPID = ?;</query-string>
     </query>
     <query id="640">
         <query-string>SELECT MDN FROM DG.POCSUBSCRINFO WHERE USERPROFILEID IN (SELECT USER_PROFILEID FROM
@@ -3005,5 +3005,11 @@ Motorola Solutions Confidential Restricted
     </query>
     <query id="750">
         <query-string>UPDATE DG.ANCHOR_POC_INFO SET POCHOME = ? WHERE CORPID = ? AND HIERARCHY_ID = ? AND CLUSTERID = ?;</query-string>
+    </query>
+    <query id="751">
+        <query-string>select POCHOME from DG.ANCHOR_POC_INFO where HIERARCHY_ID=?;</query-string>
+    </query>
+    <query id="752">
+        <query-string>SELECT DISTINCT PSI.PTTSERVERID AS POCHOME FROM DG.DEPLOY_SITE_INFO DSI INNER JOIN DG.SIGNALINGCARD_SITE_MAP SSM ON DSI.CLUSTERID = SSM.CLUSTERID INNER JOIN DG.PTTSERVERIPINFO PSI ON SSM.SIGNALINGCARDID = PSI.SIGNALINGCARDID WHERE PSI.SIGNALINGCARDTYPE = 32 and DSI.GEOCODE in (GEOCODELIST);</query-string>
     </query>
 </sql-map-corporate>

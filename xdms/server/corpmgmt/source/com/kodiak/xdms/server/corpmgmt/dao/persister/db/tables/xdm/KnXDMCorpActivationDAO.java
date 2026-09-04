@@ -642,17 +642,18 @@ public class KnXDMCorpActivationDAO implements ITableDAO {
         PreparedStatement pstmt = null;
         ResultSet rs = null;
         String query = null;
-        int index = 1;
         knLogger.debug(methodName, "mdn - ", KnGDPRTemplate.mdnList(mdnList));
         try {
             Connection conn = persisterTxn.getDBConnection(pttServerId, false);
-            query = "DELETE FROM DG.TMPVASSUBSCRIPTIONKEYINFO WHERE MDN IN (MDNLIST)";
-            query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(mdnList,query,"MDNLIST");
+            query = "DELETE FROM DG.TMPVASSUBSCRIPTIONKEYINFO WHERE MDN = ?";
+            //query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(mdnList,query,"MDNLIST");
             pstmt = conn.prepareStatement(query);
             for(String mdn : mdnList){
-                pstmt.setString(index++, mdn);
+                pstmt.setString(1, mdn);
+                pstmt.addBatch();
             }
-            rs = pstmt.executeQuery();
+            int[] results = pstmt.executeBatch();
+            boolean status = Arrays.stream(results).allMatch(result -> result >= 0);
         } catch (SQLException e) {
             throw KnDbUtil.processException(e, "Failed to get Param value " + e,
                     pttServerId, KnDAOSourceTypes.TMPVASSUBSCRIPTIONKEYINFO, query);

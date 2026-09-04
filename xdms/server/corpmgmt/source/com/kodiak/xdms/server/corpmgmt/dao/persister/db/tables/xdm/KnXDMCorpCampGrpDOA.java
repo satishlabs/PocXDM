@@ -137,20 +137,21 @@ public class KnXDMCorpCampGrpDOA implements ITableDAO {
         int index = 1;
         try {
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
-            query = "DELETE FROM DG.CAMPEDGROUPINFO WHERE MDN IN (MDNLIST)";
-            query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(mdnList,query,"MDNLIST");
+            query = "DELETE FROM DG.CAMPEDGROUPINFO WHERE MDN = ?";
+            //query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(mdnList,query,"MDNLIST");
             pstmt = conn.prepareStatement(query);
             for(String mdn : mdnList) {
-            	pstmt.setString(index++, mdn);
+            	pstmt.setString(1, mdn);
+                pstmt.addBatch();
             }
             knLogger.debug(methodName, "Executing query - ", query);
-            pstmt.executeQuery();
+            pstmt.executeBatch();
             knLogger.debug(methodName, "Exit: Query executed successfully");
         } catch (SQLException e) {
             throw KnDbUtil.processException(e, "Failed while deleting entries from DG.CAMPEDGROUPINFO", pttServerId,
                     KnDAOSourceTypes.CAMPEDGROUPINFO, query);
         } finally {
-            KnDbUtil.closeStatement(pstmt);
+            KnDbUtil.closePreparedStatement(pstmt);
         }
     }
 
@@ -158,22 +159,26 @@ public class KnXDMCorpCampGrpDOA implements ITableDAO {
         String methodName = "deleteTGSEntries(String, int KnPersisterTxn)";
         knLogger.debug(methodName, "ENTRY: mdn ", KnGDPRTemplate.mdn(mdn));
         Connection conn;
-        Statement st = null;
+        PreparedStatement pstmt = null;
         String query = null;
         try {
             KnQueryMapper queryMapper = KnQueryMapper.getInstance();
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
             query = queryMapper.getQuery(KnPersisterConstants.DELETE_CAMPED_GROUP_FOR_MDNLIST);
-            query = replaceContactWithValue(query, KnPersisterConstants.GROUPIDS, formIntegerCommaSeperatedIdList(grpIdList));
-            st = conn.createStatement();
+            //query = replaceContactWithValue(query, KnPersisterConstants.GROUPIDS, formIntegerCommaSeperatedIdList(grpIdList));
+            pstmt = conn.prepareStatement(query);
             knLogger.debug(methodName, "Executing query - ", query);
-            st.executeUpdate(query);
+            for(Integer grpId : grpIdList) {
+                pstmt.setInt(1, grpId);
+                pstmt.addBatch();
+            }
+            pstmt.executeBatch();
             knLogger.debug(methodName, "Exit: Query executed successfully");
         } catch (SQLException e) {
             throw KnDbUtil.processException(e, "Failed while deleting entries from DG.CAMPEDGROUPINFO", pttServerId,
                     KnDAOSourceTypes.CAMPEDGROUPINFO, query);
         } finally {
-            KnDbUtil.closeStatement(st);
+            KnDbUtil.closePreparedStatement(pstmt);
         }
     }
 
@@ -257,28 +262,28 @@ public class KnXDMCorpCampGrpDOA implements ITableDAO {
     }
 
     public int deleteSubsTalkGrpScanMode(List<String> mdnList, KnPersisterTxn persisterTxn) throws KnDAOException {
-        String methodName = "deleteSubsTalkGrpScanMode(String mdn, KnPersisterTxn persisterTxn)";
+        String methodName = "deleteSubsTalkGrpScanMode(List<String> mdnList, KnPersisterTxn persisterTxn)";
         knLogger.debug(methodName, "mdn", KnGDPRTemplate.mdnList(mdnList));
         Connection conn;
         PreparedStatement pstmt = null;
         String query = null;
-        int index = 1;
         int deletedRowCount = 0;
         try {
-            query = "DELETE FROM DG.XDMS_TGSC WHERE MDN IN (MDNLIST)";
-            query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(mdnList,query,"MDNLIST");
+            query = "DELETE FROM DG.XDMS_TGSC WHERE MDN = ?";
+            //query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(mdnList,query,"MDNLIST");
             conn = persisterTxn.getDBConnection(pttServerId, false);
             pstmt = conn.prepareStatement(query);
             for(String mdn : mdnList) {
-            	pstmt.setString(index++, mdn);
+            	pstmt.setString(1, mdn);
+                pstmt.addBatch();
             }
             knLogger.debug(methodName, "Executing Query- ", query);
-            deletedRowCount = pstmt.executeUpdate();
+            deletedRowCount = pstmt.executeBatch().length;
             knLogger.debug(methodName, "Exit: Query executed successfully.");
         } catch (SQLException e) {
             throw KnDbUtil.processException(e, "Failed while deleteSubsTalkGrpScanMode", pttServerId, KnDAOSourceTypes.CAMPEDGROUPINFO, query);
         } finally {
-            KnDbUtil.closeStatement(pstmt);
+            KnDbUtil.closePreparedStatement(pstmt);
         }
         return deletedRowCount;
     }

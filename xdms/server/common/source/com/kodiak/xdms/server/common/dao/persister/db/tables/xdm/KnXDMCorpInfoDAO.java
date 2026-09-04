@@ -463,7 +463,7 @@ public class KnXDMCorpInfoDAO implements ITableDAO {
         PreparedStatement pstmt = null;
         ResultSet rs = null;
         String query = "SELECT CORPGROUPID,CORPID,GROUPDISPLAYNAME,GROUPMEMBERLISTID,GROUPDISTRIBUTIONPOLICY,GROUPTYPE,POCHOME," +
-                "GROUPNAME,HANGTIMEOUT,OSMLISTID,AVATAR_ID,IS_LARGEGROUP,IS_PRECONFIG_GRP,GROUP_CREATED_BY,GROUP_OWNER FROM DG.CORPGROUPINFO WHERE CORPGROUPID=?;";
+                "GROUPNAME,HANGTIMEOUT,OSMLISTID,AVATAR_ID,IS_LARGEGROUP,IS_PRECONFIG_GRP,GROUP_CREATED_BY,GROUP_OWNER,VIDEO_PERMISSION FROM DG.CORPGROUPINFO WHERE CORPGROUPID=?;";
         KnCorpGpInfoDTO knCorpGpInfoDTO=new KnCorpGpInfoDTO();
         try {
             Connection conn = persisterTxn.getDBConnection(xdmsHome, KnDBConst.DataStores.XDM_SHARED_DATA, false);
@@ -500,6 +500,9 @@ public class KnXDMCorpInfoDAO implements ITableDAO {
                     knCorpGpInfoDTO.setIsLargeGroup(rs.getInt("IS_LARGEGROUP"));
                 } else {
                     knCorpGpInfoDTO.setIsLargeGroup(KnConstants.LARGE_GROUP_DISABLED);
+                }
+                if (rs.getObject("VIDEO_PERMISSION") != null) {
+                    knCorpGpInfoDTO.setVideoPermission(rs.getInt("VIDEO_PERMISSION"));
                 }
             }
         } catch (KnDAOException e) {

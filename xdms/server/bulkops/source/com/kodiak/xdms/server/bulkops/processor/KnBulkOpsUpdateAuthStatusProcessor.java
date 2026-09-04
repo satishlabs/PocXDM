@@ -11,6 +11,7 @@ import com.kodiak.common.dao.KnDAOException;
 import com.kodiak.common.dao.KnPersistenceException;
 import com.kodiak.common.dao.KnPersisterTxn;
 import com.kodiak.common.resources.KnErrorCodes;
+import com.kodiak.common.resources.KnGDPRTemplate;
 import com.kodiak.common.resources.KnGeneralProfileUtil;
 import com.kodiak.common.resources.KnGeneralUtil;
 import com.kodiak.frameworks.statisticalmgr.KnOMConstants;
@@ -109,17 +110,17 @@ public class KnBulkOpsUpdateAuthStatusProcessor {
             } else {
                 validMdns = new ArrayList<>(mdns);
             }
-            knLogger.debug(methodName, "Valid MDNs after hierarchy validation - ", validMdns);
+            knLogger.debug(methodName, "Valid MDNs after hierarchy validation - ", KnGDPRTemplate.mdnList(validMdns));
             // ensure transaction is open
             persisterTxn = ensureTransactionOpen(persisterTxn, methodName);
-            knLogger.debug(methodName, "MDNs for auth status update - ", validMdns);
+            knLogger.debug(methodName, "MDNs for auth status update - ", KnGDPRTemplate.mdnList(validMdns));
 
 
             // validate subscriber auth status
             failureMdns.putAll(validateSubAuthStatus(validMdns, persisterTxn));
             //don't process invalid mdns
             validMdns = new ArrayList<>(validMdns.stream().filter(mdn -> !failureMdns.containsKey(mdn)).toList());
-            knLogger.debug(methodName, "Valid MDNs after auth status validation - ", failureMdns);
+            knLogger.debug(methodName, "Valid MDNs after auth status validation - ", KnGDPRTemplate.mdnList(new ArrayList<>(failureMdns.keySet())));
 
             // get subscriber profiles
             //alias/userid/mdn based fetch is done in the current flow that's used in notification
@@ -134,7 +135,7 @@ public class KnBulkOpsUpdateAuthStatusProcessor {
             //if subscriber profile doesn't exist for any mdn, add to failure list
             for (String mdn : validMdns) {
                 if (!subscriberProfiles.containsKey(mdn)) {
-                    knLogger.error(methodName, "Subscriber Profile doesn't exist for MDN - ", mdn);
+                    knLogger.error(methodName, "Subscriber Profile doesn't exist for MDN - ", KnGDPRTemplate.mdn(mdn));
                     KnBulkOpsErrorDetail knBulkOpsErrorDetail = new KnBulkOpsErrorDetail();
                     knBulkOpsErrorDetail.setMdn(mdn);
                     knBulkOpsErrorDetail.setErrorCode(KnErrorCodes.DAO.ROW_NOT_FOUND);
@@ -142,14 +143,13 @@ public class KnBulkOpsUpdateAuthStatusProcessor {
                     failureMdns.put(mdn, knBulkOpsErrorDetail);
                 }
                 else{
-                    knLogger.debug(methodName, "Subscriber profile for mdn - ",
-                            mdn, " is ", subscriberProfiles.get(mdn));
+                    knLogger.debug(methodName, "Subscriber profile for mdn - ", KnGDPRTemplate.mdn(mdn));
                     //validate account id in subscriber profile matches with account id in request DTO
                     String accountIdInProfile = subscriberProfiles.get(mdn).getAccountId().
                             replaceAll("\\s+", "");
                     if(!(accountIdInProfile.equals(bulkSubsProvInfoDTO.getAccountId()))){
                         knLogger.error(methodName, "Subscriber Profile account id doesn't match with account id" +
-                                " for MDN - ", mdn);
+                                " for MDN - ", KnGDPRTemplate.mdn(mdn));
                         KnBulkOpsErrorDetail knBulkOpsErrorDetail = new KnBulkOpsErrorDetail();
                         knBulkOpsErrorDetail.setMdn(mdn);
                         knBulkOpsErrorDetail.setErrorCode(KnBulkOpsErrorCodes.BOEntity.ACCOUNTID_VALIDATION_FAILED);
@@ -163,7 +163,7 @@ public class KnBulkOpsUpdateAuthStatusProcessor {
             // Create a mutable copy for further processing
             validMdns = new ArrayList<>(validMdns.stream().filter(mdn -> !failureMdns.containsKey(mdn)).toList());
             knLogger.debug(methodName, "Valid MDNs after subscriber profile validation and account id validation" +
-                    " going for service auth change- ", validMdns);
+                    " going for service auth change- ", KnGDPRTemplate.mdnList(validMdns));
             //change service auth status for valid mdns
             KnChangeAuthStatusBulkResult updateAuthStatusResponseMap = changeServiceAuthStatusForSubscribers(
                     bulkSubsProvInfoDTO,
@@ -409,7 +409,7 @@ public class KnBulkOpsUpdateAuthStatusProcessor {
 
         for (String mdn : mdnsNeedingXcapUri) {
             if (!mdntoXcapRootUriMap.containsKey(mdn)) {
-                knLogger.error(methodName, "XCAP Root URI not found for MDN - ", mdn);
+                knLogger.error(methodName, "XCAP Root URI not found for MDN - ", KnGDPRTemplate.mdn(mdn));
                 KnBulkOpsErrorDetail knBulkOpsErrorDetail = new KnBulkOpsErrorDetail();
                 knBulkOpsErrorDetail.setMdn(mdn);
                 knBulkOpsErrorDetail.setErrorCode(KnErrorCodes.DAO.ROW_NOT_FOUND);
@@ -432,7 +432,7 @@ public class KnBulkOpsUpdateAuthStatusProcessor {
                 if ((bulkSubsProvInfoDTO.getClientType() != com.kodiak.common.resources.KnConstants.CLIENT_TYPE_CAT_UI)
                         && (bulkSubsProvInfoDTO.getClientType() != com.kodiak.common.resources.KnConstants.CLIENT_TYPE_REST)) {
 
-                    knLogger.error(methodName, "Mdn is present as a pseudo number,operation not allowed ", mdn);
+                    knLogger.error(methodName, "Mdn is present as a pseudo number,operation not allowed ", KnGDPRTemplate.mdn(mdn));
                     KnBulkOpsErrorDetail knBulkOpsErrorDetail = new KnBulkOpsErrorDetail();
                     knBulkOpsErrorDetail.setMdn(mdn);
                     knBulkOpsErrorDetail.setErrorCode(KnBulkOpsErrorCodes.BOEntity.MDN_PRESENT_AS_PSEUDOMDN_IN_POCSUBSCRINFO);
@@ -449,7 +449,7 @@ public class KnBulkOpsUpdateAuthStatusProcessor {
             // already updated lastProfileUpdateTime, and the compensation payload carries
             // the old etag from the original request
             if (!isCompensation && etag > 0 && currentEtag != etag) {
-                knLogger.error(methodName, "Etag mismatch", etag, " for mdn ", mdn, " current etag ", currentEtag);
+                knLogger.error(methodName, "Etag mismatch", etag, " for mdn ", KnGDPRTemplate.mdn(mdn), " current etag ", currentEtag);
                 KnBulkOpsErrorDetail knBulkOpsErrorDetail = new KnBulkOpsErrorDetail();
                 knBulkOpsErrorDetail.setMdn(mdn);
                 knBulkOpsErrorDetail.setErrorCode(KnBulkOpsErrorCodes.BOEntity.MISMATCH_IN_SUBS_DOC_ETAG);
@@ -468,11 +468,11 @@ public class KnBulkOpsUpdateAuthStatusProcessor {
                 // Note: previousServiceAuthStatus can be 0 (PROVISIONED) which is a valid state
                 if (subProfileInfo.getPreviousServiceAuthStatus() != null) {
                     targetSvcAuthStatus = subProfileInfo.getPreviousServiceAuthStatus();
-                    knLogger.info(methodName, "Compensation request: reverting MDN ", mdn,
+                    knLogger.info(methodName, "Compensation request: reverting MDN ", KnGDPRTemplate.mdn(mdn),
                             " from current auth status ", serviceAuthStatus,
                             " to previous auth status ", targetSvcAuthStatus);
                 } else {
-                    knLogger.error(methodName, "Compensation request but no previous auth status found for MDN ", mdn);
+                    knLogger.error(methodName, "Compensation request but no previous auth status found for MDN ", KnGDPRTemplate.mdn(mdn));
                     KnBulkOpsErrorDetail knBulkOpsErrorDetail = new KnBulkOpsErrorDetail();
                     knBulkOpsErrorDetail.setMdn(mdn);
                     knBulkOpsErrorDetail.setErrorCode(KnBulkOpsErrorCodes.BOEntity.MISMATCH_IN_SUBS_DOC_ETAG);
@@ -519,7 +519,7 @@ public class KnBulkOpsUpdateAuthStatusProcessor {
             if (subsProfilePersistDTO.getServiceAuthStatus() == serviceAuthStatus) {
                 isSubsrUpdateRequired = false;
                 responseSubsProfilePersistDTO = subsProfilePersistDTO; // to be removed later
-                knLogger.info(methodName, "Service Auth Status is same as existing, so no update required for mdn ", mdn);
+                knLogger.info(methodName, "Service Auth Status is same as existing, so no update required for mdn ", KnGDPRTemplate.mdn(mdn));
                 KnOPChgAuthStatusRespDTO responseDTO = new KnOPChgAuthStatusRespDTO();
                 KnOPSubsProfileInfoDTO subsProfileInfoDTO = subsProfileMap.get(mdn);
                 responseDTO.setMdn(subsProfileInfoDTO.getMdn());
@@ -536,7 +536,7 @@ public class KnBulkOpsUpdateAuthStatusProcessor {
                 if (isCompensation) {
                     // Saga compensation: do NOT update previousServiceAuthStatus - keep it as-is
                     // This preserves idempotency so the compensation can be retried safely
-                    knLogger.info(methodName, "Compensation: preserving previousServiceAuthStatus as-is for mdn ", mdn);
+                    knLogger.info(methodName, "Compensation: preserving previousServiceAuthStatus as-is for mdn ", KnGDPRTemplate.mdn(mdn));
                     subsProfilePersistDTO.setPreviousServiceAuthStatusToStore(
                             subProfileInfo.getPreviousServiceAuthStatus() != null
                                     ? subProfileInfo.getPreviousServiceAuthStatus() : 0);
@@ -615,13 +615,13 @@ public class KnBulkOpsUpdateAuthStatusProcessor {
                     if (mdnUpmFsMap != null && !mdnUpmFsMap.isEmpty()) {
                         List<String> mdnList = new ArrayList<>(mdnUpmFsMap.keySet());
                         profileMdnsMap.put(baseMdn, mdnList);
-                        knLogger.debug(methodName, "Retrieved ", mdnList.size(), " profile MDNs for base MDN ", baseMdn);
+                        knLogger.debug(methodName, "Retrieved ", mdnList.size(), " profile MDNs for base MDN ", KnGDPRTemplate.mdn(baseMdn));
                     } else {
                         // If no profile MDNs found, use just the base MDN
                         profileMdnsMap.put(baseMdn, Arrays.asList(baseMdn));
                     }
                 } catch (Exception e) {
-                    knLogger.error(methodName, "Error fetching profile MDNs for base MDN ", baseMdn, e);
+                    knLogger.error(methodName, "Error fetching profile MDNs for base MDN ", KnGDPRTemplate.mdn(baseMdn), e);
                     // If error, set just the base MDN itself
                     profileMdnsMap.put(baseMdn, Arrays.asList(baseMdn));
                 }
@@ -811,7 +811,7 @@ public class KnBulkOpsUpdateAuthStatusProcessor {
         Map<String, KnBulkOpsErrorDetail> invalidAuthStatusMdns = new HashMap<>();
 
         if (mdns != null && !mdns.isEmpty() && mdns.stream().anyMatch(Objects::nonNull)) {
-            knLogger.debug(methodName, "Validating MDNs service auth status - ", mdns);
+            knLogger.debug(methodName, "Validating MDNs service auth status - ", KnGDPRTemplate.mdnList(mdns));
 
             // Fetch the map containing MDN and service auth status
             KnPOCSubscrInfoDAO knPOCSubscrInfoDAO = new KnPOCSubscrInfoDAO();
@@ -824,7 +824,7 @@ public class KnBulkOpsUpdateAuthStatusProcessor {
                 // Validate the service auth status for each MDN
                 if (subscriberServiceAuthStatus != null
                         && SERVICE_AUTH_STATUS.MARKED_FOR_ASYNC_DELETION.value() == subscriberServiceAuthStatus) {
-                    knLogger.error(methodName, "Inactive subscriber deletion in-progress for MDN=", currentMdn, " ServiceAuthStatus: ", subscriberServiceAuthStatus);
+                    knLogger.error(methodName, "Inactive subscriber deletion in-progress for MDN=", KnGDPRTemplate.mdn(currentMdn), " ServiceAuthStatus: ", subscriberServiceAuthStatus);
                     KnBulkOpsErrorDetail knBulkOpsErrorDetail = new KnBulkOpsErrorDetail();
                     knBulkOpsErrorDetail.setMdn(currentMdn);
                     knBulkOpsErrorDetail.setErrorCode(INACTIVE_SUBSCRIBER_DELETE_IN_PROGRESS);
@@ -834,7 +834,7 @@ public class KnBulkOpsUpdateAuthStatusProcessor {
 
                 if (subscriberServiceAuthStatus != null
                         && SERVICE_AUTH_STATUS.PRE_PROVISIONED.value() == subscriberServiceAuthStatus) {
-                    knLogger.error(methodName, "Subscriber in pre-provisioned state for MDN=", currentMdn, " ServiceAuthStatus: ", subscriberServiceAuthStatus);
+                    knLogger.error(methodName, "Subscriber in pre-provisioned state for MDN=", KnGDPRTemplate.mdn(currentMdn), " ServiceAuthStatus: ", subscriberServiceAuthStatus);
                     KnBulkOpsErrorDetail knBulkOpsErrorDetail = new KnBulkOpsErrorDetail();
                     knBulkOpsErrorDetail.setMdn(currentMdn);
                     knBulkOpsErrorDetail.setErrorCode(SUBSCRIBER_IN_PRE_PROVISIONED_STATE);
@@ -854,7 +854,7 @@ public class KnBulkOpsUpdateAuthStatusProcessor {
         // Validate MDN hierarchy
         for (String mdn : mdns) {
             if (!KnGeneralProfileUtil.validateMDNCCAndHierarchy(mdn, hierarchyType)) {
-                knLogger.error(methodName, "Invalid MDN hierarchy for MDN: ", mdn, " HierarchyType: ", hierarchyType);
+                knLogger.error(methodName, "Invalid MDN hierarchy for MDN: ", KnGDPRTemplate.mdn(mdn), " HierarchyType: ", hierarchyType);
                 KnBulkOpsErrorDetail knBulkOpsErrorDetail = new KnBulkOpsErrorDetail();
                 knBulkOpsErrorDetail.setMdn(mdn);
                 knBulkOpsErrorDetail.setErrorCode(INVALID_HIERARCHY_REQUEST);

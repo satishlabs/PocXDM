@@ -256,12 +256,16 @@ public class KnXDMCorpGroupListRefDAO implements ITableDAO {
         try {
             KnQueryMapper queryMapper = KnQueryMapper.getInstance();
             query = queryMapper.getQuery(DELETE_ALL_GROUPS_LIST_REF);
-            query = replaceContactWithValue(query, GROUPIDS, formIntegerCommaSeperatedIdList(groupIdsList));
+            //query = replaceContactWithValue(query, GROUPIDS, formIntegerCommaSeperatedIdList(groupIdsList));
             //conn = persisterTxn.getDBConnection(pttServerId, false);
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
             pstmt = conn.prepareStatement(query);
             knLogger.debug( methodName, "Executing query - " , "'" , query , "'");
-            pstmt.executeQuery();
+            for(Integer groupId : groupIdsList) {
+                pstmt.setInt(1, groupId);
+                pstmt.addBatch();
+            }
+            pstmt.executeBatch();
             knLogger.debug( methodName, "EXIT: Query executed successfully");
         } catch (KnDAOException e) {
             knLogger.error( methodName, "KnDAOException occured while deleting the groups sublist refrences - " , e);
@@ -271,7 +275,7 @@ public class KnXDMCorpGroupListRefDAO implements ITableDAO {
             throw KnDbUtil.processException(e, "Failed while deleting the groups sublist refrences " + e,
                     pttServerId, KnDAOSourceTypes.XDM_CORP_GROUP_LIST_REF, query);
         } finally {
-            KnDbUtil.closeStatement(pstmt);
+            KnDbUtil.closePreparedStatement(pstmt);
         }
     }
 

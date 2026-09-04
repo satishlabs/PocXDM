@@ -199,7 +199,7 @@ public class KnSSChannelGroupInfoDAO implements ITableDAO {
     }
 
     public void deleteMdn(List<String> mdnList, KnPersisterTxn persisterTxn) throws KnDAOException {
-        final String methodName = "deleteMdn(String, KnPersisterTxn)";
+        final String methodName = "deleteMdn(List<String> mdnList, KnPersisterTxn persisterTxn)";
         knLogger.debug(methodName, "Entry : ");
         boolean ownedTxn = false;
         Connection conn;
@@ -207,17 +207,17 @@ public class KnSSChannelGroupInfoDAO implements ITableDAO {
         ResultSet rs = null;
         String query = null;
         int cnt = 0;
-        int index = 1;
         try {
-            query = "DELETE FROM DG.SSCHANNELGROUPINFO WHERE MDN IN (MDNLIST)";
-            query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(mdnList,query,"MDNLIST");
+            query = "DELETE FROM DG.SSCHANNELGROUPINFO WHERE MDN = ?";
+            //query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(mdnList,query,"MDNLIST");
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
             pStatement = conn.prepareStatement(query);
             for(String mdn : mdnList){
-                pStatement.setString(index++, mdn);
+                pStatement.setString(1, mdn);
+                pStatement.addBatch();
             }
             knLogger.debug(methodName, "QUERY : Executing ", query, " persisterTxn : ", persisterTxn);
-            cnt = pStatement.executeUpdate();
+            cnt = pStatement.executeBatch().length;
             knLogger.debug(methodName, "QUERY : Completed. no.of records deleted:" + cnt);
         } catch (KnDAOException e) {
             knLogger.error(methodName, "DAO Exception - " + e);

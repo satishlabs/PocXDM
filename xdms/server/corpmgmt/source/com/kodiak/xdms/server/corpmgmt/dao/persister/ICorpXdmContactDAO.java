@@ -527,4 +527,6 @@ public interface ICorpXdmContactDAO {
     public String selectAnsestorID(int corpId, String hierarchyId, KnPersisterTxn persisterTxn) throws KnDAOException;
 
     Map<String,Set<String>> getHierarchyMappedGeocode(int corpId, String hierarchyId, KnPersisterTxn persisterTxn) throws KnDAOException;
+
+    public String getPocHomeByHierarchyIdFromAnchor(int corpid,String hierarchyId, KnPersisterTxn persisterTxn) throws KnDAOException;
 }

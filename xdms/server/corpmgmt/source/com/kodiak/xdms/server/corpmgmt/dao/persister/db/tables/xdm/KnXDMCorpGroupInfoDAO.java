@@ -484,6 +484,59 @@ public class KnXDMCorpGroupInfoDAO implements ITableDAO {
         }
         return groupInfoDto;
     }
+
+    public Map<Integer, Integer> getGroupTypeMap(Collection<Integer> groupIds, KnPersisterTxn persisterTxn) throws KnDAOException {
+        String methodName = "getGroupTypeMap(Collection<Integer>, KnPersisterTxn)";
+        knLogger.debug(methodName, "ENTRY : groupIds - ", groupIds);
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        String query = null;
+        Map<Integer, Integer> groupTypeMap = new HashMap<Integer, Integer>();
+        boolean ownedTxn = false;
+        try {
+            if (groupIds == null || groupIds.isEmpty()) {
+                return groupTypeMap;
+            }
+            if (persisterTxn == null) {
+                persisterTxn = KnPersisterTxn.getPersisterTxn();
+                knLogger.debug(methodName, "Opening the Transaction");
+                persisterTxn.open();
+                ownedTxn = true;
+            }
+            query = "SELECT CORPGROUPID, GROUPTYPE FROM DG.CORPGROUPINFO WHERE CORPGROUPID IN (GROUPIDS)";
+            query = replaceContactWithValue(query, GROUPIDS, formIntegerCommaSeperatedIdList(groupIds));
+            conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, true);
+            pstmt = conn.prepareStatement(query);
+            knLogger.debug(methodName, "Executing query - ", query);
+            rs = pstmt.executeQuery();
+            knLogger.debug(methodName, "Query executed successfully");
+            while (rs.next()) {
+                groupTypeMap.put(rs.getInt(1), mappGroupTypeToApp(rs.getInt(2)));
+            }
+            if (ownedTxn) {
+                persisterTxn.save();
+            }
+            return groupTypeMap;
+        } catch (KnDAOException e) {
+            if (ownedTxn) {
+                persisterTxn.rollback();
+            }
+            knLogger.error(methodName, "KnDAOException occured while retrieving group type map - ", e);
+            throw e;
+        } catch (Exception e) {
+            if (ownedTxn) {
+                persisterTxn.rollback();
+            }
+            knLogger.error(methodName, "Unexpected Exception occured while retrieving group type map - ", e);
+            throw KnDbUtil.processException(e, "Failed while retrieving group type map " + e,
+                    pttServerId, KnDAOSourceTypes.XDM_CORP_GROUP_INFO, query);
+        } finally {
+            KnDbUtil.closeResultSet(rs);
+            KnDbUtil.closePreparedStatement(pstmt);
+            knLogger.debug(methodName, "EXIT : Returning groupTypeMap size - ", groupTypeMap.size());
+        }
+    }
     public Integer getMemberCountFromMemberList(int groupId,boolean readOnly, KnPersisterTxn persisterTxn) throws KnDAOException {
         String methodName = "getMemberCountFromMemberList(groupId, persisterTxn)";
         knLogger.debug(methodName, "Entry : groupId - ", groupId);
@@ -650,12 +703,16 @@ public class KnXDMCorpGroupInfoDAO implements ITableDAO {
         try {
             KnQueryMapper queryMapper = KnQueryMapper.getInstance();
             query = queryMapper.getQuery(DELETE_ALL_GROUPS_INFO);
-            query = replaceContactWithValue(query, GROUPIDS, formIntegerCommaSeperatedIdList(groupIdsList));
+            //query = replaceContactWithValue(query, GROUPIDS, formIntegerCommaSeperatedIdList(groupIdsList));
             //conn = persisterTxn.getDBConnection(pttServerId, false);
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
             pstmt = conn.prepareStatement(query);
             knLogger.debug(methodName, "Executing query - ", "'", query, "'");
-            pstmt.executeQuery();
+            for(Integer groupId : groupIdsList) {
+                pstmt.setInt(1, groupId);
+                pstmt.addBatch();
+            }
+            pstmt.executeBatch();
             knLogger.info(methodName, "EXIT: Query executed successfully");
         } catch (KnDAOException e) {
             knLogger.error(methodName, "KnDAOException occurred while deleting all the groups - ", e);
@@ -677,11 +734,15 @@ public class KnXDMCorpGroupInfoDAO implements ITableDAO {
         String query = null;
         int count = 0;
         try {
-            query = "DELETE FROM DG.GROUP_HIERARCHY_MAP WHERE CORPGROUPID IN (GROUPIDS)";
-            query = replaceContactWithValue(query, GROUPIDS, formIntegerCommaSeperatedIdList(groupIdsList));
+            query = "DELETE FROM DG.GROUP_HIERARCHY_MAP WHERE CORPGROUPID = ?";
+            //query = replaceContactWithValue(query, GROUPIDS, formIntegerCommaSeperatedIdList(groupIdsList));
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
             pstmt = conn.prepareStatement(query);
-            count = pstmt.executeUpdate();
+            for (Integer groupId : groupIdsList) {
+                pstmt.setInt(1, groupId);
+                pstmt.addBatch();
+            }
+            count = pstmt.executeBatch().length;
         } catch (KnDAOException e) {
             knLogger.error(methodName, "KnDAOException occurred while deleting all the groups Hierarchy- ", e);
             throw e;
@@ -690,7 +751,7 @@ public class KnXDMCorpGroupInfoDAO implements ITableDAO {
             throw KnDbUtil.processException(e, "Failed while deleting all the group Hierarchy  " + e,
                     pttServerId, KnDAOSourceTypes.GROUP_HIERARCHY_MAP, query);
         } finally {
-            KnDbUtil.closeStatement(pstmt);
+            KnDbUtil.closePreparedStatement(pstmt);
             knLogger.info(methodName, "EXIT : Records Deleted: ", count);
         }
     }
@@ -1587,21 +1648,22 @@ public class KnXDMCorpGroupInfoDAO implements ITableDAO {
         PreparedStatement pstmt = null;
         String query = null;
         boolean status  = false;
-        int index = 2;
         try {
-            query = "UPDATE DG.CORPGROUPINFO SET GROUP_OWNER = ? WHERE GROUP_OWNER IN (OLDGROUPOWNERS) and CORPID = ?";
+            query = "UPDATE DG.CORPGROUPINFO SET GROUP_OWNER = ? WHERE GROUP_OWNER = ? and CORPID = ?";
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
-            query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(oldGroupOwner,query,"OLDGROUPOWNERS");
+            //query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(oldGroupOwner,query,"OLDGROUPOWNERS");
             pstmt = conn.prepareStatement(query);
 
-            pstmt.setString(1,newGroupOwner);
             for(String itr : oldGroupOwner){
-                pstmt.setString(index++,itr);
+                pstmt.setString(1,newGroupOwner);
+                pstmt.setString(2,itr);
+                pstmt.setInt(3,corpID);
+                pstmt.addBatch();
             }
-            pstmt.setInt(index,corpID);
 
             knLogger.debug(methodName, "Exeuting query - ", query);
-            status = pstmt.execute();
+            int[] results = pstmt.executeBatch();
+            status = Arrays.stream(results).allMatch(result -> result >= 0);
             knLogger.debug( methodName, "Query executed successfully - ", status);
 
         }catch (SQLException e) {
@@ -1609,7 +1671,7 @@ public class KnXDMCorpGroupInfoDAO implements ITableDAO {
                     pttServerId, KnDAOSourceTypes.XDM_CORP_GROUP_INFO, query);
 
         } finally {
-            KnDbUtil.closeStatement(pstmt);
+            KnDbUtil.closePreparedStatement(pstmt);
         }
         knLogger.debug( methodName, "EXIT. groupDTO details is- ", status);
         return status;

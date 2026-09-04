@@ -488,20 +488,20 @@ public class KnCorpPTTSettingDocDAO implements ITableDAO {
         Connection conn = null;
         PreparedStatement pstmt = null;
         String query = null;
-
         try {
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
-            String placeholders = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(mdnList);
-            query = "UPDATE DG.POCSUBSCRINFO SET LASTPROFILEUPDATETIME = ? WHERE MDN IN (MDNLIST)";
-            query = KnDbUtil.replaceContactWithValue(query, MDNLIST, placeholders);
+            query = "UPDATE DG.POCSUBSCRINFO  SET LASTPROFILEUPDATETIME = ?  WHERE MC_ID = " +
+                    "(SELECT MC_ID FROM DG.POCSUBSCRINFO WHERE MDN = ?)";
             pstmt = conn.prepareStatement(query);
-            pstmt.setLong(1, System.currentTimeMillis());
-            int paramIndex = 2;
-            for (String mdn : mdnList) {
-                pstmt.setString(paramIndex++, mdn);
+            if (null != mdnList && !mdnList.isEmpty()) {
+                for (String mdn : mdnList) {
+                    pstmt.setLong(1, System.currentTimeMillis());
+                    pstmt.setString(2, mdn);
+                    pstmt.addBatch();
+                }
+                pstmt.executeBatch();
             }
             knLogger.debug(methodName, "Executing query - ", "'", query, "'");
-            pstmt.executeUpdate();
             knLogger.debug(methodName, "EXIT: Query executed successfully");
         } catch (KnDAOException e) {
             knLogger.error(methodName, "KnDAOException occurred while updateLastProfileUpdateTimeForMdns- ", e);

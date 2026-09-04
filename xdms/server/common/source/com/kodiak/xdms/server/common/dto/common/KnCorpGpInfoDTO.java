@@ -35,6 +35,7 @@ public class KnCorpGpInfoDTO implements IIdentifier {
     private Integer groupCreatedBy;
     private String groupOwner;
     private Integer isLargeGroup;
+    private Integer videoPermission;
 
     public String getIsPreConfiguredGroup() {
         return isPreConfiguredGroup;
@@ -164,6 +165,12 @@ public class KnCorpGpInfoDTO implements IIdentifier {
 
     public void setIsLargeGroup(Integer isLargeGroup) {this.isLargeGroup = isLargeGroup;}
 
+    public Integer getVideoPermission() {
+        return videoPermission;
+    }
+    public void setVideoPermission(Integer videoPermission) {
+        this.videoPermission = videoPermission;
+    }
     @Override
     public String toString() {
         return "KnCorpGpInfoDTO{" +
@@ -184,6 +191,7 @@ public class KnCorpGpInfoDTO implements IIdentifier {
                 ", groupCreatedBy=" + groupCreatedBy +
                 ", groupOwner=" + groupOwner +
                 ", isLargeGroup=" + isLargeGroup +
+                ", videoPermission=" + videoPermission +
                 '}';
     }
 }

@@ -48,7 +48,7 @@ public class KnPubContactCountDAO implements ITableDAO {
     public static final String QRY_UPDATE = "UPDATE " + TABLENAME + " SET " + PUBLIC_CONTACT_COUNT + "=?," + LAST_UPDATE_TIME + "=?" + " WHERE " +
             MDN + " = ?";
     public static final String QRY_DELETE = "DELETE FROM " + TABLENAME + " WHERE " + MDN + "= ?";
-    public static final String QRY_DELETE_COUNT_4_MDNS = "DELETE FROM " + TABLENAME + " WHERE " + MDN + " IN ";
+    public static final String QRY_DELETE_COUNT_4_MDNS = "DELETE FROM " + TABLENAME + " WHERE " + MDN + " = ?";
 
     /**
      * This method is used for insertion of data in SQL tables.
@@ -332,21 +332,25 @@ public class KnPubContactCountDAO implements ITableDAO {
         String methodName = "deleteContactCount(String, KnPersisterTxn)";
         knLogger.debug(methodName,KnGDPRTemplate.mdnList(mdns));
         Connection conn;
-        Statement statement = null;
+        PreparedStatement pstmt = null;
         String query = null;
 
         try {
 
-            StringBuffer buffer = new StringBuffer(200);
-            buffer.append(QRY_DELETE_COUNT_4_MDNS).append(KnDbUtil.convertListToStringBuffer(mdns));
-            query = buffer.toString();
+            //StringBuffer buffer = new StringBuffer(200);
+            //buffer.append(QRY_DELETE_COUNT_4_MDNS).append(KnDbUtil.convertListToStringBuffer(mdns));
+            //query = buffer.toString();
+            query = QRY_DELETE_COUNT_4_MDNS;
 
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
-            statement = conn.createStatement();
+            pstmt = conn.prepareStatement(query);
             knLogger.debug(methodName, "QUERY : Executing " + query + ", persisterTxn : ", KnGDPRTemplate.mdnList(mdns),
                     persisterTxn);
-            int flag = statement.executeUpdate(query);
-            knLogger.debug(methodName, "QUERY : Completed." , flag);
+            for(Object mdn: mdns) {
+                pstmt.setString(1, mdn.toString());
+                pstmt.addBatch();
+            }
+            pstmt.executeBatch();
             knLogger.info(methodName, "Delete public contact count  for MDN  " , KnGDPRTemplate.mdnList(mdns));
         } catch (SQLException e) {
             knLogger.error(methodName, "SQL Exception - " , e);
@@ -358,7 +362,7 @@ public class KnPubContactCountDAO implements ITableDAO {
             throw KnDbUtil.processException(e, "Failed to delete record  - " + e.getMessage(),
                     pttServerId, KnDAOSourceTypes.XDM_PUBLICCONCTACTCOUNT, query);
         } finally {
-            KnDbUtil.closeStatement(statement);
+            KnDbUtil.closePreparedStatement(pstmt);
         	knLogger.debug(methodName, "EXIT");
         }
     }

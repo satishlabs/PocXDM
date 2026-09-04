@@ -83,6 +83,7 @@ import com.kodiak.xdms.server.common.dto.common.*;
 import com.kodiak.xdms.server.common.dto.common.KnEXDMSNotifyDto;
 import com.kodiak.xdms.server.corpmgmt.business.KnCorpBOException;
 import com.kodiak.xdms.server.corpmgmt.business.helper.KnCorpCommonInfoUtil;
+import com.kodiak.xdms.server.corpmgmt.business.helper.KnCorpGroupInfoUtil;
 import com.kodiak.xdms.server.corpmgmt.dto.common.KnDocChangeListDTO;
 import com.kodiak.xdms.server.corpmgmt.dto.common.*;
 import com.kodiak.xdms.server.corpmgmt.dto.impl.KnCorpGroupInfoRespDTO;
@@ -142,6 +143,7 @@ public class KnXDMCommonMediator {
     private KnMCSDocChangeNotifier mcsDocChangeNotifier;
     private KnProvInfoUtil provInfoUtil;
     private KnCorpCommonInfoUtil commonInfoUtil;
+    private static final KnCorpGroupInfoUtil groupInfoUtil = new KnCorpGroupInfoUtil();
     KnPersisterTxn persisterTxn = null;
     IProvClientIntf provClientIntf;
     private com.kodiak.xdms.server.corpmgmt.business.helper.KnCorpPTTSettingsUtil pttSettingsUtil;
@@ -1531,6 +1533,7 @@ public class KnXDMCommonMediator {
         Map<Integer, KnCorpEXDMSNotifyDto> modifiedMap = new HashMap<>();
         Map<Integer, KnCorpEXDMSNotifyDto> deletedMap = new HashMap<>();
         Map<String, KnCorpEXDMSNotifyDto> modifiedContactMap = new HashMap<>();
+        Map<Integer, Integer> groupTypeMap = getGroupTypeMapSafely(changeLogMap);
         if (changeLogMap != null && !changeLogMap.isEmpty()) {
             for (Map.Entry<String, KnOPDirChgDTO> entry : changeLogMap.entrySet()) {
                 knLogger.debug(methodName, "MDN - ", KnGDPRTemplate.mdn(entry.getKey()));
@@ -1543,6 +1546,10 @@ public class KnXDMCommonMediator {
                         knLogger.debug(methodName, "docChgDTO  - ", docChgDTO);
                         //If the document type is corporate group
                         if (docChgDTO.getDocUri().contains(KnConstants.APP_UID_CORP_GROUP)) {
+                            Integer resolvedGroupType = groupTypeMap.get(docChgDTO.getGroupId());
+                            if (resolvedGroupType == null) {
+                                resolvedGroupType = docChgDTO.getGroupType();
+                            }
 
                             KnCorpEXDMSNotifyDto corpEXDMSNotifyDto = null;
                             if ((docChgDTO.getDocType() == com.kodiak.xdms.server.common.resources.KnConstants.DOC_CHANGE_TYPE.REMOVE.value())
@@ -1558,7 +1565,7 @@ public class KnXDMCommonMediator {
                                 corpEXDMSNotifyDto.setGrpId(docChgDTO.getGroupId());
                                 corpEXDMSNotifyDto.setGrpName(docChgDTO.getGroupDisplayName());
                                 corpEXDMSNotifyDto.setCorpid(corpId);
-                                corpEXDMSNotifyDto.setGrpType(docChgDTO.getGroupType());
+                                corpEXDMSNotifyDto.setGrpType(resolvedGroupType);
                                 if (createdBy != null) corpEXDMSNotifyDto.setCreatedBy(createdBy);
                                 corpEXDMSNotifyDto.setEtag(Integer.parseInt(docChgDTO.getNewEtag()));
                                 corpEXDMSNotifyDto.setLmrInteropFlag(lmrIntrop);
@@ -1573,13 +1580,13 @@ public class KnXDMCommonMediator {
                                 corpEXDMSNotifyDto.setVer(MICROSERVICE_NOTIFY_DOC_VER);
                                 corpEXDMSNotifyDto.setNotifyEventType(KnConstants.MICROSERVICES_NOTIFY_EVENT_TYPE.GROUP_NOTIFY_EVENTS.value());
                                 corpEXDMSNotifyDto.setOsmIdChanged(docChgDTO.isOsmListChanged());
-                                if (docChgDTO.getGroupType() == 3) {
+                                if (resolvedGroupType == 3) {
                                     knLogger.debug(methodName, "Broadcast group type");
                                     corpEXDMSNotifyDto.setType(KnConstants.MICROSERVICES_EVENT_TYPE.MODIFY_CORP_GROUP.value());
                                     corpEXDMSNotifyDto.setPreviousEtag(-1);
                                     modifiedMap.put(docChgDTO.getGroupId(), corpEXDMSNotifyDto);
                                 } else {
-                                    knLogger.debug(methodName, " Non Broadcast - ", docChgDTO.getGroupType());
+                                    knLogger.debug(methodName, " Non Broadcast - ", resolvedGroupType);
                                     //corpEXDMSNotifyDto.setType(KnConstants.MICROSERVICES_EVENT_TYPE.DELETE_CORP_GROUP.value());
                                     deletedMap.put(docChgDTO.getGroupId(), corpEXDMSNotifyDto);
                                 }
@@ -1593,6 +1600,7 @@ public class KnXDMCommonMediator {
                                 }
                                 deletedMap.remove(docChgDTO.getGroupId());
                                 corpEXDMSNotifyDto.setGrpId(docChgDTO.getGroupId());
+                                corpEXDMSNotifyDto.setGrpType(resolvedGroupType);
                                 corpEXDMSNotifyDto.setGrpUri("kn-corp-groups=" + corpId + "_" + docChgDTO.getGroupId());
                                 corpEXDMSNotifyDto.setGrpSIPUri(KnGenInfoUtil.mcpttGroupUri(docChgDTO.getGroupId(), corpId, grpSIPUri));
                                 corpEXDMSNotifyDto.setLmrInteropFlag(lmrIntrop);
@@ -1611,7 +1619,7 @@ public class KnXDMCommonMediator {
                                 corpEXDMSNotifyDto.setType(KnConstants.MICROSERVICES_EVENT_TYPE.MODIFY_CORP_GROUP.value());
                                 corpEXDMSNotifyDto.setId(KnConstants.MICROSERVICES_EVENT_TYPE.MODIFY_CORP_GROUP.value() + "_" + docChgDTO.getGroupId());
                                 corpEXDMSNotifyDto.setOsmIdChanged(docChgDTO.isOsmListChanged());
-                                if (docChgDTO.getGroupType() == 3) {
+                                if (resolvedGroupType == 3) {
                                     knLogger.debug(methodName, " Broadcast group ");
                                     corpEXDMSNotifyDto.setPreviousEtag(-1);
                                 }
@@ -1890,6 +1898,37 @@ public class KnXDMCommonMediator {
      * @param corpId
      * @return
      */
+    private static Map<Integer, Integer> getGroupTypeMapSafely(Map<String, KnOPDirChgDTO> changeLogMap) {
+        String methodName = "getGroupTypeMapSafely()";
+        try {
+            Set<Integer> groupIds = new HashSet<Integer>();
+            knLogger.debug(methodName, "Entry changeLogMap size - ", changeLogMap != null ? changeLogMap.size() : 0);
+            if (changeLogMap != null && !changeLogMap.isEmpty()) {
+                for (Map.Entry<String, KnOPDirChgDTO> entry : changeLogMap.entrySet()) {
+                    KnOPDirChgDTO opDirChgDTO = entry.getValue();
+                    if (opDirChgDTO == null) {
+                        continue;
+                    }
+                    Collection<KnOPDocChgDTO> changeDocList = opDirChgDTO.getDocChgDTO();
+                    if (changeDocList == null || changeDocList.isEmpty()) {
+                        continue;
+                    }
+                    for (KnOPDocChgDTO docChgDTO : changeDocList) {
+                        if (docChgDTO != null && docChgDTO.getDocUri() != null
+                                && docChgDTO.getDocUri().contains(KnConstants.APP_UID_CORP_GROUP)) {
+                            groupIds.add(docChgDTO.getGroupId());
+                        }
+                    }
+                }
+            }
+            knLogger.debug(methodName, "Collected groupIds - ", groupIds);
+            return groupInfoUtil.getGroupTypeMap(groupIds, KnDbUtil.getDBConfigInfo().getLocalPttId(), null);
+        } catch (Throwable t) {
+            knLogger.error(methodName, "Failed to resolve group type map, continuing without it - ", t);
+            return Collections.emptyMap();
+        }
+    }
+
     private static List<KnCorpEXDMSNotifyDto> getModifiedNotifyJson(Map<String, KnOPDirChgDTO> changeLogMap, int corpId,
                                                                     Integer createdBy, Integer lmrIntrop, Integer mcxInd,
                                                                     Map<Integer, KnCorpGroupInfoDTO> groupSharedMap,
@@ -1901,6 +1940,7 @@ public class KnXDMCommonMediator {
         Map<Integer, KnCorpEXDMSNotifyDto> modifiedMap = new HashMap<>();
         Map<Integer, KnCorpEXDMSNotifyDto> deletedMap = new HashMap<>();
         Map<String, KnCorpEXDMSNotifyDto> modifiedContactMap = new HashMap<>();
+        Map<Integer, Integer> groupTypeMap = getGroupTypeMapSafely(changeLogMap);
         if (changeLogMap != null && !changeLogMap.isEmpty()) {
             for (Map.Entry<String, KnOPDirChgDTO> entry : changeLogMap.entrySet()) {
                 knLogger.debug(methodName, "MDN - ", KnGDPRTemplate.mdn(entry.getKey()));
@@ -1914,6 +1954,10 @@ public class KnXDMCommonMediator {
                     if (docChgDTO.getDocUri().contains(KnConstants.APP_UID_CORP_GROUP)) {
 
                         KnCorpEXDMSNotifyDto corpEXDMSNotifyDto = null;
+                        Integer resolvedGroupType = groupTypeMap.get(docChgDTO.getGroupId());
+                        if (resolvedGroupType == null) {
+                            resolvedGroupType = docChgDTO.getGroupType();
+                        }
                         if ((docChgDTO.getDocType() == com.kodiak.xdms.server.common.resources.KnConstants.DOC_CHANGE_TYPE.REMOVE.value())
                                 && !(modifiedMap.containsKey(docChgDTO.getGroupId()))) {
                             //A group can get deleted by some other operations like modify/delete sublist.
@@ -1927,7 +1971,7 @@ public class KnXDMCommonMediator {
                             corpEXDMSNotifyDto.setGrpId(docChgDTO.getGroupId());
                             corpEXDMSNotifyDto.setGrpName(docChgDTO.getGroupDisplayName());
                             corpEXDMSNotifyDto.setCorpid(corpId);
-                            corpEXDMSNotifyDto.setGrpType(docChgDTO.getGroupType());
+                            corpEXDMSNotifyDto.setGrpType(resolvedGroupType);
                             if (createdBy != null) corpEXDMSNotifyDto.setCreatedBy(createdBy);
                             corpEXDMSNotifyDto.setEtag(Integer.parseInt(docChgDTO.getNewEtag()));
                             corpEXDMSNotifyDto.setLmrInteropFlag(lmrIntrop);
@@ -1943,7 +1987,7 @@ public class KnXDMCommonMediator {
                             corpEXDMSNotifyDto.setVer(MICROSERVICE_NOTIFY_DOC_VER);
                             corpEXDMSNotifyDto.setNotifyEventType(KnConstants.MICROSERVICES_NOTIFY_EVENT_TYPE.GROUP_NOTIFY_EVENTS.value());
                             corpEXDMSNotifyDto.setOsmIdChanged(docChgDTO.isOsmListChanged());
-                            if (docChgDTO.getGroupType() == 3) {
+                            if (resolvedGroupType == 3) {
                                 knLogger.debug(methodName, "Broadcast group type");
                                 corpEXDMSNotifyDto.setType(KnConstants.MICROSERVICES_EVENT_TYPE.MODIFY_CORP_GROUP.value());
                                 corpEXDMSNotifyDto.setPreviousEtag(-1);
@@ -1952,7 +1996,7 @@ public class KnXDMCommonMediator {
                                 }
                                 modifiedMap.put(docChgDTO.getGroupId(), corpEXDMSNotifyDto);
                             } else {
-                                knLogger.debug(methodName, " Non Broadcast - ", docChgDTO.getGroupType());
+                                knLogger.debug(methodName, " Non Broadcast - ", resolvedGroupType);
                                 //corpEXDMSNotifyDto.setType(KnConstants.MICROSERVICES_EVENT_TYPE.DELETE_CORP_GROUP.value());
                                 deletedMap.put(docChgDTO.getGroupId(), corpEXDMSNotifyDto);
                             }
@@ -1966,6 +2010,7 @@ public class KnXDMCommonMediator {
                             }
                             deletedMap.remove(docChgDTO.getGroupId());
                             corpEXDMSNotifyDto.setGrpId(docChgDTO.getGroupId());
+                            corpEXDMSNotifyDto.setGrpType(resolvedGroupType);
                             corpEXDMSNotifyDto.setGrpUri("kn-corp-groups=" + corpId + "_" + docChgDTO.getGroupId());
                             corpEXDMSNotifyDto.setGrpSIPUri(KnGenInfoUtil.mcpttGroupUri(docChgDTO.getGroupId(),corpId,grpSIPUri));
                             corpEXDMSNotifyDto.setLmrInteropFlag(lmrIntrop);
@@ -1995,7 +2040,7 @@ public class KnXDMCommonMediator {
                             }
                             corpEXDMSNotifyDto.setId(KnConstants.MICROSERVICES_EVENT_TYPE.MODIFY_CORP_GROUP.value() + "_" + docChgDTO.getGroupId());
                             corpEXDMSNotifyDto.setOsmIdChanged(docChgDTO.isOsmListChanged());
-                            if (docChgDTO.getGroupType() == 3) {
+                            if (resolvedGroupType == 3) {
                                 knLogger.debug(methodName, " Broadcast group ");
                                 corpEXDMSNotifyDto.setPreviousEtag(-1);
                             }
@@ -2156,7 +2201,7 @@ public class KnXDMCommonMediator {
                             corpEXDMSNotifyDto.setVer(MICROSERVICE_NOTIFY_DOC_VER);
                             corpEXDMSNotifyDto.setNotifyEventType(KnConstants.MICROSERVICES_NOTIFY_EVENT_TYPE.GROUP_NOTIFY_EVENTS.value());
                             corpEXDMSNotifyDto.setCorpid(corpId);
-                            corpEXDMSNotifyDto.setGrpType(docChgDTO.getGroupType());
+                            corpEXDMSNotifyDto.setGrpType(resolvedGroupType);
                             corpEXDMSNotifyDto.setEtag(Integer.parseInt(docChgDTO.getNewEtag()));
                             corpEXDMSNotifyDto.setPreviousEtag(-1);
                             if (null != oldLmr) {
@@ -2329,6 +2374,11 @@ public class KnXDMCommonMediator {
 
     public List<KnCorpEXDMSNotifyDto> getModifyMcxGrpMicroSrvNotifyDto(KnCorpResponseDTO respDto, int corpId, int groupId, String profileId,
                                                                        com.kodiak.common.commdto.common.KnCorpGroupContactDTO memberPr, Integer oldLmr) {
+        return getModifyMcxGrpMicroSrvNotifyDto(respDto, corpId, groupId, profileId, memberPr, oldLmr,null);
+    }
+
+    public List<KnCorpEXDMSNotifyDto> getModifyMcxGrpMicroSrvNotifyDto(KnCorpResponseDTO respDto, int corpId, int groupId, String profileId,
+                                                                       com.kodiak.common.commdto.common.KnCorpGroupContactDTO memberPr, Integer oldLmr, Integer groupType) {
         String methodName = "getModifyMcxGrpMicroSrvNotifyDto()";
         knLogger.info(methodName, "ENTRY");
         knLogger.debug(methodName, "respDto - ", respDto);
@@ -2336,6 +2386,7 @@ public class KnXDMCommonMediator {
         KnCorpEXDMSNotifyDto notifyDto = new KnCorpEXDMSNotifyDto();
         notifyDto.setCorpid(corpId);
         notifyDto.setGrpId(groupId);
+        notifyDto.setGrpType(groupType);
         if (null != oldLmr) {
             notifyDto.setOldLmrInteropFlag(oldLmr);
         }
@@ -3598,6 +3649,7 @@ public class KnXDMCommonMediator {
 
                 KnCorpEXDMSNotifyDto corpEXDMSNotifyDto = new KnCorpEXDMSNotifyDto();
                 corpEXDMSNotifyDto.setGrpId(groupId);
+                corpEXDMSNotifyDto.setGrpType(grp.getGroupType());
                 corpEXDMSNotifyDto.setGrpSIPUri(KnGenInfoUtil.mcpttGroupUri(groupId,corpId,grpSIPUri));
                 corpEXDMSNotifyDto.setLmrInteropFlag(lmrIntrop);
                 corpEXDMSNotifyDto.setRecordingFs(recordingFs);

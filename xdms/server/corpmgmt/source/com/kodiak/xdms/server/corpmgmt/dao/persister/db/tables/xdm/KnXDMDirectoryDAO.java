@@ -373,15 +373,14 @@ public class KnXDMDirectoryDAO implements ITableDAO {
                 pstmt = null;
 
                 if (!chunk.isEmpty()) {
-                    updateQuery = "UPDATE DG.XDM_DIRECTORY SET ETAG = ETAG + 1 WHERE MDN IN ("
-                            + com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(chunk) + ")";
+                    updateQuery = "UPDATE DG.XDM_DIRECTORY SET ETAG = ETAG + 1 WHERE MDN = ?";
                     pstmt = conn.prepareStatement(updateQuery);
-                    int updateIndex = 1;
                     for (String mdn : chunk) {
-                        pstmt.setString(updateIndex++, mdn);
+                        pstmt.setString(1, mdn);
+                        pstmt.addBatch();
                     }
                     knLogger.debug(methodName, "Executing query- ", updateQuery);
-                    pstmt.executeUpdate();
+                    pstmt.executeBatch();
                 }
             }
             knLogger.debug(methodName, "Query executed successfully");

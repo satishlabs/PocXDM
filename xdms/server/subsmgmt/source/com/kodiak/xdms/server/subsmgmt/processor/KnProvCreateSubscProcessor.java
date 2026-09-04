@@ -597,6 +597,7 @@ public class KnProvCreateSubscProcessor {
                     corpProfilePersistDTO.setFeatureRelVersion(currentFsVersion);
                     String xdmCorpFS2Set = KnGeneralUtil.getDefaultXDMCorpFS2Set(XDMCORPFS2_SET.EMERGENCY_CONF_TIMER_FEATURE.value(), com.kodiak.common.resources.KnConstants.TRUE);
                     xdmCorpFS2Set = featureSetUtil.calculateXDMCorpFS2(xdmCorpFS2Set, XDMCORPFS2_SET.EMERGENCY_CONF_TIMER_FEATURE.value(), com.kodiak.common.resources.KnConstants.TRUE);
+                    xdmCorpFS2Set = featureSetUtil.calculateXDMCorpFS2(xdmCorpFS2Set, XDMCORPFS2_SET.MC_REACHABILITY_FLAG.value(), com.kodiak.common.resources.KnConstants.TRUE);
                     corpProfilePersistDTO.setXdmCorpFS2Set(xdmCorpFS2Set);
                     provXDMServerDAO.createCorporateProfile(corpProfilePersistDTO, persisterTxn);
                     successPegs.add(KnOMConstants.XDM_NUM_CORP_PROFILE_CREATED);

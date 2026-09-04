@@ -3418,19 +3418,19 @@ public class KnDBXDMServerDAO implements IXDMServerDAO, IStatusMgrNotifyIntf {
         Connection conn;
         PreparedStatement pStatement = null;
         String query = null;
-        int index = 1;
         knLogger.debug(methodName, "ENTRY : deviceInfo -> " + deviceInfo);
         try {
             //open a txn if its not already opened
             conn = persisterTxn.getDBConnection(xdmPttServerId, KnDBConst.DataStores.XDM_SHARED_DATA,true);
             if(null != deviceInfo.getDeviceIdList() && !deviceInfo.getDeviceIdList().isEmpty()){
-                query = "DELETE FROM DG.DEVICE_INFO WHERE DEVICEID IN (DEVICEIDLIST)";
-                query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(deviceInfo.getDeviceIdList(),query,"DEVICEIDLIST");
+                query = "DELETE FROM DG.DEVICE_INFO WHERE DEVICEID = ?";
+                //query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(deviceInfo.getDeviceIdList(),query,"DEVICEIDLIST");
                 pStatement = conn.prepareStatement(query);
                 for(String deviceId : deviceInfo.getDeviceIdList()){
-                    pStatement.setString(index++, deviceId);
+                    pStatement.setString(1, deviceId);
+                    pStatement.addBatch();
                 }
-                int count = pStatement.executeUpdate();
+                int count = pStatement.executeBatch().length;
                 knLogger.debug(methodName, "QUERY : Completed." + count);
             } else {
                 pStatement = conn.prepareStatement(QRY_DELETE_DEVICE_INFO);
@@ -3487,19 +3487,19 @@ public class KnDBXDMServerDAO implements IXDMServerDAO, IStatusMgrNotifyIntf {
         Connection conn;
         PreparedStatement pStatement = null;
         String query = null;
-        int index = 1;
         knLogger.debug(methodName, "ENTRY : deviceInfo -> " + deviceInfo);
         try {
             //open a txn if its not already opened
             conn = persisterTxn.getDBConnection(xdmPttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, true);
             if(null != deviceInfo.getDeviceIdList() && !deviceInfo.getDeviceIdList().isEmpty()){
-                query = "DELETE FROM DG.DEVICEIMPIINFO WHERE DEVICE_IMPI IN ( SELECT DEVICE_IMPI FROM DG.DEVICE_INFO WHERE DEVICEID IN (DEVICEIDLIST))";
-                query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(deviceInfo.getDeviceIdList(),query,"DEVICEIDLIST");
+                query = "DELETE FROM DG.DEVICEIMPIINFO WHERE DEVICE_IMPI IN ( SELECT DEVICE_IMPI FROM DG.DEVICE_INFO WHERE DEVICEID = ?)";
+                //query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(deviceInfo.getDeviceIdList(),query,"DEVICEIDLIST");
                 pStatement = conn.prepareStatement(query);
                 for(String deviceId : deviceInfo.getDeviceIdList()){
-                    pStatement.setString(index++, deviceId);
+                    pStatement.setString(1, deviceId);
+                    pStatement.addBatch();
                 }
-                int count = pStatement.executeUpdate();
+                int count = pStatement.executeBatch().length;
                 knLogger.debug(methodName, "QUERY : Completed." + count);
             } else {
                 pStatement = conn.prepareStatement(QRY_DELETE_DEVICEIMPIINFO);
@@ -4868,19 +4868,19 @@ public class KnDBXDMServerDAO implements IXDMServerDAO, IStatusMgrNotifyIntf {
         Connection conn;
         PreparedStatement pStatement = null;
         String query = null;
-        int index = 1;
         knLogger.debug(methodName, "ENTRY : deleteSubscriberCameraInfo mdn--> " + KnGDPRTemplate.mdnList(mdnList));
         try {
             //open a txn if its not already opened
             conn = persisterTxn.getDBConnection(xdmPttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, true);
-            query = "DELETE FROM DG.SUBSCR_CAMERA_INFO WHERE MDN IN (MDNLIST)";
-            query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(mdnList,query,"MDNLIST");
+            query = "DELETE FROM DG.SUBSCR_CAMERA_INFO WHERE MDN = ?";
+            //query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(mdnList,query,"MDNLIST");
             pStatement = conn.prepareStatement(query);
             for(String mdn : mdnList){
-                pStatement.setString(index++, mdn);
+                pStatement.setString(1, mdn);
+                pStatement.addBatch();
             }
             knLogger.debug(methodName, "QUERY : Executing " + query);
-            int count = pStatement.executeUpdate();
+            int count = pStatement.executeBatch().length;
             knLogger.debug(methodName, "QUERY : Completed." + count);
         } catch (KnDAOException e) {
             knLogger.error(methodName, "DAO Exception - " + e);

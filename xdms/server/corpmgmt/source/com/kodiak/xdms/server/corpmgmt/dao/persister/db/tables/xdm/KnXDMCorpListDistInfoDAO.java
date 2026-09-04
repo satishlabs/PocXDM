@@ -171,23 +171,22 @@ public class KnXDMCorpListDistInfoDAO implements ITableDAO {
             query = queryMapper.getQuery(DELETE_CORP_LIST_FOR_SUBSCRIBER);
             //conn = persisterTxn.getDBConnection(pttServerId, false);
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
-            String sublistListStr = formIntegerCommaSeperatedIdList(removeSubListId);
-            query = replaceContactWithValue(query, SUBLISTID, sublistListStr);
-            Collection<String> sublist = new ArrayList<String>();
+            Collection<String> subscribersMdnList = new ArrayList<String>();
             if(null != subsDTO.getMdnList() && !subsDTO.getMdnList().isEmpty()){
-                sublist.addAll(subsDTO.getMdnList());
+                subscribersMdnList.addAll(subsDTO.getMdnList());
             } else {
-                sublist.add(subsDTO.getMdn());
+                subscribersMdnList.add(subsDTO.getMdn());
             }
-            query = replaceContactWithValue(query, MDNLIST, formCommaSeperatedIdList(sublist));
             pstmt = conn.prepareStatement(query);
-            /*for (int sublistId : removeSubListId) {
-                pstmt.setInt(2, sublistId);
-                pstmt.setString(1, subscribersMdn);
-                pstmt.addBatch();
-            }*/
             knLogger.debug( methodName, "Executinng query -  " , "'" , query , "'");
-            pstmt.executeUpdate();
+            for (String subscribersMdn : subscribersMdnList) {
+                for (int sublistId : removeSubListId) {
+                    pstmt.setString(1, subscribersMdn);
+                    pstmt.setInt(2, sublistId);
+                    pstmt.addBatch();
+                }
+            }
+            pstmt.executeBatch();
             knLogger.debug( methodName, "EXIT: Query executed successfully");
         } catch (KnDAOException e) {
             knLogger.error( methodName, "KnDAOException occured while remove sublist for subscriber - " , e);
@@ -416,27 +415,21 @@ public class KnXDMCorpListDistInfoDAO implements ITableDAO {
         Connection conn;
         PreparedStatement pstmt=null;
         String query = null;
-        int index = 1;
         try {
             KnQueryMapper queryMapper = KnQueryMapper.getInstance();
             query = queryMapper.getQuery(DELETE_CORP_LIST_FOR_SUBSCRIBER);
             //conn = persisterTxn.getDBConnection(pttServerId, false);
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
-            //String sublistListStr = formIntegerCommaSeperatedIdList(subsRequestDTO.getSublistIds());
-            //query = replaceContactWithValue(query, SUBLISTID, sublistListStr);
-            query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(subsRequestDTO.getMdnList(),query,"MDNLIST");
-            //String mdnListStr = formCommaSeperatedIdList(subsRequestDTO.getMdnList());
-            //query = replaceContactWithValue(query, MDNLIST, mdnListStr);
-            query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks("SUBLISTID",subsRequestDTO.getSublistIds(),query);
             pstmt = conn.prepareStatement(query);
-            for(String mdn : subsRequestDTO.getMdnList()){
-                pstmt.setString(index++,mdn);
-            }
-            for(int i : subsRequestDTO.getSublistIds()){
-                pstmt.setInt(index++,i);
-            }
             knLogger.debug( methodName, "Executing query -  " , "'" , query , "'");
-            pstmt.executeQuery();
+            for(String mdn : subsRequestDTO.getMdnList()){
+                for(int sublistId : subsRequestDTO.getSublistIds()){
+                    pstmt.setString(1,mdn);
+                    pstmt.setInt(2,sublistId);
+                    pstmt.addBatch();
+                }
+            }
+            pstmt.executeBatch();
             knLogger.debug(methodName, "EXIT: Query executed successfully");
         } catch (KnDAOException e) {
             knLogger.error( methodName, "KnDAOException occured while removing subsrcibers sublist lists- " , e);
@@ -447,7 +440,7 @@ public class KnXDMCorpListDistInfoDAO implements ITableDAO {
                     pttServerId, KnDAOSourceTypes.XDM_CORP_GROUP_LIST_DIST, query);
         }
         finally {
-            KnDbUtil.closeStatement(pstmt);
+            KnDbUtil.closePreparedStatement(pstmt);
         }
     }
 
@@ -596,21 +589,21 @@ public class KnXDMCorpListDistInfoDAO implements ITableDAO {
         Connection conn = null;
         PreparedStatement pstmt = null;
         String query = null;
-        int index = 1;
         try {
-            query = "DELETE FROM DG.CORPLISTDISTINFO WHERE CORPLISTID IN (SUBLISTID) AND RECIPIENTMDN IN (MDNLIST)";
-            query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks("SUBLISTID", sublistId, query);
-            query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(mdnList,query,"MDNLIST");
+            query = "DELETE FROM DG.CORPLISTDISTINFO WHERE CORPLISTID = ? AND RECIPIENTMDN = ?";
+//            query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks("SUBLISTID", sublistId, query);
+//            query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(mdnList,query,"MDNLIST");
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
             pstmt = conn.prepareStatement(query);
-            for (int sublistIdVal : sublistId) {
-                pstmt.setInt(index++, sublistIdVal);
-            }
-            for (String mdn : mdnList) {
-                pstmt.setString(index++, mdn);
-            }
             knLogger.debug(methodName, "Executing query -  ", "'", query, "'");
-            pstmt.executeUpdate();
+            for (String mdn : mdnList) {
+                for (int sublistIdVal : sublistId) {
+                    pstmt.setInt(1, sublistIdVal);
+                    pstmt.setString(2, mdn);
+                    pstmt.addBatch();
+                }
+            }
+            pstmt.executeBatch();
             knLogger.debug(methodName, "EXIT: Query executed successfully");
         } catch (KnDAOException | SQLException e) {
             knLogger.error(methodName, "KnDAOException occured while corp list distribution reference - ", e);
@@ -673,12 +666,16 @@ public class KnXDMCorpListDistInfoDAO implements ITableDAO {
         try {
             KnQueryMapper queryMapper = KnQueryMapper.getInstance();
             query = queryMapper.getQuery(DELETE_ALL_CORP_LIST__REF_FOR_ALL_SUBSCRIBERS);
-            query = replaceContactWithValue(query, SUBLISTID, formIntegerCommaSeperatedIdList(sublistIdsList));
+            //query = replaceContactWithValue(query, SUBLISTID, formIntegerCommaSeperatedIdList(sublistIdsList));
             //conn = persisterTxn.getDBConnection(pttServerId, false);
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
             pstmt = conn.prepareStatement(query);
             knLogger.debug( methodName, "Executing query -  " , "'" , query , "'");
-            pstmt.executeQuery();
+            for(Integer sublistId : sublistIdsList) {
+                pstmt.setInt(1, sublistId);
+                pstmt.addBatch();
+            }
+            pstmt.executeBatch();
             knLogger.debug(methodName, "EXIT: Query executed successfully");
         } catch (KnDAOException e) {
             knLogger.error( methodName, "KnDAOException occured while corp list distribution reference - " , e);

@@ -2528,8 +2528,12 @@ public class KnPOCSubscrInfoDAO implements ITableDAO {
             String mdn = subsProfilePersistDTO.getMdn();
             List<String> mdnList = subsProfilePersistDTO.getMdnList();
             int serviceStatusOp = subsProfilePersistDTO.getServiceStatusOp();
-
-            StringBuffer keys = com.kodiak.common.dao.KnDbUtil.convertListToStringBuffer(mdnList);
+            Collection<String> mdnCollection = new ArrayList<String>();
+            if (mdnList != null && !mdnList.isEmpty()) {
+                mdnCollection.addAll(mdnList);
+            } else {
+                mdnCollection.add(mdn);
+            }
 
             StringBuilder queryBuffer = new StringBuilder();
             queryBuffer.append(UPDATE_QRY);
@@ -2540,34 +2544,35 @@ public class KnPOCSubscrInfoDAO implements ITableDAO {
             queryBuffer.append(SERVICE_STATUS_OP).append("=?, ");
             queryBuffer.append(PREV_SERVICE_AUTH_STATUS).append("=?, ");
             queryBuffer.append(PREV_SERVICE_AUTH_STATUS_UPDATETIME).append("=? ");
-            queryBuffer.append("WHERE MDN IN ").append(keys.toString());
+            queryBuffer.append("WHERE ").append(MDN).append("=?");
             query = queryBuffer.toString();
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
             pStmt = conn.prepareStatement(query);
-            pStmt.setInt(1, serviceAuthStatus);
-            if (clientPassword == null) {
-                pStmt.setNull(2, java.sql.Types.CHAR);
-            } else {
-                pStmt.setString(2, clientPassword);
-            }
-            if (userAgent == null) {
-                pStmt.setNull(3, java.sql.Types.CHAR);
-            } else {
-                pStmt.setString(3, userAgent);
-            }
-
-            pStmt.setLong(4, lastProfileUpdateTime);
-            pStmt.setInt(5,serviceStatusOp);
-            if (subsProfilePersistDTO.getPreviousServiceAuthStatusToStore() != null) {
-                pStmt.setInt(6, subsProfilePersistDTO.getPreviousServiceAuthStatusToStore());
-            } else {
-                pStmt.setNull(6, java.sql.Types.INTEGER);
-            }
-            pStmt.setLong(7, System.currentTimeMillis());
-            //pStmt.setString(6, mdn);
-
             knLogger.debug(methodName, "QUERY: Executing the query - ", query);
-            pStmt.executeUpdate();
+            for (String mdnVal : mdnCollection) {
+                pStmt.setInt(1, serviceAuthStatus);
+                if (clientPassword == null) {
+                    pStmt.setNull(2, java.sql.Types.CHAR);
+                } else {
+                    pStmt.setString(2, clientPassword);
+                }
+                if (userAgent == null) {
+                    pStmt.setNull(3, java.sql.Types.CHAR);
+                } else {
+                    pStmt.setString(3, userAgent);
+                }
+                pStmt.setLong(4, lastProfileUpdateTime);
+                pStmt.setInt(5,serviceStatusOp);
+                if (subsProfilePersistDTO.getPreviousServiceAuthStatusToStore() != null) {
+                    pStmt.setInt(6, subsProfilePersistDTO.getPreviousServiceAuthStatusToStore());
+                } else {
+                    pStmt.setNull(6, java.sql.Types.INTEGER);
+                }
+                pStmt.setLong(7, System.currentTimeMillis());
+                pStmt.setString(8, mdnVal);
+                pStmt.addBatch();
+            }
+            pStmt.executeBatch();
             knLogger.debug(methodName, "QUERY: Executed ");
 
             if (ownedTxn) {
