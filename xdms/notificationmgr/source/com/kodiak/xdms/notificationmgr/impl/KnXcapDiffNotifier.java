@@ -366,8 +366,11 @@ public class KnXcapDiffNotifier {
 
                     if (!iosMdns.isEmpty()) {
                         for (String mdn : iosMdns) {
-                            // This method is invoked only after poll eligibility (self immediately
-                            // or watcher after XCAP_NOTIFICATION_PERIOD). Wake the client now.
+                            if (!isImmediateSelfClientPayload(mdn, xcapDiffNotifyObj)) {
+                                knLogger.info(methodName, FLOW_TAG + " STEP-IOS1 Skipping direct iOS wakeup for delayed payload. iosMdn="
+                                        + normalizeMdn(mdn) + " reason=nonSelfOrWatcherScopeMutation");
+                                continue;
+                            }
                             KnPersisterTxn persisterTxn = null;
                             try {
                                 String payLods = Base64.getEncoder().encodeToString(notifyXML.getBytes());
@@ -783,26 +786,15 @@ public class KnXcapDiffNotifier {
         knLogger.debug(methodName, "sendXcapDiffNotifications - ", xcapDiffNotifyDTOs);
         try {
             if (xcapDiffNotifyDTOs == null || xcapDiffNotifyDTOs.isEmpty()) {
-                knLogger.warn(methodName, FLOW_TAG + " STEP-PX Empty DirChg input; nothing to send");
+                knLogger.warn(methodName, FLOW_TAG + " STEP-PX Empty DirChg input; nothing to enqueue");
                 return false;
             }
 
-            // Poller/worker dispatch path: build the XCAP-DIFF payload and publish it.
-            // Producers must keep using KnXcapDiffNotifierImpl save-first enqueue.
-            List<KnNotifyPayloadDTO> listOfNotifyPayload =
-                    xcapDiffDirChgNotifications(xcapDiffNotifyDTOs, mdnSubsInfoMap, persisterTxn);
-            if (listOfNotifyPayload == null || listOfNotifyPayload.isEmpty()) {
-                knLogger.warn(methodName, FLOW_TAG
-                        + " STEP-PX DirChg payload generation returned empty; nothing to send. watcherCount="
-                        + xcapDiffNotifyDTOs.size());
-                return false;
-            }
-            notifyStatus = sendBulkNotifications(listOfNotifyPayload,
-                    KnXcapNotifyConstants.DOC_CHANGE_EVENT_FEATURE_ID,
-                    mdnSubsInfoMap, persisterTxn, baseMdnMap);
-            knLogger.info(methodName, FLOW_TAG + " STEP-PX Dispatched DirChg XCAP-DIFF to client. status="
-                    + notifyStatus + " watcherCount=" + xcapDiffNotifyDTOs.size()
-                    + " payloadCount=" + listOfNotifyPayload.size());
+            // Always use save-first flow so watcher notifications honor delay/epoch policy.
+            KnXcapDiffNotifierImpl notifierImpl = new KnXcapDiffNotifierImpl();
+            notifyStatus = notifierImpl.sendXcapDiffNotifications(xcapDiffNotifyDTOs, persisterTxn, null);
+            knLogger.info(methodName, FLOW_TAG + " STEP-PX Delegated DirChg flow to save-first pipeline. status="
+                    + notifyStatus + " watcherCount=" + xcapDiffNotifyDTOs.size());
         } catch (Throwable e) {
             knLogger.error(methodName, "Unexpected Exception occurred while sending bulk notifications - ",
                     new KnException("", e.getMessage(), e));
@@ -973,10 +965,6 @@ public class KnXcapDiffNotifier {
                     KnPoCXcapDiffNotifyDTO pocXcapDiffNotifyDTO = new KnPoCXcapDiffNotifyDTO();
                     pocXcapDiffNotifyDTO.setXcapURI(xcapDiffNotifyObj.getDirURI());
                     pocXcapDiffNotifyDTO.setXcapDiff(notifyXML);
-                    String destMdn = xcapDiffNotifyObj.getMdn();
-                    if (destMdn != null && !destMdn.trim().isEmpty()) {
-                        requestObj.setUserMDN(destMdn.trim());
-                    }
                     //INT82147 Identify type of Notify listed below, Directory change Notify  - 1, Doc-Diff  Notify - 2
                     pocXcapDiffNotifyDTO.setTypeOfNotify(KnXcapNotifyConstants.DOC_DIFF_NOTIFY_TYPE);
                     //Setting ntfyOnAnyMDN=1 for ABDG group Type
@@ -1026,8 +1014,7 @@ public class KnXcapDiffNotifier {
                  String xmlPayload=Base64.getEncoder().encodeToString(notifyXML.getBytes());
                   notifyPayloadDTO.setXmlLoad(xmlPayload);
                     notifyPayloadDTO.setIosMdn(mdn);
-                    // Payload build here is the post-poll dispatch path, so iOS wakeup is eligible.
-                    notifyPayloadDTO.setImmediateIosEligible(true);
+                    notifyPayloadDTO.setImmediateIosEligible(isImmediateSelfClientPayload(mdn, xcapDiffNotifyObj));
                     notifyPayloadDTO.setMdnMaps(mdnMaps);
                     listOfNotifyPayload.add(notifyPayloadDTO);
                 }
@@ -1067,7 +1054,7 @@ public class KnXcapDiffNotifier {
                 if (!knNotifyPayloadDTO.isImmediateIosEligible()) {
                     knLogger.info(methodName, FLOW_TAG + " STEP-IOS2 Suppressing direct iOS wakeup in bulk send. iosMdn="
                             + normalizeMdn(knNotifyPayloadDTO.getIosMdn())
-                            + " reason=notEligibleAtDispatch");
+                            + " reason=delayedWatcherFlow");
                 } else {
                     try {
                         persisterTxn = KnPersisterTxn.getPersisterTxn();
@@ -2408,10 +2395,6 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
             KnPoCXcapDiffNotifyDTO pocXcapDiffNotifyDTO = new KnPoCXcapDiffNotifyDTO();
             pocXcapDiffNotifyDTO.setXcapURI(xcapDiffNotifyObj.getDirURI());
             pocXcapDiffNotifyDTO.setXcapDiff(notifyXML);
-            String destMdn = xcapDiffNotifyObj.getMdn();
-            if (destMdn != null && !destMdn.trim().isEmpty()) {
-                requestObj.setUserMDN(destMdn.trim());
-            }
             if (xcapDiffNotifyObj.getProtocolVersion() != null && xcapDiffNotifyObj.getProtocolVersion().matches(com.kodiak.common.resources.KnConstants.PROTOCOL_VERSION_REGEX)) {
                 pocXcapDiffNotifyDTO.setReason(xcapDiffNotifyObj.getReason());
             }
@@ -3700,7 +3683,6 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
         long   nowMillis    = 0L;
         long   periodMillis = 0L;
         long   cutoffMillis = 0L;
-        long   cutoffNanos  = 0L;
         boolean optimizedMode = false;
 
         try {
@@ -3736,11 +3718,12 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                 nowMillis    = System.currentTimeMillis();
                 cutoffMillis = nowMillis - periodMillis;
                 long nowNanos = nowMillis * 1_000_000L;
-                cutoffNanos = nowNanos - (periodMillis * 1_000_000L);
+                long cutoffNanos = nowNanos - (periodMillis * 1_000_000L);
                 knLogger.debug(methodName,
                         "Optimized mode ON - epoch period=" + notificationPeriodSeconds + "s now=" + nowMillis);
 
-                // Keep millis cutoff for MDN_NOTIFY_TRACKER; nanos cutoff is for queue INSERTION_TIME.
+                // Reuse cutoffMillis for tracker housekeeping, but claim gating is queue-age based.
+                cutoffMillis = cutoffNanos;
             }
 
             knLogger.info(methodName, FLOW_TAG + " STEP-HG1 Poll start. clusterId=" + clusterIdEnv
@@ -3776,11 +3759,10 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
             // Step 3a: OPTIMIZED PATH – epoch-gated MDN fetch
             // ─────────────────────────────────────────────────────────────────
             if (optimizedMode) {
-                // Eligible watchers are pending queue DEST_IDs whose epoch has elapsed.
-                // Do not seed from MDN_NOTIFY_TRACKER: stale tracker MDNs with no queue
-                // starve the FIRST-N window and leave real pending rows unclaimed.
+                // Fetch at most 100 eligible watcher MDNs from MDN_NOTIFY_TRACKER.
+                // "Eligible" means oldest pending row for watcher has crossed epoch.
                 List<String> eligibleMdns =
-                        fetchEligibleMdns(connection, trackerConnection, cutoffMillis, cutoffNanos, 100);
+                        fetchEligibleMdns(connection, cutoffMillis, 100);
 
                 knLogger.debug(methodName,
                         "Eligible watcher MDN count for this cycle: " + eligibleMdns.size());
@@ -3844,6 +3826,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                     if (registerClaimedRecord(claimedRecordKeys, selfKey)) {
                         seqList.add(selfKey);
                         record.put(selfKey, selfEntry.getValue());
+                        claimedOptimizedMdns.add(selfKey.getDestId());
                         immediateSelfClaimed++;
                     }
                 }
@@ -4035,16 +4018,8 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                             + " STEP-HG6A No claimed optimized MDNs this cycle; timestamp update skipped");
                 }
 
-                // Housekeeping must never abort a successful claim/commit. Tracker lives on
-                // shared DSN; queue lives on primary. A wrong-DSN prepare used to throw
-                // TT2206 and roll back the entire poll cycle.
-                try {
-                    cleanupMdnNotifyTracker(trackerConnection, connection, nowMillis - periodMillis, periodMillis);
-                } catch (Exception cleanupEx) {
-                    knLogger.warn(methodName, FLOW_TAG
-                            + " STEP-HG6B Tracker cleanup failed; poll cycle continues. cause="
-                            + cleanupEx.getMessage());
-                }
+                // Always run cleanup in optimized mode to age out stale tracker rows.
+                cleanupMdnNotifyTracker(trackerConnection, connection, nowMillis - periodMillis, periodMillis);
 
                 knLogger.info(methodName, FLOW_TAG
                         + " STEP-HG6 Tracker maintenance complete. updatedMdns=" + claimedOptimizedMdns.size());
@@ -4338,102 +4313,44 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
     // ═══════════════════════════════════════════════════════════════════════════════════
 
     /**
-     * Queries eligible watchers for the current poll cycle.
-     * Source of truth is pending {@code XCAP_PENDING_NOTIFYQ} rows (primary DSN).
-     * Epoch is then applied from {@code MDN_NOTIFY_TRACKER.LAST_NOTIFIED_TIME}
-     * (shared DSN) when a tracker row exists; otherwise oldest queue age is used.
+     * Queries eligible watchers from {@code DG.XCAP_PENDING_NOTIFYQ}.
+     * "Eligible" means the oldest pending row for a watcher is older than the
+     * configured queue-age cutoff.
+     *
+     * @param connection   open JDBC connection (not closed here)
+     * @param cutoffNanos  queue-age cutoff in nanoseconds
+     * @param maxMdns      batch cap (typically 100)
+     * @return list of eligible watcher MDNs
+     * @throws SQLException on DB error
      */
-    private List<String> fetchEligibleMdns(Connection queueConnection,
-                                           Connection trackerConnection,
-                                           long cutoffMillis,
+    private List<String> fetchEligibleMdns(Connection connection,
                                            long cutoffNanos,
                                            int maxMdns) throws SQLException {
-        LinkedHashMap<String, Long> pendingOldestByMdn = new LinkedHashMap<>();
-        String pendingSql =
-                "SELECT DEST_ID, MIN(INSERTION_TIME) AS OLDEST_TS " +
+        List<String> eligibleMdns = new ArrayList<>();
+        String sql =
+                "SELECT FIRST " + maxMdns + " DEST_ID, MIN(INSERTION_TIME) AS OLDEST_TS " +
                 "FROM DG.XCAP_PENDING_NOTIFYQ " +
                 "WHERE NOTIFY_STATUS = ? AND DEST_TYPE != ? " +
                 "GROUP BY DEST_ID " +
+                "HAVING MIN(INSERTION_TIME) <= ? " +
                 "ORDER BY OLDEST_TS ASC";
-        try (PreparedStatement ps = queueConnection.prepareStatement(pendingSql)) {
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, KnXcapNotifyConstants.NOTIFYSTATUS.PENDING.value());
             ps.setInt(2, KnXcapNotifyConstants.DESTTYPE.SUPPRESSMDN.value());
+            ps.setLong(3, cutoffNanos);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    String mdn = normalizeMdn(rs.getString(1));
-                    if (mdn != null && !pendingOldestByMdn.containsKey(mdn)) {
-                        pendingOldestByMdn.put(mdn, rs.getLong(2));
-                    }
+                    eligibleMdns.add(rs.getString(1));
                 }
             }
         }
-
-        Map<String, Long> trackerLastNotified = new HashMap<>();
-        if (trackerConnection != null && !pendingOldestByMdn.isEmpty()) {
-            List<String> trackerQueryKeys = expandMdnVariants(pendingOldestByMdn.keySet());
-            String inClause = String.join(",", Collections.nCopies(trackerQueryKeys.size(), "?"));
-            String trackerSql = "SELECT MDN, LAST_NOTIFIED_TIME FROM DG.MDN_NOTIFY_TRACKER WHERE MDN IN ("
-                    + inClause + ")";
-            try (PreparedStatement ps = trackerConnection.prepareStatement(trackerSql)) {
-                for (int i = 0; i < trackerQueryKeys.size(); i++) {
-                    ps.setString(i + 1, trackerQueryKeys.get(i));
-                }
-                try (ResultSet rs = ps.executeQuery()) {
-                    while (rs.next()) {
-                        String mdn = normalizeMdn(rs.getString(1));
-                        if (mdn != null) {
-                            trackerLastNotified.put(mdn, rs.getLong(2));
-                        }
-                    }
-                }
-            }
-        }
-
-        LinkedHashSet<String> eligibleMdns = new LinkedHashSet<>();
-        int skippedInEpoch = 0;
-        for (Map.Entry<String, Long> pending : pendingOldestByMdn.entrySet()) {
-            if (eligibleMdns.size() >= maxMdns) {
-                break;
-            }
-            String mdn = pending.getKey();
-            Long oldestTs = pending.getValue();
-            Long lastNotified = lookupTrackerTime(trackerLastNotified, mdn);
-            boolean eligible;
-            if (lastNotified != null) {
-                eligible = lastNotified <= cutoffMillis;
-            } else {
-                eligible = oldestTs != null && oldestTs <= cutoffNanos;
-            }
-            if (eligible) {
-                eligibleMdns.add(mdn);
-            } else {
-                skippedInEpoch++;
-            }
-        }
-
         knLogger.debug("fetchEligibleMdns",
-                "Eligible MDN count (trackerCutoffMillis=" + cutoffMillis
-                        + " queueCutoffNanos=" + cutoffNanos + "):" + eligibleMdns.size());
+                "Eligible MDN count (queueCutoffNanos=" + cutoffNanos + "):" + eligibleMdns.size());
         knLogger.info("fetchEligibleMdns", FLOW_TAG
                 + " STEP-HG2A Eligible MDNs fetched. maxMdns=" + maxMdns
-                + " pendingDestCount=" + pendingOldestByMdn.size()
-                + " skippedInEpoch=" + skippedInEpoch
                 + " eligibleCount=" + eligibleMdns.size());
-        return new ArrayList<>(eligibleMdns);
-    }
-
-    private Long lookupTrackerTime(Map<String, Long> trackerLastNotified, String mdn) {
-        if (trackerLastNotified == null || mdn == null) {
-            return null;
-        }
-        Long direct = trackerLastNotified.get(mdn);
-        if (direct != null) {
-            return direct;
-        }
-        if (mdn.startsWith("+") && mdn.length() > 1) {
-            return trackerLastNotified.get(mdn.substring(1));
-        }
-        return trackerLastNotified.get("+" + mdn);
+        return eligibleMdns;
     }
 
     private KnXcapDiffDirChgNotifyDTO buildDirChgFallbackPayload(KnXcapDiffDirChgNotifyDTO source,
@@ -4897,13 +4814,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                                          Connection queueConnection,
                                          long cutoffMillis,
                                          long periodMillis) throws SQLException {
-        if (trackerConnection == null || queueConnection == null) {
-            knLogger.warn("cleanupMdnNotifyTracker", FLOW_TAG
-                    + " STEP-HG6B Skipping tracker cleanup; missing DB connection");
-            return;
-        }
-        // Tracker DSN (shared) does not contain XCAP_PENDING_NOTIFYQ. Count only on queueConnection.
-        String selectSql = "SELECT FIRST 200 MDN FROM DG.MDN_NOTIFY_TRACKER WHERE LAST_NOTIFIED_TIME <= ?";
+        String selectSql = "SELECT MDN FROM DG.MDN_NOTIFY_TRACKER WHERE LAST_NOTIFIED_TIME <= ?";
         String countSql = "SELECT COUNT(1) FROM DG.XCAP_PENDING_NOTIFYQ WHERE DEST_ID = ? AND NOTIFY_STATUS IN (?, ?)";
         String deleteSql = "DELETE FROM DG.MDN_NOTIFY_TRACKER WHERE MDN = ?";
         int deleted = 0;
