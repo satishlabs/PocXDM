@@ -469,7 +469,14 @@ public class KnWatcherDebulkSendNotification implements Runnable {
         merged.setNotfnCapability(first.isNotfnCapability());
         merged.setPushNotifyEnabled(first.isPushNotifyEnabled());
         merged.setProtocolVersion(first.getProtocolVersion());
-        merged.setNtfyOnAnyMDN(first.getNtfyOnAnyMDN());
+        boolean watcherFanout = false;
+        for (KnXcapDiffDirChgNotifyDTO row : sourceRows) {
+            if (row != null && row.getNtfyOnAnyMDN() != null && row.getNtfyOnAnyMDN() == 1) {
+                watcherFanout = true;
+                break;
+            }
+        }
+        merged.setNtfyOnAnyMDN(watcherFanout ? 1 : 0);
 
         // Use latest non-empty etag values from the bundled rows.
         for (KnXcapDiffDirChgNotifyDTO row : sourceRows) {

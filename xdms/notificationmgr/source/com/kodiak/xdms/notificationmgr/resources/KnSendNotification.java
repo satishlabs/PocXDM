@@ -59,6 +59,9 @@ public class KnSendNotification implements Runnable {
         String methodName = "run()";
         knLogger.debug(methodName, "run method", knXcapDiffNotifyDTO);
         boolean isSuccess = false;
+        if (seqId != null && seqId.getDestId() != null && knXcapDiffNotifyDTO != null) {
+            knXcapDiffNotifyDTO.setMdn(seqId.getDestId().trim());
+        }
         if (seqId.getMsgType() == 1) {
             isSuccess = xcapDiffNotifier.generateDirNotification(knXcapDiffNotifyDTO, mdnSubsInfoMap, baseMdnsMap);
         } else {
