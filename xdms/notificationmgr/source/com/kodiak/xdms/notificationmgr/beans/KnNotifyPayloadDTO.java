@@ -42,6 +42,7 @@ public class KnNotifyPayloadDTO implements IIdentifier {
     private String iosMdn;
     private Map<String,KnXDMSubsProvDTO> mdnMaps;
     private String docType;
+    private boolean immediateIosEligible = true;
 
     public String getDocType() {
         return docType;
@@ -111,4 +112,12 @@ public class KnNotifyPayloadDTO implements IIdentifier {
 	public void setMdnMaps(Map<String,KnXDMSubsProvDTO> mdnMaps) {
 		this.mdnMaps = mdnMaps;
 	}
+
+    public boolean isImmediateIosEligible() {
+        return immediateIosEligible;
+    }
+
+    public void setImmediateIosEligible(boolean immediateIosEligible) {
+        this.immediateIosEligible = immediateIosEligible;
+    }
 }

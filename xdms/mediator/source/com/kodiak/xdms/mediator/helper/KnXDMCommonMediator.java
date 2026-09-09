@@ -1281,6 +1281,7 @@ public class KnXDMCommonMediator {
                         }
                     }
                     KnXcapDiffDirChgNotifyDTO xcapDiffNotifyDTO = new KnXcapDiffDirChgNotifyDTO();
+                    xcapDiffNotifyDTO.setMdn(dirChgDTO.getMdn() != null ? dirChgDTO.getMdn() : entry.getKey());
                     xcapDiffNotifyDTO.setXcapRootUri(dirChgDTO.getXcapRootURI());
                     Collections.sort(diffDocList);
                     xcapDiffNotifyDTO.setDocDiffObj(diffDocList);

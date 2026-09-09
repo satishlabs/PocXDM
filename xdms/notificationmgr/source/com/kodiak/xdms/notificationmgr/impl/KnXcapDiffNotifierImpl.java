@@ -193,35 +193,36 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
                     knLogger.info(methodName, FLOW_TAG + " STEP-P2 Saved notifications to DG.XCAP_PENDING_NOTIFYQ (DirChg)");
 
                     // Anything after queue save must never undo / block the queue write.
+                    LinkedHashSet<String> watcherMdns = extractWatcherMdnsFromDirChg(initialList);
                     try {
-                        LinkedHashSet<String> watcherMdns = extractWatcherMdnsFromDirChg(initialList);
                         xcapDiffNotifier.logQueueSnapshotForMdns("STEP-P2A", watcherMdns, null);
+                    } catch (Throwable snapshotEx) {
+                        knLogger.warn(methodName, FLOW_TAG
+                                + " STEP-P2A Queue snapshot failed for DirChg; continuing with tracker upsert. uniqueMdns="
+                                + watcherMdns.size(), snapshotEx);
+                    }
 
-                        if (xcapDiffNotifier.isOptimizedNotificationEnabled()) {
-                            try {
-                                xcapDiffNotifier.upsertMdnNotifyTracker(watcherMdns, null);
-                                knLogger.info(methodName, FLOW_TAG + " STEP-P3 Upserted MDN tracker entries (DirChg). uniqueMdns="
-                                        + watcherMdns.size());
-                                xcapDiffNotifier.logTrackerSnapshotForMdns("STEP-P3B", watcherMdns, null);
-                            } catch (Exception trackerEx) {
-                                knLogger.warn(methodName, FLOW_TAG + " STEP-P3 MDN tracker upsert failed for DirChg; queue rows remain saved. uniqueMdns="
-                                        + watcherMdns.size(), trackerEx);
-                            }
-                        } else {
-                            knLogger.info(methodName, FLOW_TAG
-                                    + " STEP-P3 Legacy mode – tracker upsert skipped (DirChg). uniqueMdns="
+                    if (xcapDiffNotifier.isOptimizedNotificationEnabled()) {
+                        try {
+                            xcapDiffNotifier.upsertMdnNotifyTracker(watcherMdns, null);
+                            knLogger.info(methodName, FLOW_TAG + " STEP-P3 Upserted MDN tracker entries (DirChg). uniqueMdns="
                                     + watcherMdns.size());
+                            xcapDiffNotifier.logTrackerSnapshotForMdns("STEP-P3B", watcherMdns, null);
+                        } catch (Exception trackerEx) {
+                            knLogger.warn(methodName, FLOW_TAG + " STEP-P3 MDN tracker upsert failed for DirChg; queue rows remain saved. uniqueMdns="
+                                    + watcherMdns.size(), trackerEx);
                         }
+                    } else {
+                        knLogger.info(methodName, FLOW_TAG
+                                + " STEP-P3 Legacy mode – tracker upsert skipped (DirChg). uniqueMdns="
+                                + watcherMdns.size());
+                    }
 
-                        if (shouldTriggerImmediateEtagNotify()) {
-                            xcapDiffNotifier.sendXcapDiffDirMicroserviceNotificationforEtagNotify(initialList);
-                            knLogger.info(methodName, FLOW_TAG + " STEP-P4 Triggered microservice etag notify for DirChg batch");
-                        } else {
-                            knLogger.info(methodName, FLOW_TAG + " STEP-P4 Optimized mode ON - deferring etag notify to bundled worker path (DirChg)");
-                        }
-                    } catch (Throwable postSaveEx) {
-                        knLogger.error(methodName, FLOW_TAG
-                                + " STEP-ERR Post-save processing failed for DirChg; queue insert already committed", postSaveEx);
+                    if (shouldTriggerImmediateEtagNotify()) {
+                        xcapDiffNotifier.sendXcapDiffDirMicroserviceNotificationforEtagNotify(initialList);
+                        knLogger.info(methodName, FLOW_TAG + " STEP-P4 Triggered microservice etag notify for DirChg batch");
+                    } else {
+                        knLogger.info(methodName, FLOW_TAG + " STEP-P4 Optimized mode ON - deferring etag notify to bundled worker path (DirChg)");
                     }
                 } else if (saveSuppressEnabled) {
                     knLogger.info(methodName, FLOW_TAG + " STEP-PX Save-first bypassed; entering suppress flow (DirChg)");
@@ -364,35 +365,36 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
                     xcapDiffNotifier.saveNotification(initialList, notificationParamDTO, null);
                     knLogger.info(methodName, FLOW_TAG + " STEP-P2 Saved notifications to DG.XCAP_PENDING_NOTIFYQ (DiffList)");
 
+                    LinkedHashSet<String> watcherMdns = extractWatcherMdnsFromDiff(initialList);
                     try {
-                        LinkedHashSet<String> watcherMdns = extractWatcherMdnsFromDiff(initialList);
                         xcapDiffNotifier.logQueueSnapshotForMdns("STEP-P2A", watcherMdns, null);
+                    } catch (Throwable snapshotEx) {
+                        knLogger.warn(methodName, FLOW_TAG
+                                + " STEP-P2A Queue snapshot failed for DiffList; continuing with tracker upsert. uniqueMdns="
+                                + watcherMdns.size(), snapshotEx);
+                    }
 
-                        if (xcapDiffNotifier.isOptimizedNotificationEnabled()) {
-                            try {
-                                xcapDiffNotifier.upsertMdnNotifyTracker(watcherMdns, null);
-                                knLogger.info(methodName, FLOW_TAG + " STEP-P3 Upserted MDN tracker entries (DiffList). uniqueMdns="
-                                        + watcherMdns.size());
-                                xcapDiffNotifier.logTrackerSnapshotForMdns("STEP-P3B", watcherMdns, null);
-                            } catch (Exception trackerEx) {
-                                knLogger.warn(methodName, FLOW_TAG + " STEP-P3 MDN tracker upsert failed for DiffList; queue rows remain saved. uniqueMdns="
-                                        + watcherMdns.size(), trackerEx);
-                            }
-                        } else {
-                            knLogger.info(methodName, FLOW_TAG
-                                    + " STEP-P3 Legacy mode – tracker upsert skipped (DiffList). uniqueMdns="
+                    if (xcapDiffNotifier.isOptimizedNotificationEnabled()) {
+                        try {
+                            xcapDiffNotifier.upsertMdnNotifyTracker(watcherMdns, null);
+                            knLogger.info(methodName, FLOW_TAG + " STEP-P3 Upserted MDN tracker entries (DiffList). uniqueMdns="
                                     + watcherMdns.size());
+                            xcapDiffNotifier.logTrackerSnapshotForMdns("STEP-P3B", watcherMdns, null);
+                        } catch (Exception trackerEx) {
+                            knLogger.warn(methodName, FLOW_TAG + " STEP-P3 MDN tracker upsert failed for DiffList; queue rows remain saved. uniqueMdns="
+                                    + watcherMdns.size(), trackerEx);
                         }
+                    } else {
+                        knLogger.info(methodName, FLOW_TAG
+                                + " STEP-P3 Legacy mode – tracker upsert skipped (DiffList). uniqueMdns="
+                                + watcherMdns.size());
+                    }
 
-                        if (shouldTriggerImmediateEtagNotify()) {
-                            xcapDiffNotifier.sendXcapDiffMicroserviceNotificationforEtagNotify(initialList);
-                            knLogger.info(methodName, FLOW_TAG + " STEP-P4 Triggered microservice etag notify for DiffList batch");
-                        } else {
-                            knLogger.info(methodName, FLOW_TAG + " STEP-P4 Optimized mode ON - deferring etag notify to bundled worker path (DiffList)");
-                        }
-                    } catch (Throwable postSaveEx) {
-                        knLogger.error(methodName, FLOW_TAG
-                                + " STEP-ERR Post-save processing failed for DiffList; queue insert already committed", postSaveEx);
+                    if (shouldTriggerImmediateEtagNotify()) {
+                        xcapDiffNotifier.sendXcapDiffMicroserviceNotificationforEtagNotify(initialList);
+                        knLogger.info(methodName, FLOW_TAG + " STEP-P4 Triggered microservice etag notify for DiffList batch");
+                    } else {
+                        knLogger.info(methodName, FLOW_TAG + " STEP-P4 Optimized mode ON - deferring etag notify to bundled worker path (DiffList)");
                     }
                 } else if (saveSuppressEnabled) {
                     knLogger.info(methodName, FLOW_TAG + " STEP-PX Save-first bypassed; entering suppress flow (DiffList)");
@@ -497,35 +499,36 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
                     xcapDiffNotifier.saveNotification(initialList, notificationParamDTO, null);
                     knLogger.info(methodName, FLOW_TAG + " STEP-P2 Saved notifications to DG.XCAP_PENDING_NOTIFYQ (SingleDiff)");
 
+                    LinkedHashSet<String> watcherMdns = extractWatcherMdnsFromDiff(initialList);
                     try {
-                        LinkedHashSet<String> watcherMdns = extractWatcherMdnsFromDiff(initialList);
                         xcapDiffNotifier.logQueueSnapshotForMdns("STEP-P2A", watcherMdns, null);
+                    } catch (Throwable snapshotEx) {
+                        knLogger.warn(methodName, FLOW_TAG
+                                + " STEP-P2A Queue snapshot failed for SingleDiff; continuing with tracker upsert. uniqueMdns="
+                                + watcherMdns.size(), snapshotEx);
+                    }
 
-                        if (xcapDiffNotifier.isOptimizedNotificationEnabled()) {
-                            try {
-                                xcapDiffNotifier.upsertMdnNotifyTracker(watcherMdns, null);
-                                knLogger.info(methodName, FLOW_TAG + " STEP-P3 Upserted MDN tracker entries (SingleDiff). uniqueMdns="
-                                        + watcherMdns.size());
-                                xcapDiffNotifier.logTrackerSnapshotForMdns("STEP-P3B", watcherMdns, null);
-                            } catch (Exception trackerEx) {
-                                knLogger.warn(methodName, FLOW_TAG + " STEP-P3 MDN tracker upsert failed for SingleDiff; queue rows remain saved. uniqueMdns="
-                                        + watcherMdns.size(), trackerEx);
-                            }
-                        } else {
-                            knLogger.info(methodName, FLOW_TAG
-                                    + " STEP-P3 Legacy mode – tracker upsert skipped (SingleDiff). uniqueMdns="
+                    if (xcapDiffNotifier.isOptimizedNotificationEnabled()) {
+                        try {
+                            xcapDiffNotifier.upsertMdnNotifyTracker(watcherMdns, null);
+                            knLogger.info(methodName, FLOW_TAG + " STEP-P3 Upserted MDN tracker entries (SingleDiff). uniqueMdns="
                                     + watcherMdns.size());
+                            xcapDiffNotifier.logTrackerSnapshotForMdns("STEP-P3B", watcherMdns, null);
+                        } catch (Exception trackerEx) {
+                            knLogger.warn(methodName, FLOW_TAG + " STEP-P3 MDN tracker upsert failed for SingleDiff; queue rows remain saved. uniqueMdns="
+                                    + watcherMdns.size(), trackerEx);
                         }
+                    } else {
+                        knLogger.info(methodName, FLOW_TAG
+                                + " STEP-P3 Legacy mode – tracker upsert skipped (SingleDiff). uniqueMdns="
+                                + watcherMdns.size());
+                    }
 
-                        if (shouldTriggerImmediateEtagNotify()) {
-                            xcapDiffNotifier.sendXcapDiffMicroserviceNotificationforEtagNotify(initialList);
-                            knLogger.info(methodName, FLOW_TAG + " STEP-P4 Triggered microservice etag notify for SingleDiff batch");
-                        } else {
-                            knLogger.info(methodName, FLOW_TAG + " STEP-P4 Optimized mode ON - deferring etag notify to bundled worker path (SingleDiff)");
-                        }
-                    } catch (Throwable postSaveEx) {
-                        knLogger.error(methodName, FLOW_TAG
-                                + " STEP-ERR Post-save processing failed for SingleDiff; queue insert already committed", postSaveEx);
+                    if (shouldTriggerImmediateEtagNotify()) {
+                        xcapDiffNotifier.sendXcapDiffMicroserviceNotificationforEtagNotify(initialList);
+                        knLogger.info(methodName, FLOW_TAG + " STEP-P4 Triggered microservice etag notify for SingleDiff batch");
+                    } else {
+                        knLogger.info(methodName, FLOW_TAG + " STEP-P4 Optimized mode ON - deferring etag notify to bundled worker path (SingleDiff)");
                     }
                 } else if (saveSuppressEnabled) {
                     knLogger.info(methodName, FLOW_TAG + " STEP-PX Save-first bypassed; entering suppress flow (SingleDiff)");
@@ -633,8 +636,7 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
             if (dto == null) {
                 continue;
             }
-            // getMDNFromURI strips the URI path and returns only the MDN portion.
-            String mdn = getMDNFromURI(dto.getDirURI());
+            String mdn = resolveWatcherMdn(dto.getMdn(), dto.getDirURI());
             if (mdn != null && !mdn.trim().isEmpty()) {
                 mdns.add(mdn.trim());
             } else {
@@ -673,7 +675,7 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
             if (dto == null) {
                 continue;
             }
-            String mdn = getMDNFromURI(dto.getDirURI());
+            String mdn = resolveWatcherMdn(dto.getMdn(), dto.getDirURI());
             if (mdn != null && !mdn.trim().isEmpty()) {
                 mdns.add(mdn.trim());
             } else {
@@ -686,6 +688,13 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
         knLogger.debug(methodName, "Extracted " + mdns.size() + " unique watcher MDN(s)");
         knLogger.info(methodName, FLOW_TAG + " STEP-P3A MDN extraction complete for Diff. uniqueMdns=" + mdns.size());
         return mdns;
+    }
+
+    private String resolveWatcherMdn(String explicitMdn, String dirUri) {
+        if (explicitMdn != null && !explicitMdn.trim().isEmpty()) {
+            return explicitMdn.trim();
+        }
+        return getMDNFromURI(dirUri);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════

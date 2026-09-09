@@ -112,7 +112,7 @@ public class KnMCSXCAPNotifier {
         if (etagBlockingQueue == null) {
             etagBlockingQueue = new LinkedBlockingQueue<String>();
         }
-        knLogger.debug(methodName, "BlockingQueue Instance obtained", blockingQueue.hashCode());
+        knLogger.debug(methodName, "BlockingQueue Instance obtained", etagBlockingQueue.hashCode());
         return etagBlockingQueue;
     }
 
@@ -122,21 +122,40 @@ public class KnMCSXCAPNotifier {
             return;
         }
 
-        etagMdnDTOS.stream()
-                .filter(etagMdnDTO -> etagMdnDTO != null && !etagMdnDTO.isEmpty()) // Filter out null or empty strings
-                .forEach(etagMdnDTO -> {
-                    try {
-                        if (etagBlockingQueue != null
-                                && etagBlockingQueue.size() < MAX_BLOCKING_QUEUE_SIZE
-                                && !etagBlockingQueue.contains(etagMdnDTO)) {
-                            etagBlockingQueue.put(etagMdnDTO);
-                        }
-                    } catch (Exception e) {
-                        knLogger.error("sendEtagNotification", "Exception occurred while adding to etagBlockingQueue", e);
-                    }
-                });
+        // Ensure queue exists even if producer runs before consumer init.
+        BlockingQueue<String> queue = getEtagBlockingQueue();
+        int queuedCount = 0;
+        int duplicateCount = 0;
+        int blankCount = 0;
+        int fullQueueCount = 0;
 
-        knLogger.info("sendEtagNotification", "Etag notification sent to blocking queue", etagBlockingQueue);
+        for (String etagMdnDTO : etagMdnDTOS) {
+            String normalizedMdn = etagMdnDTO != null ? etagMdnDTO.trim() : null;
+            if (normalizedMdn == null || normalizedMdn.isEmpty()) {
+                blankCount++;
+                continue;
+            }
+            try {
+                if (queue.size() >= MAX_BLOCKING_QUEUE_SIZE) {
+                    fullQueueCount++;
+                    continue;
+                }
+                if (queue.contains(normalizedMdn)) {
+                    duplicateCount++;
+                    continue;
+                }
+                queue.put(normalizedMdn);
+                queuedCount++;
+            } catch (Exception e) {
+                knLogger.error("sendEtagNotification", "Exception occurred while adding to etagBlockingQueue", e);
+            }
+        }
+
+        knLogger.info("sendEtagNotification", "Etag enqueue summary queuedCount=" + queuedCount
+                + " duplicateCount=" + duplicateCount
+                + " blankCount=" + blankCount
+                + " fullQueueCount=" + fullQueueCount
+                + " queueSize=" + queue.size());
     }
 
 }

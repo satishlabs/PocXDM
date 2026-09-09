@@ -1038,6 +1038,8 @@ public class KnXDMBulkMediator {
                     }
                 }
                 KnXcapDiffDirChgNotifyDTO xcapDiffNotifyDTO = new KnXcapDiffDirChgNotifyDTO();
+                // Preserve watcher identity for downstream queue routing/debulk gating.
+                xcapDiffNotifyDTO.setMdn(dirChgDTO.getMdn() != null ? dirChgDTO.getMdn() : entry.getKey());
                 xcapDiffNotifyDTO.setXcapRootUri(dirChgDTO.getXcapRootURI());
                 Collections.sort(diffDocList);
                 xcapDiffNotifyDTO.setDocDiffObj(diffDocList);
@@ -1564,6 +1566,8 @@ public class KnXDMBulkMediator {
         List<KnXcapDiffNotifyDTO> xcapDiffNotifyDTOs = new ArrayList<>();
         for (KnOPDirChgDTO dirChgDTO : dirChgDTOs) {
             KnXcapDiffNotifyDTO xcapDiffNotifyDTO = new KnXcapDiffNotifyDTO();
+            // Ensure watcher mdn is carried when available; avoids fallback-to-dirURI misrouting.
+            xcapDiffNotifyDTO.setMdn(dirChgDTO.getMdn());
             Collection<KnXcapDiffDocDTO> xcapDocList = new ArrayList<>();
             Collection<KnOPDocChgDTO> chgDocList = dirChgDTO.getDocChgDTO();
             if (chgDocList != null) {

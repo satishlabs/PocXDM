@@ -15,6 +15,7 @@ import com.kodiak.logger.KnAuditHelper;
 import com.kodiak.logger.KnLogger;
 import com.kodiak.xdms.notificationmgr.beans.KnEtagEXDMSNotifyDto;
 import com.kodiak.xdms.notificationmgr.beans.KnResourceDetailsDTO;
+import com.kodiak.xdms.server.common.business.helper.KnGenInfoUtil;
 
 import java.util.*;
 
@@ -24,6 +25,7 @@ import static com.kodiak.xdms.notificationmgr.resources.KnJobConstants.RESOURCE_
 
 public class KnEtagMcsSendNotification implements Runnable {
     private static final KnLogger knLogger = KnLogger.getLogger(KnEtagMcsSendNotification.class);
+    private static final String FLOW_TAG = "[XCAP-DEBULK-FLOW]";
 
     private String mdn;
     private Map<String, Integer> mapOfEtag;
@@ -61,6 +63,7 @@ public class KnEtagMcsSendNotification implements Runnable {
             String federatedRoutingKey = KnConstants.ETAG_EVENT_FEDERATED_ROUTING_KEY;
             String json = objectMapper.writeValueAsString(notifyDto);
             knLogger.info(methodName, "Publishing json - ", json, ", routingKey - ", routingKey);
+            knLogger.debug(methodName, "Publishing json - ", json, ", routingKey - ", routingKey);
             KnMessage request = new KnMessage();
             request.setDestRoutingKey(routingKey);
             //request.setMsgType(KnAsyncConstant.MESSAGE_TYPE.OBJECT);
@@ -74,6 +77,7 @@ public class KnEtagMcsSendNotification implements Runnable {
                 request.setDestRoutingKey(federatedRoutingKey);
                 request.setSrcExchangeName("FederatedTopicExchange");
                 knLogger.info(methodName, "Inside Publishing json - ", json, ", routingKey - ", request.getDestRoutingKey());
+                knLogger.debug(methodName, "Inside Publishing json - ", json, ", routingKey - ", request.getDestRoutingKey());
                 knLogger.info(methodName, "Message Publish with request second publish" + request);
                 status1 = sendMessage(request);
                 if (!status1) {
@@ -131,12 +135,24 @@ public class KnEtagMcsSendNotification implements Runnable {
         etagNotifyDto.setResourceId(mdn);
         etagNotifyDto.setNotifyEventType(7);
         resourceDetailsDTO.setResourceType("DIRECTORY_ETAG");
-        if (etagMap.get(mdn) != null) {
-            resourceDetailsDTO.setEtag(String.valueOf(etagMap.get(mdn)));
+        Integer etagValue = resolveEtagForMdn(mdn, etagMap);
+        if (etagValue != null) {
+            resourceDetailsDTO.setEtag(String.valueOf(etagValue));
+            knLogger.info(methodName, FLOW_TAG + " STEP-ETAG-S0 Resolved etag for mdn=" + mdn + " etag=" + etagValue);
+        } else {
+            knLogger.warn(methodName, FLOW_TAG + " STEP-ETAG-S0 Unable to resolve directory etag for mdn=" + mdn
+                    + ". Handset may not auto-refresh for this event.");
         }
         resourceDetailsDTO.setUpdateTime(String.valueOf(System.currentTimeMillis()));
         etagNotifyDto.setResourceDetails(Collections.singletonList(resourceDetailsDTO));
         knLogger.debug(methodName, "Etag Notify DTO : ", etagNotifyDto);
         return etagNotifyDto;
+    }
+
+    private Integer resolveEtagForMdn(String mdn, Map<String, Integer> etagMap) {
+        if (mdn == null || etagMap == null || etagMap.isEmpty()) {
+            return null;
+        }
+        return etagMap.get(mdn);
     }
 }

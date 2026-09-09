@@ -49,6 +49,7 @@ import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -214,16 +215,17 @@ public class KnWatcherDebulkSendNotification implements Runnable {
             // ── Step 5: Dispatch one bundled watcher notification ─────────────────────
             // Route to the correct send path based on the chosen rule:
             //   RULE-I-CONSOLIDATED   → inline consolidated diff notification
-            //   All other rules       → directory-etag notification (no inline payload)
-            boolean isSuccess;
-            if ("RULE-I-CONSOLIDATED".equals(appliedRule)) {
-                isSuccess = xcapDiffNotifier.sendXcapDiffNotifications(
-                        notifications, mdnSubsInfoMap, null, baseMdnsMap);
-            } else {
-                // RULE-I-OVERSIZE-FALLBACK / RULE-II-MULTI-DOC / RULE-III-CORE-DIRECTORY
-                xcapDiffNotifier.sendXcapDiffDirMicroserviceNotificationforEtagNotify(notifications);
-                isSuccess = true; // etag path does not return a boolean; treat as success
-            }
+            //   All other rules       → xcapDiff directory-etag style notification
+            List<KnXcapDiffDirChgNotifyDTO> watcherBundleToSend =
+                    buildSingleWatcherBundle(appliedRule, notifications);
+            knLogger.info(methodName, FLOW_TAG + " STEP-11B Watcher bundle prepared. watcher="
+                    + safeValue(seqId != null ? seqId.getDestId() : null)
+                    + " sourceRows=" + notifications.size()
+                    + " sendRows=" + watcherBundleToSend.size()
+                    + " appliedRule=" + appliedRule);
+
+            boolean isSuccess = xcapDiffNotifier.sendXcapDiffNotifications(
+                    watcherBundleToSend, mdnSubsInfoMap, null, baseMdnsMap);
 
             // ── Step 6: Log outcome ─────────────���────────────────────────────────────
             knLogger.info(methodName,
@@ -420,6 +422,68 @@ public class KnWatcherDebulkSendNotification implements Runnable {
                 .map(KnXcapDiffDocDTO::getDocumentSelector)
                 .filter(sel -> sel != null && !sel.trim().isEmpty())
                 .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    private List<KnXcapDiffDirChgNotifyDTO> buildSingleWatcherBundle(String appliedRule,
+                                                                      List<KnXcapDiffDirChgNotifyDTO> sourceRows) {
+        KnXcapDiffDirChgNotifyDTO merged = createMergedTemplate(sourceRows);
+        if (merged == null) {
+            return sourceRows;
+        }
+
+        if ("RULE-I-CONSOLIDATED".equals(appliedRule)) {
+            List<KnXcapDiffDocDTO> mergedDiffs = new ArrayList<>();
+            for (KnXcapDiffDirChgNotifyDTO row : sourceRows) {
+                if (row != null && row.getDocDiffObj() != null) {
+                    mergedDiffs.addAll(row.getDocDiffObj());
+                }
+            }
+            merged.setDocDiffObj(mergedDiffs);
+        } else {
+            // Rule-I fallback / Rule-II / Rule-III: send directory-etag style payload only.
+            merged.setDocDiffObj(null);
+        }
+        return Collections.singletonList(merged);
+    }
+
+    private KnXcapDiffDirChgNotifyDTO createMergedTemplate(List<KnXcapDiffDirChgNotifyDTO> sourceRows) {
+        if (sourceRows == null || sourceRows.isEmpty()) {
+            return null;
+        }
+        KnXcapDiffDirChgNotifyDTO first = sourceRows.get(0);
+        if (first == null) {
+            return null;
+        }
+
+        KnXcapDiffDirChgNotifyDTO merged = new KnXcapDiffDirChgNotifyDTO(first.getDocLenThresold());
+        String watcherMdn = (seqId != null && seqId.getDestId() != null
+                && !seqId.getDestId().trim().isEmpty()) ? seqId.getDestId().trim() : null;
+        merged.setMdn(watcherMdn != null ? watcherMdn : first.getMdn());
+        merged.setPocHome(first.getPocHome());
+        merged.setPresenceHome(first.getPresenceHome());
+        merged.setAction(first.getAction());
+        merged.setXcapRootUri(first.getXcapRootUri());
+        merged.setDirURI(first.getDirURI());
+        merged.setDirPrevEtag(first.getDirPrevEtag());
+        merged.setDirNewEtag(first.getDirNewEtag());
+        merged.setNotfnCapability(first.isNotfnCapability());
+        merged.setPushNotifyEnabled(first.isPushNotifyEnabled());
+        merged.setProtocolVersion(first.getProtocolVersion());
+        merged.setNtfyOnAnyMDN(first.getNtfyOnAnyMDN());
+
+        // Use latest non-empty etag values from the bundled rows.
+        for (KnXcapDiffDirChgNotifyDTO row : sourceRows) {
+            if (row == null) {
+                continue;
+            }
+            if (row.getDirPrevEtag() != null && !row.getDirPrevEtag().trim().isEmpty()) {
+                merged.setDirPrevEtag(row.getDirPrevEtag());
+            }
+            if (row.getDirNewEtag() != null && !row.getDirNewEtag().trim().isEmpty()) {
+                merged.setDirNewEtag(row.getDirNewEtag());
+            }
+        }
+        return merged;
     }
 
     /**
