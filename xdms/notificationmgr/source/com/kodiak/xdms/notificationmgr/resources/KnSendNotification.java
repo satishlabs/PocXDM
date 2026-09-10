@@ -59,9 +59,6 @@ public class KnSendNotification implements Runnable {
         String methodName = "run()";
         knLogger.debug(methodName, "run method", knXcapDiffNotifyDTO);
         boolean isSuccess = false;
-        if (seqId != null && seqId.getDestId() != null && knXcapDiffNotifyDTO != null) {
-            knXcapDiffNotifyDTO.setMdn(seqId.getDestId().trim());
-        }
         if (seqId.getMsgType() == 1) {
             isSuccess = xcapDiffNotifier.generateDirNotification(knXcapDiffNotifyDTO, mdnSubsInfoMap, baseMdnsMap);
         } else {
@@ -71,9 +68,6 @@ public class KnSendNotification implements Runnable {
         }
         if (isSuccess) {
             xcapDiffNotifier.cleanUpRecord(seqId);
-            if (seqId.getDestId() != null) {
-                xcapDiffNotifier.cleanupTrackerForMdn(Collections.singletonList(seqId.getDestId().trim()));
-            }
         } else {
             // Revert to PENDING so the row can be retried on the next poll cycle
             // without waiting for a service restart (startup recovery only).

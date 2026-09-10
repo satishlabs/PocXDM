@@ -56,9 +56,6 @@ public class KnXcapSendNotification implements Runnable {
         boolean isSuccess = xcapDiffNotifier.sendXcapDiffNotifications(knXcapDiffDirChgNotifyDTOList, mdnSubsInfoMap, null, baseMdnsMap);
         if (isSuccess) {
             xcapDiffNotifier.cleanUpRecord(seqId);
-            if (seqId.getDestId() != null) {
-                xcapDiffNotifier.cleanupTrackerForMdn(Collections.singletonList(seqId.getDestId().trim()));
-            }
         } else {
             // Revert to PENDING so the row can be retried on the next poll cycle
             // without waiting for a service restart (startup recovery only).
