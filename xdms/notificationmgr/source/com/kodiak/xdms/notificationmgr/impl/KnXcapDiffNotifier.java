@@ -3319,8 +3319,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                         continue;
                     }
                     boolean optimizedSave = isOptimizedNotificationEnabled();
-                    boolean watcherFanout = isWatcherFanoutNtfy(knXcapDiffDirChgNotifyDTO.getNtfyOnAnyMDN());
-                    int destType = (optimizedSave && watcherFanout)
+                    int destType = optimizedSave
                             ? KnXcapNotifyConstants.DESTTYPE.GROUP.value()
                             : KnXcapNotifyConstants.DESTTYPE.MDN.value();
                     bindPendingNotifyInsert(pStmt, timeInNanoSecond, watcherMdn, destType, data, notificationParamDTO);
@@ -3330,7 +3329,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                         knLogger.info(methodName, FLOW_TAG
                                 + " STEP-SN2A Enqueue DirChg. destId=" + watcherMdn
                                 + " destType=" + destType
-                                + " watcherFanout=" + watcherFanout);
+                                + " watcherFanout=true");
                     }
                     if (count % batchSize == 0) {
                         knLogger.debug(methodName, "Executing batch of 100");
@@ -3416,8 +3415,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                         continue;
                     }
                     boolean optimizedSave = isOptimizedNotificationEnabled();
-                    boolean watcherFanout = isWatcherFanoutNtfy(knXcapDiffNotifyDTO.getNtfyOnAnyMDN());
-                    int destType = (optimizedSave && watcherFanout)
+                    int destType = optimizedSave
                             ? KnXcapNotifyConstants.DESTTYPE.GROUP.value()
                             : KnXcapNotifyConstants.DESTTYPE.MDN.value();
                     bindPendingNotifyInsert(pStmt, timeInNanoSecond, watcherMdn, destType, data, notificationParamDTO);
@@ -3427,7 +3425,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                         knLogger.info(methodName, FLOW_TAG
                                 + " STEP-SN2A Enqueue Diff. destId=" + watcherMdn
                                 + " destType=" + destType
-                                + " watcherFanout=" + watcherFanout);
+                                + " watcherFanout=true");
                     }
                     if (count % batchSize == 0) {
                         knLogger.debug(methodName, "Executing batch of 100");
@@ -3728,12 +3726,10 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
             // Step 3a: OPTIMIZED PATH – epoch-gated MDN fetch
             // ─────────────────────────────────────────────────────────────────
             if (optimizedMode) {
-                int immediateSelfCount = claimImmediateSelfPending(connection, seqList, record, 200);
-                knLogger.info(methodName, FLOW_TAG
-                        + " STEP-HG2S Immediate self DEST_TYPE=MDN claimed. count=" + immediateSelfCount);
-
                 int expiredCount = claimExpiredWatcherPending(connection, seqList, record,
                         claimedOptimizedMdns, nowMillis, periodMillis, 200);
+                knLogger.info(methodName, FLOW_TAG
+                        + " STEP-HG2S Immediate self send skipped in optimized mode (XCAP wait-and-bundle)");
                 knLogger.info(methodName, FLOW_TAG
                         + " STEP-HG3 Claimed pending queue rows for eligible watchers. claimedRows="
                         + expiredCount + " claimedMdns=" + claimedOptimizedMdns.size());
@@ -4629,7 +4625,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                             rs.getInt(5),
                             rs.getString(6));
                     Object payload = KnGeneralUtil.byteArrayToObject(rs.getBytes(4));
-                    if (isWatcherFanoutPayload(payload)) {
+                    if (payload instanceof KnXcapDiffDirChgNotifyDTO || isWatcherFanoutPayload(payload)) {
                         continue;
                     }
                     forceUnicastPayload(payload);
