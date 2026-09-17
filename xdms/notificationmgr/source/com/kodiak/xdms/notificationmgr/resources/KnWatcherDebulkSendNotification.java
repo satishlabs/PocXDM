@@ -49,6 +49,7 @@ import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -160,12 +161,20 @@ public class KnWatcherDebulkSendNotification implements Runnable {
             return;
         }
 
-        knLogger.info(methodName,
-                FLOW_TAG + " STEP-8 Worker started. cid=" + safeValue(seqId != null ? seqId.getCid() : null)
-                        + " watcher=" + safeValue(seqId != null ? seqId.getDestId() : null)
-                        + " bundledCount=" + notifications.size());
+            knLogger.info(methodName,
+                    FLOW_TAG + " STEP-8 Worker started. cid=" + safeValue(seqId != null ? seqId.getCid() : null)
+                            + " watcher=" + safeValue(seqId != null ? seqId.getDestId() : null)
+                            + " destType=" + (seqId != null ? seqId.getDestType() : -1)
+                            + " bundledCount=" + notifications.size());
 
         try {
+            if (seqId != null && seqId.getDestType() == KnXcapNotifyConstants.DESTTYPE.MDN.value()) {
+                for (KnXcapDiffDirChgNotifyDTO dto : notifications) {
+                    if (dto != null) {
+                        dto.setNtfyOnAnyMDN(0);
+                    }
+                }
+            }
             // ── Step 1: Resolve the configured max diff payload size ───────────────────
             int maxPayloadBytes = resolveMaxPayloadBytes();
             knLogger.info(methodName, FLOW_TAG + " STEP-9 Resolved payload threshold. maxPayloadBytes=" + maxPayloadBytes);
@@ -220,9 +229,9 @@ public class KnWatcherDebulkSendNotification implements Runnable {
                 isSuccess = xcapDiffNotifier.sendXcapDiffNotifications(
                         notifications, mdnSubsInfoMap, null, baseMdnsMap);
             } else {
-                // RULE-I-OVERSIZE-FALLBACK / RULE-II-MULTI-DOC / RULE-III-CORE-DIRECTORY
-                xcapDiffNotifier.sendXcapDiffDirMicroserviceNotificationforEtagNotify(notifications);
-                isSuccess = true; // etag path does not return a boolean; treat as success
+                List<KnXcapDiffDirChgNotifyDTO> directoryEtagBundle = toDirectoryEtagBundle(notifications);
+                isSuccess = xcapDiffNotifier.sendXcapDiffNotifications(
+                        directoryEtagBundle, mdnSubsInfoMap, null, baseMdnsMap);
             }
 
             // ── Step 6: Log outcome ─────────────���────────────────────────────────────
@@ -242,7 +251,8 @@ public class KnWatcherDebulkSendNotification implements Runnable {
                 // Eagerly remove the MDN_NOTIFY_TRACKER row so the MDN does not
                 // re-appear as eligible until a new operation inserts it again.
                 // This prevents spurious empty-batch cycles and keeps the tracker bounded.
-                if (seqId != null && seqId.getDestId() != null) {
+                if (seqId != null && seqId.getDestId() != null
+                        && seqId.getDestType() == KnXcapNotifyConstants.DESTTYPE.GROUP.value()) {
                     xcapDiffNotifier.cleanupTrackerForMdn(
                             Collections.singletonList(seqId.getDestId().trim()));
                     knLogger.info(methodName, FLOW_TAG + " STEP-12B Tracker row removed for watcher="
@@ -293,6 +303,30 @@ public class KnWatcherDebulkSendNotification implements Runnable {
      * @return one of: "RULE-III-CORE-DIRECTORY", "RULE-II-MULTI-DOC",
      *                 "RULE-I-OVERSIZE-FALLBACK", "RULE-I-CONSOLIDATED"
      */
+    private List<KnXcapDiffDirChgNotifyDTO> toDirectoryEtagBundle(List<KnXcapDiffDirChgNotifyDTO> notifications) {
+        List<KnXcapDiffDirChgNotifyDTO> etagBundle = new ArrayList<>();
+        for (KnXcapDiffDirChgNotifyDTO source : notifications) {
+            if (source == null) {
+                continue;
+            }
+            KnXcapDiffDirChgNotifyDTO copy = new KnXcapDiffDirChgNotifyDTO();
+            copy.setMdn(source.getMdn());
+            copy.setPocHome(source.getPocHome());
+            copy.setPresenceHome(source.getPresenceHome());
+            copy.setXcapRootUri(source.getXcapRootUri());
+            copy.setDirURI(source.getDirURI());
+            copy.setDirPrevEtag(source.getDirPrevEtag());
+            copy.setDirNewEtag(source.getDirNewEtag());
+            copy.setProtocolVersion(source.getProtocolVersion());
+            copy.setNtfyOnAnyMDN(source.getNtfyOnAnyMDN());
+            copy.setNotfnCapability(source.isNotfnCapability());
+            copy.setPushNotifyEnabled(source.isPushNotifyEnabled());
+            copy.setDocDiffObj(Collections.emptyList());
+            etagBundle.add(copy);
+        }
+        return etagBundle;
+    }
+
     static String determineRule(List<KnXcapDiffDirChgNotifyDTO> notifications,
                                 long serialisedBytes,
                                 int maxPayloadBytes) {

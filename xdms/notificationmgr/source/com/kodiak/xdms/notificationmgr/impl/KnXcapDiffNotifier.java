@@ -219,7 +219,7 @@ public class KnXcapDiffNotifier {
      * MDNs confirmed to have no outstanding queue work.
      */
     private final String SELECT_STALE_TRACKER_MDNS =
-            "SELECT MDN FROM DG.MDN_NOTIFY_TRACKER WHERE LAST_NOTIFIED_TIME <= ?";
+            "SELECT FIRST 200 MDN FROM DG.MDN_NOTIFY_TRACKER WHERE LAST_NOTIFIED_TIME <= ?";
 
     /**
      * constructor
@@ -967,6 +967,8 @@ public class KnXcapDiffNotifier {
                     pocXcapDiffNotifyDTO.setTypeOfNotify(KnXcapNotifyConstants.DOC_DIFF_NOTIFY_TYPE);
                     //Setting ntfyOnAnyMDN=1 for ABDG group Type
                     pocXcapDiffNotifyDTO.setNtfyOnAnyMDN(xcapDiffNotifyObj.getNtfyOnAnyMDN());
+                    applySipDestTargeting(pocXcapDiffNotifyDTO, xcapDiffNotifyObj.getNtfyOnAnyMDN(),
+                            xcapDiffNotifyObj.getMdn());
                     requestObj.setRequestData(pocXcapDiffNotifyDTO);
 
                     knLogger.info(methodName, "TLV Request Object - ", KnGDPRTemplate.mdnUriTemplate(requestObj.toString()));
@@ -2395,6 +2397,8 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                 pocXcapDiffNotifyDTO.setTypeOfNotify(KnXcapNotifyConstants.SUBSCRIBE_NOTIFY_TYPE);
             }*/
             pocXcapDiffNotifyDTO.setNtfyOnAnyMDN(xcapDiffNotifyObj.getNtfyOnAnyMDN());
+            applySipDestTargeting(pocXcapDiffNotifyDTO, xcapDiffNotifyObj.getNtfyOnAnyMDN(),
+                    xcapDiffNotifyObj.getMdn());
             requestObj.setRequestData(pocXcapDiffNotifyDTO);
 
             knLogger.debug(methodName, "TLV Request Object - ", requestObj);
@@ -3306,9 +3310,6 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                     Instant instant = Instant.now();
                     long timeInNanoSecond = instant.getNano() + instant.getEpochSecond() * 1000000000L;
                     String watcherMdn = resolveWatcherMdn(knXcapDiffDirChgNotifyDTO.getMdn(), knXcapDiffDirChgNotifyDTO.getDirURI());
-                    pStmt.setLong(1, timeInNanoSecond);
-                    pStmt.setString(2, watcherMdn);
-                    pStmt.setInt(3, KnXcapNotifyConstants.DESTTYPE.MDN.value());
                     byte[] data = KnGeneralUtil.toByteArray(knXcapDiffDirChgNotifyDTO);
                     knLogger.debug(methodName, "data length", data.length);
                     if (data.length > 10000) {
@@ -3317,18 +3318,27 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                                 + watcherMdn + " payloadLength=" + data.length);
                         continue;
                     }
-                    pStmt.setBytes(4, data);
-                    pStmt.setInt(5, KnXcapNotifyConstants.NOTIFYSTATUS.PENDING.value());
-                    pStmt.setInt(6, KnXcapNotifyConstants.PAYLOADVERSION.ONE.value());
-                    pStmt.setString(7,notificationParamDTO.getCid());
-                    pStmt.setInt(8,notificationParamDTO.getOpsCode());
-                    pStmt.setInt(9,notificationParamDTO.getPriority());
-                    pStmt.setInt(10,notificationParamDTO.getRetryCount());
-                    pStmt.setInt(11,notificationParamDTO.getNotifyType());
-                    pStmt.setInt(12,notificationParamDTO.getProtocol());
-                    pStmt.setInt(13,notificationParamDTO.getMsgType());
+                    boolean optimizedSave = isOptimizedNotificationEnabled();
+                    int watcherDestType = optimizedSave
+                            ? KnXcapNotifyConstants.DESTTYPE.GROUP.value()
+                            : KnXcapNotifyConstants.DESTTYPE.MDN.value();
+                    bindPendingNotifyInsert(pStmt, timeInNanoSecond, watcherMdn, watcherDestType, data, notificationParamDTO);
                     pStmt.addBatch();
                     count++;
+                    if (optimizedSave) {
+                        KnXcapDiffDirChgNotifyDTO ownerCopy = cloneDirChgNotifyForSelf(knXcapDiffDirChgNotifyDTO);
+                        byte[] ownerData = KnGeneralUtil.toByteArray(ownerCopy);
+                        if (ownerData.length <= 10000) {
+                            bindPendingNotifyInsert(pStmt, timeInNanoSecond + 1, watcherMdn,
+                                    KnXcapNotifyConstants.DESTTYPE.MDN.value(), ownerData, notificationParamDTO);
+                            pStmt.addBatch();
+                            count++;
+                            knLogger.info(methodName, FLOW_TAG
+                                    + " STEP-SN2A Dual-row enqueue DirChg. destId=" + watcherMdn
+                                    + " watcherDestType=" + watcherDestType
+                                    + " selfDestType=" + KnXcapNotifyConstants.DESTTYPE.MDN.value());
+                        }
+                    }
                     if (count % batchSize == 0) {
                         knLogger.debug(methodName, "Executing batch of 100");
                         pStmt.executeBatch();
@@ -3404,9 +3414,6 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                     Instant instant = Instant.now();
                     long timeInNanoSecond = instant.getNano() + instant.getEpochSecond() * 1000000000L;
                     String watcherMdn = resolveWatcherMdn(knXcapDiffNotifyDTO.getMdn(), knXcapDiffNotifyDTO.getDirURI());
-                    pStmt.setLong(1, timeInNanoSecond);
-                    pStmt.setString(2, watcherMdn);
-                    pStmt.setInt(3, KnXcapNotifyConstants.DESTTYPE.MDN.value());
                     byte[] data = KnGeneralUtil.toByteArray(knXcapDiffNotifyDTO);
                     knLogger.debug(methodName, "data length", data.length);
                     if (data.length > 10000) {
@@ -3415,18 +3422,27 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                                 + watcherMdn + " payloadLength=" + data.length);
                         continue;
                     }
-                    pStmt.setBytes(4, data);
-                    pStmt.setInt(5, KnXcapNotifyConstants.NOTIFYSTATUS.PENDING.value());
-                    pStmt.setInt(6, KnXcapNotifyConstants.PAYLOADVERSION.ONE.value());
-                    pStmt.setString(7,notificationParamDTO.getCid());
-                    pStmt.setInt(8,notificationParamDTO.getOpsCode());
-                    pStmt.setInt(9,notificationParamDTO.getPriority());
-                    pStmt.setInt(10,notificationParamDTO.getRetryCount());
-                    pStmt.setInt(11,notificationParamDTO.getNotifyType());
-                    pStmt.setInt(12,notificationParamDTO.getProtocol());
-                    pStmt.setInt(13,notificationParamDTO.getMsgType());
+                    boolean optimizedSave = isOptimizedNotificationEnabled();
+                    int watcherDestType = optimizedSave
+                            ? KnXcapNotifyConstants.DESTTYPE.GROUP.value()
+                            : KnXcapNotifyConstants.DESTTYPE.MDN.value();
+                    bindPendingNotifyInsert(pStmt, timeInNanoSecond, watcherMdn, watcherDestType, data, notificationParamDTO);
                     pStmt.addBatch();
                     count++;
+                    if (optimizedSave) {
+                        KnXcapDiffNotifyDTO ownerCopy = cloneDiffNotifyForSelf(knXcapDiffNotifyDTO);
+                        byte[] ownerData = KnGeneralUtil.toByteArray(ownerCopy);
+                        if (ownerData.length <= 10000) {
+                            bindPendingNotifyInsert(pStmt, timeInNanoSecond + 1, watcherMdn,
+                                    KnXcapNotifyConstants.DESTTYPE.MDN.value(), ownerData, notificationParamDTO);
+                            pStmt.addBatch();
+                            count++;
+                            knLogger.info(methodName, FLOW_TAG
+                                    + " STEP-SN2A Dual-row enqueue Diff. destId=" + watcherMdn
+                                    + " watcherDestType=" + watcherDestType
+                                    + " selfDestType=" + KnXcapNotifyConstants.DESTTYPE.MDN.value());
+                        }
+                    }
                     if (count % batchSize == 0) {
                         knLogger.debug(methodName, "Executing batch of 100");
                         pStmt.executeBatch();
@@ -3726,10 +3742,12 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
             // Step 3a: OPTIMIZED PATH – epoch-gated MDN fetch
             // ─────────────────────────────────────────────────────────────────
             if (optimizedMode) {
-                // Fetch at most 100 eligible watcher MDNs from MDN_NOTIFY_TRACKER.
-                // "Eligible" means the epoch window has expired for that watcher.
+                int immediateSelfCount = claimImmediateSelfPending(connection, seqList, record, 200);
+                knLogger.info(methodName, FLOW_TAG
+                        + " STEP-HG2S Immediate self DEST_TYPE=MDN claimed. count=" + immediateSelfCount);
+
                 List<String> eligibleMdns =
-                        fetchEligibleMdns(trackerConnection, cutoffMillis, periodMillis, 100);
+                        fetchEligibleMdns(connection, trackerConnection, nowMillis, cutoffMillis, periodMillis, 100);
 
                 knLogger.debug(methodName,
                         "Eligible watcher MDN count for this cycle: " + eligibleMdns.size());
@@ -3738,28 +3756,35 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                 logQueueSnapshotForMdns("STEP-HG2B", eligibleMdns, persisterTxn);
 
                 if (!eligibleMdns.isEmpty()) {
-                    // Build IN-clause placeholders dynamically
                     String inClause = String.join(",",
                             Collections.nCopies(eligibleMdns.size(), "?"));
 
                     selectQry =
                             "SELECT INSERTION_TIME, DEST_ID, DEST_TYPE, PAYLOAD, MSG_TYPE, CID " +
                             "FROM DG.XCAP_PENDING_NOTIFYQ " +
-                            "WHERE NOTIFY_STATUS = ? AND DEST_TYPE != 3 " +
+                            "WHERE NOTIFY_STATUS = ? AND DEST_TYPE = ? " +
                             "  AND DEST_ID IN (" + inClause + ") " +
                             "ORDER BY INSERTION_TIME";
 
                     pStmt = connection.prepareStatement(selectQry);
                     pStmt.setInt(1, KnXcapNotifyConstants.NOTIFYSTATUS.PENDING.value());
+                    pStmt.setInt(2, KnXcapNotifyConstants.DESTTYPE.GROUP.value());
                     for (int i = 0; i < eligibleMdns.size(); i++) {
-                        pStmt.setString(i + 2, eligibleMdns.get(i));
+                        pStmt.setString(i + 3, eligibleMdns.get(i));
                     }
                     rs = pStmt.executeQuery();
                     knLogger.debug(methodName, "OPTIMIZED QUERY executed: ", selectQry);
 
                     while (rs.next()) {
+                        long insertionTime = rs.getLong(1);
+                        if (isQueueRowInHoldWindow(insertionTime, nowMillis, periodMillis)) {
+                            knLogger.info(methodName, FLOW_TAG
+                                    + " STEP-HG3H Watcher row still in epoch hold. destId=" + rs.getString(2)
+                                    + " insertionTime=" + insertionTime);
+                            continue;
+                        }
                         KnNotificationKeyDTO knNotificationKeyDTO = new KnNotificationKeyDTO(
-                                rs.getLong(1),
+                                insertionTime,
                                 rs.getString(2),
                                 rs.getInt(3),
                                 rs.getInt(5),
@@ -3767,7 +3792,6 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                         seqList.add(knNotificationKeyDTO);
                         Object payload = KnGeneralUtil.byteArrayToObject(rs.getBytes(4));
                         record.put(knNotificationKeyDTO, payload);
-                        // Track which MDNs are actually being claimed this cycle
                         claimedOptimizedMdns.add(knNotificationKeyDTO.getDestId());
                     }
                     knLogger.info(methodName, FLOW_TAG
@@ -3960,8 +3984,12 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                             + " STEP-HG6A No claimed optimized MDNs this cycle; timestamp update skipped");
                 }
 
-                // Always run cleanup in optimized mode to age out stale tracker rows.
-                cleanupMdnNotifyTracker(trackerConnection, connection, cutoffMillis, periodMillis);
+                try {
+                    cleanupMdnNotifyTracker(trackerConnection, connection, cutoffMillis, periodMillis);
+                } catch (Exception cleanupEx) {
+                    knLogger.warn(methodName, FLOW_TAG
+                            + " STEP-HG6B Tracker housekeeping failed this cycle (send path continues)", cleanupEx);
+                }
 
                 knLogger.info(methodName, FLOW_TAG
                         + " STEP-HG6 Tracker maintenance complete. updatedMdns=" + claimedOptimizedMdns.size());
@@ -4016,30 +4044,36 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
             persisterTxn = KnPersisterTxn.getPersisterTxn();
             persisterTxn.open();
             String localPttId = KnDbUtil.getDBConfigInfo().getLocalPttId();
-            Connection connection;
+            Connection queueConnection = persisterTxn.getDBConnection(localPttId, false);
+            Connection trackerConnection;
             try {
-                connection = persisterTxn.getDBConnection(localPttId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
+                trackerConnection = persisterTxn.getDBConnection(localPttId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
             } catch (Exception e) {
-                connection = persisterTxn.getDBConnection(localPttId, false);
+                trackerConnection = queueConnection;
             }
-            // Delete the tracker row for each MDN only if the queue has no pending/initiated rows.
-            String deleteSql =
-                    "DELETE FROM DG.MDN_NOTIFY_TRACKER " +
-                    "WHERE MDN = ? " +
-                    "AND NOT EXISTS (" +
-                    "  SELECT 1 FROM DG.XCAP_PENDING_NOTIFYQ " +
-                    "  WHERE DEST_ID = ? AND NOTIFY_STATUS IN (?, ?)" +
-                    ")";
-            try (PreparedStatement ps = connection.prepareStatement(deleteSql)) {
-                int totalDeleted = 0;
+            String remainingSql =
+                    "SELECT COUNT(*) FROM DG.XCAP_PENDING_NOTIFYQ WHERE DEST_ID = ? AND NOTIFY_STATUS IN (?, ?)";
+            String deleteSql = "DELETE FROM DG.MDN_NOTIFY_TRACKER WHERE MDN = ?";
+            int totalDeleted = 0;
+            try (PreparedStatement remainingPs = queueConnection.prepareStatement(remainingSql);
+                 PreparedStatement deletePs = trackerConnection.prepareStatement(deleteSql)) {
                 for (String mdn : mdns) {
                     if (mdn == null || mdn.trim().isEmpty()) continue;
                     String trimmed = mdn.trim();
-                    ps.setString(1, trimmed);
-                    ps.setString(2, trimmed);
-                    ps.setInt(3, KnXcapNotifyConstants.NOTIFYSTATUS.PENDING.value());
-                    ps.setInt(4, KnXcapNotifyConstants.NOTIFYSTATUS.NOTIFY_INITIATED.value());
-                    totalDeleted += ps.executeUpdate();
+                    remainingPs.setString(1, trimmed);
+                    remainingPs.setInt(2, KnXcapNotifyConstants.NOTIFYSTATUS.PENDING.value());
+                    remainingPs.setInt(3, KnXcapNotifyConstants.NOTIFYSTATUS.NOTIFY_INITIATED.value());
+                    int remaining = 0;
+                    try (ResultSet rs = remainingPs.executeQuery()) {
+                        if (rs.next()) {
+                            remaining = rs.getInt(1);
+                        }
+                    }
+                    if (remaining > 0) {
+                        continue;
+                    }
+                    deletePs.setString(1, trimmed);
+                    totalDeleted += deletePs.executeUpdate();
                 }
                 persisterTxn.save();
                 knLogger.info(methodName, FLOW_TAG
@@ -4265,28 +4299,70 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
      * @return list of eligible watcher MDNs
      * @throws SQLException on DB error
      */
-    private List<String> fetchEligibleMdns(Connection connection,
+    private List<String> fetchEligibleMdns(Connection queueConnection,
+                                            Connection trackerConnection,
+                                            long nowMillis,
                                             long cutoffMillis,
                                             long periodMillis,
                                             int maxMdns) throws SQLException {
-        List<String> eligibleMdns = new ArrayList<>();
-        String sql =
-                "SELECT FIRST " + maxMdns + " MDN FROM DG.MDN_NOTIFY_TRACKER " +
-                "WHERE LAST_NOTIFIED_TIME <= ? " +
-                "ORDER BY LAST_NOTIFIED_TIME ASC";
-
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setLong(1, cutoffMillis);
+        List<String> pendingDestIds = new ArrayList<>();
+        String pendingSql =
+                "SELECT FIRST " + (maxMdns * 5) + " DEST_ID FROM DG.XCAP_PENDING_NOTIFYQ " +
+                "WHERE NOTIFY_STATUS = ? AND DEST_TYPE = ? " +
+                "ORDER BY INSERTION_TIME ASC";
+        try (PreparedStatement ps = queueConnection.prepareStatement(pendingSql)) {
+            ps.setInt(1, KnXcapNotifyConstants.NOTIFYSTATUS.PENDING.value());
+            ps.setInt(2, KnXcapNotifyConstants.DESTTYPE.GROUP.value());
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    eligibleMdns.add(rs.getString(1));
+                    String destId = rs.getString(1);
+                    if (destId != null && !destId.trim().isEmpty() && !pendingDestIds.contains(destId.trim())) {
+                        pendingDestIds.add(destId.trim());
+                        if (pendingDestIds.size() >= maxMdns) {
+                            break;
+                        }
+                    }
                 }
             }
+        }
+        if (pendingDestIds.isEmpty()) {
+            knLogger.info("fetchEligibleMdns", FLOW_TAG
+                    + " STEP-HG2A Eligible MDNs fetched. maxMdns=" + maxMdns + " eligibleCount=0 reason=noPendingWatcherRows");
+            return pendingDestIds;
+        }
+
+        Map<String, Long> trackerTsByMdn = new HashMap<>();
+        String inClause = String.join(",", Collections.nCopies(pendingDestIds.size(), "?"));
+        String trackerSql = "SELECT MDN, LAST_NOTIFIED_TIME FROM DG.MDN_NOTIFY_TRACKER WHERE MDN IN (" + inClause + ")";
+        try (PreparedStatement ps = trackerConnection.prepareStatement(trackerSql)) {
+            for (int i = 0; i < pendingDestIds.size(); i++) {
+                ps.setString(i + 1, pendingDestIds.get(i));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    trackerTsByMdn.put(rs.getString(1), rs.getLong(2));
+                }
+            }
+        }
+
+        List<String> eligibleMdns = new ArrayList<>();
+        for (String destId : pendingDestIds) {
+            Long lastNotified = trackerTsByMdn.get(destId);
+            if (lastNotified == null || lastNotified > cutoffMillis) {
+                continue;
+            }
+            if (hasPendingWatcherRowsInHoldWindow(queueConnection, destId, nowMillis, periodMillis)) {
+                knLogger.info("fetchEligibleMdns", FLOW_TAG
+                        + " STEP-HG3H Watcher dest still in insertion hold. destId=" + destId);
+                continue;
+            }
+            eligibleMdns.add(destId);
         }
         knLogger.debug("fetchEligibleMdns",
                 "Eligible MDN count (cutoff=" + cutoffMillis + ", period>=" + periodMillis + "ms):" + eligibleMdns.size());
         knLogger.info("fetchEligibleMdns", FLOW_TAG
                 + " STEP-HG2A Eligible MDNs fetched. maxMdns=" + maxMdns
+                + " pendingDestCount=" + pendingDestIds.size()
                 + " eligibleCount=" + eligibleMdns.size());
         return eligibleMdns;
     }
@@ -4547,13 +4623,134 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
         return getMDNFromURI(dirUri);
     }
 
+    private void bindPendingNotifyInsert(PreparedStatement pStmt,
+                                         long insertionTime,
+                                         String destId,
+                                         int destType,
+                                         byte[] payload,
+                                         KnNotificationParamDTO notificationParamDTO) throws SQLException {
+        pStmt.setLong(1, insertionTime);
+        pStmt.setString(2, destId);
+        pStmt.setInt(3, destType);
+        pStmt.setBytes(4, payload);
+        pStmt.setInt(5, KnXcapNotifyConstants.NOTIFYSTATUS.PENDING.value());
+        pStmt.setInt(6, KnXcapNotifyConstants.PAYLOADVERSION.ONE.value());
+        pStmt.setString(7, notificationParamDTO.getCid());
+        pStmt.setInt(8, notificationParamDTO.getOpsCode());
+        pStmt.setInt(9, notificationParamDTO.getPriority());
+        pStmt.setInt(10, notificationParamDTO.getRetryCount());
+        pStmt.setInt(11, notificationParamDTO.getNotifyType());
+        pStmt.setInt(12, notificationParamDTO.getProtocol());
+        pStmt.setInt(13, notificationParamDTO.getMsgType());
+    }
+
+    private KnXcapDiffDirChgNotifyDTO cloneDirChgNotifyForSelf(KnXcapDiffDirChgNotifyDTO source) throws KnException {
+        KnXcapDiffDirChgNotifyDTO copy = (KnXcapDiffDirChgNotifyDTO) KnGeneralUtil.byteArrayToObject(
+                KnGeneralUtil.toByteArray(source));
+        copy.setNtfyOnAnyMDN(0);
+        return copy;
+    }
+
+    private KnXcapDiffNotifyDTO cloneDiffNotifyForSelf(KnXcapDiffNotifyDTO source) throws KnException {
+        KnXcapDiffNotifyDTO copy = (KnXcapDiffNotifyDTO) KnGeneralUtil.byteArrayToObject(
+                KnGeneralUtil.toByteArray(source));
+        copy.setNtfyOnAnyMDN(0);
+        return copy;
+    }
+
+    private void applySipDestTargeting(KnPoCXcapDiffNotifyDTO pocXcapDiffNotifyDTO, Integer ntfyOnAnyMDN, String destId) {
+        if (pocXcapDiffNotifyDTO == null) {
+            return;
+        }
+        if (ntfyOnAnyMDN != null && ntfyOnAnyMDN == 0) {
+            pocXcapDiffNotifyDTO.setNtfyOnAnyMDN(0);
+            knLogger.info("applySipDestTargeting", FLOW_TAG
+                    + " STEP-PX Forced unicast ntfyOnAnyMDN=0 destId=" + destId);
+        }
+    }
+
+    private int claimImmediateSelfPending(Connection connection,
+                                          List<KnNotificationKeyDTO> seqList,
+                                          Map<KnNotificationKeyDTO, Object> record,
+                                          int maxRows) throws SQLException, KnException {
+        int claimed = 0;
+        String sql =
+                "SELECT FIRST " + maxRows + " INSERTION_TIME, DEST_ID, DEST_TYPE, PAYLOAD, MSG_TYPE, CID " +
+                "FROM DG.XCAP_PENDING_NOTIFYQ " +
+                "WHERE NOTIFY_STATUS = ? AND DEST_TYPE = ? " +
+                "ORDER BY INSERTION_TIME DESC";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, KnXcapNotifyConstants.NOTIFYSTATUS.PENDING.value());
+            ps.setInt(2, KnXcapNotifyConstants.DESTTYPE.MDN.value());
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    KnNotificationKeyDTO key = new KnNotificationKeyDTO(
+                            rs.getLong(1),
+                            rs.getString(2),
+                            rs.getInt(3),
+                            rs.getInt(5),
+                            rs.getString(6));
+                    Object payload = KnGeneralUtil.byteArrayToObject(rs.getBytes(4));
+                    forceUnicastPayload(payload);
+                    seqList.add(key);
+                    record.put(key, payload);
+                    claimed++;
+                }
+            }
+        }
+        return claimed;
+    }
+
+    private void forceUnicastPayload(Object payload) {
+        if (payload instanceof KnXcapDiffDirChgNotifyDTO dto) {
+            dto.setNtfyOnAnyMDN(0);
+        } else if (payload instanceof KnXcapDiffNotifyDTO dto) {
+            dto.setNtfyOnAnyMDN(0);
+        }
+    }
+
+    private boolean isQueueRowInHoldWindow(long insertionTime, long nowMillis, long periodMillis) {
+        long insertedMillis = toMillis(insertionTime);
+        return periodMillis > 0 && (nowMillis - insertedMillis) < periodMillis;
+    }
+
+    private long toMillis(long insertionTime) {
+        if (insertionTime > 10_000_000_000_000L) {
+            return insertionTime / 1_000_000L;
+        }
+        return insertionTime;
+    }
+
+    private boolean hasPendingWatcherRowsInHoldWindow(Connection queueConnection,
+                                                      String destId,
+                                                      long nowMillis,
+                                                      long periodMillis) throws SQLException {
+        String sql =
+                "SELECT INSERTION_TIME FROM DG.XCAP_PENDING_NOTIFYQ " +
+                "WHERE DEST_ID = ? AND DEST_TYPE = ? AND NOTIFY_STATUS = ?";
+        try (PreparedStatement ps = queueConnection.prepareStatement(sql)) {
+            ps.setString(1, destId);
+            ps.setInt(2, KnXcapNotifyConstants.DESTTYPE.GROUP.value());
+            ps.setInt(3, KnXcapNotifyConstants.NOTIFYSTATUS.PENDING.value());
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    if (isQueueRowInHoldWindow(rs.getLong(1), nowMillis, periodMillis)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
     public void getmdnListTogetSublistInfo(Map<KnNotificationKeyDTO, Object> record, List<String> mdnListTogetSublistInfo) {
         String methodName = "getmdnListTogetSublistInfo(Map<KnNotificationKeyDTO, Object>, List<String>)";
         for (Map.Entry<KnNotificationKeyDTO, Object> itr : record.entrySet()) {
             Object obj = itr.getValue();
             if (obj instanceof KnXcapDiffDirChgNotifyDTO) {
                 KnXcapDiffDirChgNotifyDTO payload = (KnXcapDiffDirChgNotifyDTO) obj;
-                if (itr.getKey().getDestType() == 2) {
+                if (itr.getKey().getDestType() == KnXcapNotifyConstants.DESTTYPE.MDN.value()
+                        || itr.getKey().getDestType() == KnXcapNotifyConstants.DESTTYPE.GROUP.value()) {
                     mdnListTogetSublistInfo.add(itr.getKey().getDestId());
                 }
                 if (null != payload.getDocDiffObj()) {
@@ -4591,7 +4788,8 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                 knLogger.debug(methodName, "KnXcapDiffDirChgNotifyDTO mdnListTogetSublistInfo size: ", mdnListTogetSublistInfo.size());
             } else if (obj instanceof KnXcapDiffNotifyDTO) {
                 KnXcapDiffNotifyDTO payload = (KnXcapDiffNotifyDTO) obj;
-                if (itr.getKey().getDestType() == 2) {
+                if (itr.getKey().getDestType() == KnXcapNotifyConstants.DESTTYPE.MDN.value()
+                        || itr.getKey().getDestType() == KnXcapNotifyConstants.DESTTYPE.GROUP.value()) {
                     mdnListTogetSublistInfo.add(itr.getKey().getDestId());
                 }
 
