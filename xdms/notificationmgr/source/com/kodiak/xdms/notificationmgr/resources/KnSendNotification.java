@@ -80,7 +80,7 @@ public class KnSendNotification implements Runnable {
             toSend = new ArrayList<>();
             toSend.add(knXcapDiffNotifyDTO);
         }
-        if (toSend != null && seqId != null && seqId.getDestType() == KnXcapNotifyConstants.DESTTYPE.MDN.value()) {
+        if (toSend != null && seqId != null) {
             for (KnXcapDiffNotifyDTO dto : toSend) {
                 if (dto != null) {
                     dto.setNtfyOnAnyMDN(0);

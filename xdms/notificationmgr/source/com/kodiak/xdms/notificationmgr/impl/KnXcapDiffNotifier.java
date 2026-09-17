@@ -131,6 +131,18 @@ import net.minidev.json.parser.JSONParser;
 public class KnXcapDiffNotifier {
     private static final KnLogger knLogger = KnLogger.getLogger(KnXcapDiffNotifier.class);
     private static final String FLOW_TAG = "[XCAP-DEBULK-FLOW]";
+    /**
+     * Optimized XCAP wait-and-bundle (XCAP_NOTIFICATION_OPTIMIZED=1):
+     * destType=1 ntfy=0 destId=owner  → self change, send immediately.
+     * destType=2 ntfy=0 destId=watcher → related watcher (CAT/SIP/Dispatcher), send after
+     *                                    XCAP_NOTIFICATION_PERIOD. Flag off = legacy immediate.
+     * Example: subscriber 323045306 self-change → destType=1 now;
+     *          watcher 805061809210 of that subscriber → destType=2 after period.
+     */
+    private static final int XCAP_DEST_SELF_IMMEDIATE = KnXcapNotifyConstants.DESTTYPE.MDN.value();
+    private static final int XCAP_DEST_WATCHER_EPOCH = KnXcapNotifyConstants.DESTTYPE.GROUP.value();
+    private static final int XCAP_NTFY_SELF_UNICAST = 0;
+    private static final int XCAP_NTFY_WATCHER_FANOUT = 1;
     private static KnXcapDiffNotifier xcapDiffNotifierObj = null;
     private static KnGenInfoUtil genInfoUtil = null;
     private KnGeneralUtil generalUtil = null;
@@ -351,7 +363,9 @@ public class KnXcapDiffNotifier {
                 }
             }
             xcapDiffTypeObj.setDocumentType(docType);
-            if (!mdns.isEmpty()) {
+            boolean watcherEpochFanout = isOptimizedNotificationEnabled()
+                    && !isSelfDest(xcapDiffNotifyObj.getMdn(), xcapDiffNotifyObj.getDirURI());
+            if (!mdns.isEmpty() && !watcherEpochFanout) {
                 knLogger.debug(methodName, "sending System profiles Mcs XCAP Notifies for MDNs", mdns);
                 knMCSXCAPNotifier.sendMCSXCAPNotification(mdns);
             }
@@ -2299,7 +2313,9 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                 }
             }
             xcapDiffTypeObj.setDocumentType(docType);
-            if(!mdns.isEmpty())
+            boolean watcherEpochFanout = isOptimizedNotificationEnabled()
+                    && !isSelfDest(xcapDiffNotifyObj.getMdn(), xcapDiffNotifyObj.getDirURI());
+            if(!mdns.isEmpty() && !watcherEpochFanout)
     		{
                 knLogger.debug(methodName,"sending System profiles Mcs XCAP Notifies for MDNs",mdns);
     			knMCSXCAPNotifier.sendMCSXCAPNotification(mdns);
@@ -2321,7 +2337,6 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                     listOfNotifyPayload.add(notifyPayloadDTO);
                     knLogger.debug(methodName, FLOW_TAG + " STEP-GN3 Added DOC_CHANGE payload. mdn="
                             + xcapDiffNotifyObj.getMdn() + " pttServerId=" + xcapDiffNotifyObj.getPresenceHome());
-
                 }
                 // send deRegister notification if flag set
                 if (xcapDiffNotifyObj.isDeRegisterNotify()) {
@@ -3318,19 +3333,19 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                                 + watcherMdn + " payloadLength=" + data.length);
                         continue;
                     }
-                    boolean optimizedSave = isOptimizedNotificationEnabled();
-                    int destType = optimizedSave
-                            ? KnXcapNotifyConstants.DESTTYPE.GROUP.value()
-                            : KnXcapNotifyConstants.DESTTYPE.MDN.value();
-                    bindPendingNotifyInsert(pStmt, timeInNanoSecond, watcherMdn, destType, data, notificationParamDTO);
-                    pStmt.addBatch();
-                    count++;
-                    if (optimizedSave) {
-                        knLogger.info(methodName, FLOW_TAG
-                                + " STEP-SN2A Enqueue DirChg. destId=" + watcherMdn
-                                + " destType=" + destType
-                                + " watcherFanout=true");
+                    byte[] selfPayload = data;
+                    byte[] watcherPayload = data;
+                    if (isOptimizedNotificationEnabled()) {
+                        KnXcapDiffDirChgNotifyDTO selfCopy = cloneDirChgNotifyForSelf(knXcapDiffDirChgNotifyDTO);
+                        selfCopy.setMdn(watcherMdn);
+                        selfPayload = KnGeneralUtil.toByteArray(selfCopy);
+                        KnXcapDiffDirChgNotifyDTO watcherCopy = cloneDirChgNotifyForWatcher(knXcapDiffDirChgNotifyDTO);
+                        watcherCopy.setMdn(watcherMdn);
+                        watcherPayload = KnGeneralUtil.toByteArray(watcherCopy);
                     }
+                    count += enqueuePendingByDest(pStmt, timeInNanoSecond, watcherMdn,
+                            knXcapDiffDirChgNotifyDTO.getDirURI(), data, selfPayload, watcherPayload,
+                            notificationParamDTO, methodName);
                     if (count % batchSize == 0) {
                         knLogger.debug(methodName, "Executing batch of 100");
                         pStmt.executeBatch();
@@ -3414,19 +3429,19 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                                 + watcherMdn + " payloadLength=" + data.length);
                         continue;
                     }
-                    boolean optimizedSave = isOptimizedNotificationEnabled();
-                    int destType = optimizedSave
-                            ? KnXcapNotifyConstants.DESTTYPE.GROUP.value()
-                            : KnXcapNotifyConstants.DESTTYPE.MDN.value();
-                    bindPendingNotifyInsert(pStmt, timeInNanoSecond, watcherMdn, destType, data, notificationParamDTO);
-                    pStmt.addBatch();
-                    count++;
-                    if (optimizedSave) {
-                        knLogger.info(methodName, FLOW_TAG
-                                + " STEP-SN2A Enqueue Diff. destId=" + watcherMdn
-                                + " destType=" + destType
-                                + " watcherFanout=true");
+                    byte[] selfPayload = data;
+                    byte[] watcherPayload = data;
+                    if (isOptimizedNotificationEnabled()) {
+                        KnXcapDiffNotifyDTO selfCopy = cloneDiffNotifyForSelf(knXcapDiffNotifyDTO);
+                        selfCopy.setMdn(watcherMdn);
+                        selfPayload = KnGeneralUtil.toByteArray(selfCopy);
+                        KnXcapDiffNotifyDTO watcherCopy = cloneDiffNotifyForWatcher(knXcapDiffNotifyDTO);
+                        watcherCopy.setMdn(watcherMdn);
+                        watcherPayload = KnGeneralUtil.toByteArray(watcherCopy);
                     }
+                    count += enqueuePendingByDest(pStmt, timeInNanoSecond, watcherMdn,
+                            knXcapDiffNotifyDTO.getDirURI(), data, selfPayload, watcherPayload,
+                            notificationParamDTO, methodName);
                     if (count % batchSize == 0) {
                         knLogger.debug(methodName, "Executing batch of 100");
                         pStmt.executeBatch();
@@ -3726,10 +3741,12 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
             // Step 3a: OPTIMIZED PATH – epoch-gated MDN fetch
             // ─────────────────────────────────────────────────────────────────
             if (optimizedMode) {
+                int immediateSelfCount = claimImmediateSelfPending(connection, seqList, record, 200);
+                knLogger.info(methodName, FLOW_TAG
+                        + " STEP-HG2S Immediate self Diff claimed. count=" + immediateSelfCount);
+
                 int expiredCount = claimExpiredWatcherPending(connection, seqList, record,
                         claimedOptimizedMdns, nowMillis, periodMillis, 200);
-                knLogger.info(methodName, FLOW_TAG
-                        + " STEP-HG2S Immediate self send skipped in optimized mode (XCAP wait-and-bundle)");
                 knLogger.info(methodName, FLOW_TAG
                         + " STEP-HG3 Claimed pending queue rows for eligible watchers. claimedRows="
                         + expiredCount + " claimedMdns=" + claimedOptimizedMdns.size());
@@ -4578,17 +4595,66 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
         pStmt.setInt(13, notificationParamDTO.getMsgType());
     }
 
+    private int enqueuePendingByDest(PreparedStatement pStmt,
+                                     long insertionTime,
+                                     String destMdn,
+                                     String dirUri,
+                                     byte[] legacyPayload,
+                                     byte[] selfPayload,
+                                     byte[] watcherPayload,
+                                     KnNotificationParamDTO notificationParamDTO,
+                                     String methodName) throws SQLException {
+        if (!isOptimizedNotificationEnabled()) {
+            bindPendingNotifyInsert(pStmt, insertionTime, destMdn,
+                    XCAP_DEST_SELF_IMMEDIATE, legacyPayload, notificationParamDTO);
+            pStmt.addBatch();
+            return 1;
+        }
+        if (isSelfDest(destMdn, dirUri)) {
+            bindPendingNotifyInsert(pStmt, insertionTime, destMdn,
+                    XCAP_DEST_SELF_IMMEDIATE, selfPayload, notificationParamDTO);
+            pStmt.addBatch();
+            knLogger.info(methodName, FLOW_TAG
+                    + " STEP-SN2A SELF destType=" + XCAP_DEST_SELF_IMMEDIATE
+                    + " ntfy=" + XCAP_NTFY_SELF_UNICAST
+                    + " destId=" + destMdn);
+            return 1;
+        }
+        bindPendingNotifyInsert(pStmt, insertionTime, destMdn,
+                XCAP_DEST_WATCHER_EPOCH, watcherPayload, notificationParamDTO);
+        pStmt.addBatch();
+        knLogger.info(methodName, FLOW_TAG
+                + " STEP-SN2A WATCHER destType=" + XCAP_DEST_WATCHER_EPOCH
+                + " ntfy=" + XCAP_NTFY_SELF_UNICAST
+                + " destId=" + destMdn);
+        return 1;
+    }
+
     private KnXcapDiffDirChgNotifyDTO cloneDirChgNotifyForSelf(KnXcapDiffDirChgNotifyDTO source) throws KnException {
         KnXcapDiffDirChgNotifyDTO copy = (KnXcapDiffDirChgNotifyDTO) KnGeneralUtil.byteArrayToObject(
                 KnGeneralUtil.toByteArray(source));
-        copy.setNtfyOnAnyMDN(0);
+        copy.setNtfyOnAnyMDN(XCAP_NTFY_SELF_UNICAST);
+        return copy;
+    }
+
+    private KnXcapDiffDirChgNotifyDTO cloneDirChgNotifyForWatcher(KnXcapDiffDirChgNotifyDTO source) throws KnException {
+        KnXcapDiffDirChgNotifyDTO copy = (KnXcapDiffDirChgNotifyDTO) KnGeneralUtil.byteArrayToObject(
+                KnGeneralUtil.toByteArray(source));
+        copy.setNtfyOnAnyMDN(XCAP_NTFY_SELF_UNICAST);
         return copy;
     }
 
     private KnXcapDiffNotifyDTO cloneDiffNotifyForSelf(KnXcapDiffNotifyDTO source) throws KnException {
         KnXcapDiffNotifyDTO copy = (KnXcapDiffNotifyDTO) KnGeneralUtil.byteArrayToObject(
                 KnGeneralUtil.toByteArray(source));
-        copy.setNtfyOnAnyMDN(0);
+        copy.setNtfyOnAnyMDN(XCAP_NTFY_SELF_UNICAST);
+        return copy;
+    }
+
+    private KnXcapDiffNotifyDTO cloneDiffNotifyForWatcher(KnXcapDiffNotifyDTO source) throws KnException {
+        KnXcapDiffNotifyDTO copy = (KnXcapDiffNotifyDTO) KnGeneralUtil.byteArrayToObject(
+                KnGeneralUtil.toByteArray(source));
+        copy.setNtfyOnAnyMDN(XCAP_NTFY_SELF_UNICAST);
         return copy;
     }
 
@@ -4596,11 +4662,13 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
         if (pocXcapDiffNotifyDTO == null) {
             return;
         }
-        if (ntfyOnAnyMDN != null && ntfyOnAnyMDN == 0) {
-            pocXcapDiffNotifyDTO.setNtfyOnAnyMDN(0);
-            knLogger.info("applySipDestTargeting", FLOW_TAG
-                    + " STEP-PX Forced unicast ntfyOnAnyMDN=0 destId=" + destId);
-        }
+        int ntfy = (ntfyOnAnyMDN != null && ntfyOnAnyMDN == XCAP_NTFY_WATCHER_FANOUT)
+                ? XCAP_NTFY_WATCHER_FANOUT
+                : XCAP_NTFY_SELF_UNICAST;
+        pocXcapDiffNotifyDTO.setNtfyOnAnyMDN(ntfy);
+        knLogger.info("applySipDestTargeting", FLOW_TAG
+                + (ntfy == XCAP_NTFY_WATCHER_FANOUT ? " STEP-PX WATCHER fanout ntfy=" : " STEP-PX SELF unicast ntfy=")
+                + ntfy + " destId=" + destId);
     }
 
     private int claimImmediateSelfPending(Connection connection,
@@ -4608,6 +4676,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                                           Map<KnNotificationKeyDTO, Object> record,
                                           int maxRows) throws SQLException, KnException {
         int claimed = 0;
+        List<KnNotificationKeyDTO> leftoverWatcherSelfRows = new ArrayList<>();
         String sql =
                 "SELECT FIRST " + maxRows + " INSERTION_TIME, DEST_ID, DEST_TYPE, PAYLOAD, MSG_TYPE, CID " +
                 "FROM DG.XCAP_PENDING_NOTIFYQ " +
@@ -4615,7 +4684,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                 "ORDER BY INSERTION_TIME DESC";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, KnXcapNotifyConstants.NOTIFYSTATUS.PENDING.value());
-            ps.setInt(2, KnXcapNotifyConstants.DESTTYPE.MDN.value());
+            ps.setInt(2, XCAP_DEST_SELF_IMMEDIATE);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     KnNotificationKeyDTO key = new KnNotificationKeyDTO(
@@ -4625,15 +4694,19 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                             rs.getInt(5),
                             rs.getString(6));
                     Object payload = KnGeneralUtil.byteArrayToObject(rs.getBytes(4));
-                    if (payload instanceof KnXcapDiffDirChgNotifyDTO || isWatcherFanoutPayload(payload)) {
+                    if (!isSelfNotificationPayload(key.getDestId(), payload)) {
+                        leftoverWatcherSelfRows.add(key);
                         continue;
                     }
-                    forceUnicastPayload(payload);
+                    applyQueueDestNtfy(payload, XCAP_DEST_SELF_IMMEDIATE);
                     seqList.add(key);
                     record.put(key, payload);
                     claimed++;
                 }
             }
+        }
+        for (KnNotificationKeyDTO leftover : leftoverWatcherSelfRows) {
+            deletePendingNotifyRow(connection, leftover);
         }
         return claimed;
     }
@@ -4651,11 +4724,11 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
         String sql =
                 "SELECT FIRST " + maxRows + " INSERTION_TIME, DEST_ID, DEST_TYPE, PAYLOAD, MSG_TYPE, CID " +
                 "FROM DG.XCAP_PENDING_NOTIFYQ " +
-                "WHERE NOTIFY_STATUS = ? AND DEST_TYPE != ? " +
+                "WHERE NOTIFY_STATUS = ? AND DEST_TYPE = ? " +
                 "ORDER BY INSERTION_TIME ASC";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, KnXcapNotifyConstants.NOTIFYSTATUS.PENDING.value());
-            ps.setInt(2, KnXcapNotifyConstants.DESTTYPE.SUPPRESSMDN.value());
+            ps.setInt(2, XCAP_DEST_WATCHER_EPOCH);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     scanned++;
@@ -4672,6 +4745,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                         continue;
                     }
                     Object payload = KnGeneralUtil.byteArrayToObject(rs.getBytes(4));
+                    applyQueueDestNtfy(payload, XCAP_DEST_WATCHER_EPOCH);
                     seqList.add(key);
                     record.put(key, payload);
                     claimedOptimizedMdns.add(destId);
@@ -4701,11 +4775,48 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
     }
 
     private boolean isDocumentOwnerDest(String destMdn, String dirUri) {
-        if (destMdn == null || destMdn.trim().isEmpty()) {
-            return false;
+        return isSelfDest(destMdn, dirUri);
+    }
+
+    private boolean isSelfDest(String destMdn, String dirUri) {
+        String dest = normalizeMdn(destMdn);
+        String owner = extractOwnerMdn(dirUri);
+        if (dest == null || dest.isEmpty()) {
+            return true;
         }
-        String ownerMdn = getMDNFromURI(dirUri);
-        return ownerMdn != null && destMdn.trim().equals(ownerMdn.trim());
+        if (owner == null || owner.isEmpty()) {
+            return dirUri != null && dirUri.contains(dest);
+        }
+        return dest.equals(owner);
+    }
+
+    private String extractOwnerMdn(String dirUri) {
+        String fromUri = getMDNFromURI(dirUri);
+        if (fromUri != null && !fromUri.trim().isEmpty()) {
+            return normalizeMdn(fromUri);
+        }
+        if (dirUri == null) {
+            return null;
+        }
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(\\d{8,15})").matcher(dirUri);
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+        return null;
+    }
+
+    private String normalizeMdn(String mdn) {
+        if (mdn == null) {
+            return null;
+        }
+        String trimmed = mdn.trim();
+        if (trimmed.startsWith("tel:")) {
+            trimmed = trimmed.substring(4);
+        }
+        if (trimmed.startsWith("+")) {
+            trimmed = trimmed.substring(1);
+        }
+        return trimmed;
     }
 
     private boolean isSelfNotificationPayload(String destId, Object payload) {
@@ -4718,11 +4829,30 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
         return false;
     }
 
-    private void forceUnicastPayload(Object payload) {
+    private void deletePendingNotifyRow(Connection connection, KnNotificationKeyDTO key) {
+        if (connection == null || key == null) {
+            return;
+        }
+        String sql = "DELETE FROM DG.XCAP_PENDING_NOTIFYQ WHERE INSERTION_TIME = ? AND DEST_ID=? AND DEST_TYPE=?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setLong(1, key.getInsertionTime());
+            ps.setString(2, key.getDestId());
+            ps.setInt(3, key.getDestType());
+            int deleted = ps.executeUpdate();
+            knLogger.info("deletePendingNotifyRow", FLOW_TAG
+                    + " STEP-HG2S Dropped leftover destType=1 watcher row. destId=" + key.getDestId()
+                    + " deleted=" + deleted);
+        } catch (SQLException e) {
+            knLogger.warn("deletePendingNotifyRow", FLOW_TAG
+                    + " STEP-HG2S Failed dropping leftover destType=1 watcher row. destId=" + key.getDestId(), e);
+        }
+    }
+
+    private void applyQueueDestNtfy(Object payload, int destType) {
         if (payload instanceof KnXcapDiffDirChgNotifyDTO dto) {
-            dto.setNtfyOnAnyMDN(0);
+            dto.setNtfyOnAnyMDN(XCAP_NTFY_SELF_UNICAST);
         } else if (payload instanceof KnXcapDiffNotifyDTO dto) {
-            dto.setNtfyOnAnyMDN(0);
+            dto.setNtfyOnAnyMDN(XCAP_NTFY_SELF_UNICAST);
         }
     }
 

@@ -168,7 +168,7 @@ public class KnWatcherDebulkSendNotification implements Runnable {
                             + " bundledCount=" + notifications.size());
 
         try {
-            if (seqId != null && seqId.getDestType() == KnXcapNotifyConstants.DESTTYPE.MDN.value()) {
+            if (seqId != null) {
                 for (KnXcapDiffDirChgNotifyDTO dto : notifications) {
                     if (dto != null) {
                         dto.setNtfyOnAnyMDN(0);
