@@ -161,21 +161,21 @@ public class KnWatcherDebulkSendNotification implements Runnable {
             return;
         }
 
-            knLogger.info(methodName,
-                    FLOW_TAG + " STEP-8 Worker started. cid=" + safeValue(seqId != null ? seqId.getCid() : null)
-                            + " watcher=" + safeValue(seqId != null ? seqId.getDestId() : null)
-                            + " destType=" + (seqId != null ? seqId.getDestType() : -1)
-                            + " bundledCount=" + notifications.size());
+        knLogger.info(methodName,
+                FLOW_TAG + " STEP-8 Worker started. cid=" + safeValue(seqId != null ? seqId.getCid() : null)
+                        + " watcher=" + safeValue(seqId != null ? seqId.getDestId() : null)
+                        + " destType=" + (seqId != null ? seqId.getDestType() : -1)
+                        + " bundledCount=" + notifications.size());
 
         try {
             if (seqId != null) {
+                int ntfy = seqId.getDestType() == KnXcapNotifyConstants.DESTTYPE.GROUP.value() ? 1 : 0;
                 for (KnXcapDiffDirChgNotifyDTO dto : notifications) {
                     if (dto != null) {
-                        dto.setNtfyOnAnyMDN(0);
+                        dto.setNtfyOnAnyMDN(ntfy);
                     }
                 }
             }
-            // ── Step 1: Resolve the configured max diff payload size ───────────────────
             int maxPayloadBytes = resolveMaxPayloadBytes();
             knLogger.info(methodName, FLOW_TAG + " STEP-9 Resolved payload threshold. maxPayloadBytes=" + maxPayloadBytes);
 
