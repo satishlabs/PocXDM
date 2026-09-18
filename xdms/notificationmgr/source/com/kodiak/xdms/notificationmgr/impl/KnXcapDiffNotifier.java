@@ -132,10 +132,11 @@ public class KnXcapDiffNotifier {
     private static final KnLogger knLogger = KnLogger.getLogger(KnXcapDiffNotifier.class);
     private static final String FLOW_TAG = "[XCAP-DEBULK-FLOW]";
     /**
-     * Optimized XCAP wait-and-bundle (XCAP_NOTIFICATION_OPTIMIZED=1):
-     * destType=1 ntfy=0 → owner Diff only, send immediately.
-     * destType=2 ntfy=1 → DirChg and delayed Diff fanout, send after
-     *                      XCAP_NOTIFICATION_PERIOD (SQL INSERTION_TIME cutoff).
+     * Jira primary: after a subscriber document change, SIP/CAT/Dispatcher
+     * watchers of that document get one XCAP notify after XCAP_NOTIFICATION_PERIOD.
+     * destType=1 ntfy=0 → document owner, immediate (subscriber handset).
+     * destType=2 ntfy=0 → other dests in the same save (CAT), delayed; payload
+     * dirURI is the subscriber document, not the watcher's own directory.xml.
      */
     private static final int XCAP_DEST_SELF_IMMEDIATE = KnXcapNotifyConstants.DESTTYPE.MDN.value();
     private static final int XCAP_DEST_WATCHER_EPOCH = KnXcapNotifyConstants.DESTTYPE.GROUP.value();
@@ -3318,7 +3319,6 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                 pStmt = connection.prepareStatement(NOTIFICATION_INSERT_QUERY);
                 boolean optimized = isOptimizedNotificationEnabled();
                 knLogger.info(methodName, FLOW_TAG + " STEP-SN1A DirChg enqueue mode. optimized=" + optimized);
-                Set<String> watcherDestsInserted = new LinkedHashSet<>();
                 long start = System.currentTimeMillis();
                 for (KnXcapDiffDirChgNotifyDTO knXcapDiffDirChgNotifyDTO : knXcapDiffDirChgNotifyDTOs) {
                     long timeInNanoSecond = System.currentTimeMillis();
@@ -3331,19 +3331,9 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                                 + watcherMdn + " payloadLength=" + data.length);
                         continue;
                     }
-                    byte[] selfPayload = data;
-                    byte[] watcherPayload = data;
-                    if (optimized) {
-                        KnXcapDiffDirChgNotifyDTO selfCopy = cloneDirChgNotifyForSelf(knXcapDiffDirChgNotifyDTO);
-                        selfCopy.setMdn(watcherMdn);
-                        selfPayload = KnGeneralUtil.toByteArray(selfCopy);
-                        KnXcapDiffDirChgNotifyDTO watcherCopy = cloneDirChgNotifyForWatcher(knXcapDiffDirChgNotifyDTO);
-                        watcherCopy.setMdn(resolveEpochDest(watcherMdn, knXcapDiffDirChgNotifyDTO.getDirURI()));
-                        watcherPayload = KnGeneralUtil.toByteArray(watcherCopy);
-                    }
                     count += enqueuePendingByDest(pStmt, timeInNanoSecond, watcherMdn,
-                            knXcapDiffDirChgNotifyDTO.getDirURI(), data, selfPayload, watcherPayload,
-                            notificationParamDTO, methodName, optimized, watcherDestsInserted);
+                            knXcapDiffDirChgNotifyDTO.getDirURI(), data, data, data,
+                            notificationParamDTO, methodName, optimized);
                     if (count % batchSize == 0) {
                         knLogger.debug(methodName, "Executing batch of 100");
                         pStmt.executeBatch();
@@ -3416,7 +3406,6 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                 pStmt = connection.prepareStatement(NOTIFICATION_INSERT_QUERY);
                 boolean optimized = isOptimizedNotificationEnabled();
                 knLogger.info(methodName, FLOW_TAG + " STEP-SN1A Diff enqueue mode. optimized=" + optimized);
-                Set<String> watcherDestsInserted = new LinkedHashSet<>();
                 long start = System.currentTimeMillis();
                 for (KnXcapDiffNotifyDTO knXcapDiffNotifyDTO : knXcapDiffNotifyDTOs) {
                     long timeInNanoSecond = System.currentTimeMillis();
@@ -3429,19 +3418,9 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                                 + watcherMdn + " payloadLength=" + data.length);
                         continue;
                     }
-                    byte[] selfPayload = data;
-                    byte[] watcherPayload = data;
-                    if (optimized) {
-                        KnXcapDiffNotifyDTO selfCopy = cloneDiffNotifyForSelf(knXcapDiffNotifyDTO);
-                        selfCopy.setMdn(watcherMdn);
-                        selfPayload = KnGeneralUtil.toByteArray(selfCopy);
-                        KnXcapDiffNotifyDTO watcherCopy = cloneDiffNotifyForWatcher(knXcapDiffNotifyDTO);
-                        watcherCopy.setMdn(resolveEpochDest(watcherMdn, knXcapDiffNotifyDTO.getDirURI()));
-                        watcherPayload = KnGeneralUtil.toByteArray(watcherCopy);
-                    }
                     count += enqueuePendingByDest(pStmt, timeInNanoSecond, watcherMdn,
-                            knXcapDiffNotifyDTO.getDirURI(), data, selfPayload, watcherPayload,
-                            notificationParamDTO, methodName, optimized, watcherDestsInserted);
+                            knXcapDiffNotifyDTO.getDirURI(), data, data, data,
+                            notificationParamDTO, methodName, optimized);
                     if (count % batchSize == 0) {
                         knLogger.debug(methodName, "Executing batch of 100");
                         pStmt.executeBatch();
@@ -3745,7 +3724,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                         + " STEP-HG2S Immediate self Diff claimed. count=" + immediateSelfCount);
 
                 int expiredCount = claimExpiredWatcherPending(connection, seqList, record,
-                        claimedOptimizedMdns, nowMillis, periodMillis, 200);
+                        claimedOptimizedMdns, nowMillis, periodMillis, 500);
                 knLogger.info(methodName, FLOW_TAG
                         + " STEP-HG3 Claimed pending queue rows for eligible watchers. claimedRows="
                         + expiredCount + " claimedMdns=" + claimedOptimizedMdns.size());
@@ -4616,8 +4595,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                                      byte[] watcherPayload,
                                      KnNotificationParamDTO notificationParamDTO,
                                      String methodName,
-                                     boolean optimized,
-                                     Set<String> watcherDestsInserted) throws SQLException {
+                                     boolean optimized) throws SQLException {
         if (!optimized) {
             bindPendingNotifyInsert(pStmt, insertionTime, destMdn,
                     XCAP_DEST_SELF_IMMEDIATE, legacyPayload, notificationParamDTO);
@@ -4627,29 +4605,28 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                     + " destId=" + destMdn);
             return 1;
         }
-        int inserted = 0;
         if (isSelfDest(destMdn, dirUri)) {
             bindPendingNotifyInsert(pStmt, insertionTime, destMdn,
                     XCAP_DEST_SELF_IMMEDIATE, selfPayload, notificationParamDTO);
             pStmt.addBatch();
-            inserted++;
             knLogger.info(methodName, FLOW_TAG
                     + " STEP-SN2A SELF destType=" + XCAP_DEST_SELF_IMMEDIATE
                     + " ntfy=" + XCAP_NTFY_SELF_UNICAST
                     + " destId=" + destMdn);
+            return 1;
         }
-        String epochDest = resolveEpochDest(destMdn, dirUri);
-        if (watcherDestsInserted.add(epochDest)) {
-            bindPendingNotifyInsert(pStmt, insertionTime + 1, epochDest,
-                    XCAP_DEST_WATCHER_EPOCH, watcherPayload, notificationParamDTO);
-            pStmt.addBatch();
-            inserted++;
-            knLogger.info(methodName, FLOW_TAG
-                    + " STEP-SN2A WATCHER destType=" + XCAP_DEST_WATCHER_EPOCH
-                    + " ntfy=" + XCAP_NTFY_WATCHER_FANOUT
-                    + " destId=" + epochDest);
+        if (destMdn == null || destMdn.trim().isEmpty()) {
+            return 0;
         }
-        return inserted;
+        bindPendingNotifyInsert(pStmt, insertionTime, destMdn.trim(),
+                XCAP_DEST_WATCHER_EPOCH, watcherPayload, notificationParamDTO);
+        pStmt.addBatch();
+        knLogger.info(methodName, FLOW_TAG
+                + " STEP-SN2A WATCHER destType=" + XCAP_DEST_WATCHER_EPOCH
+                + " ntfy=" + XCAP_NTFY_SELF_UNICAST
+                + " destId=" + destMdn.trim()
+                + " dirURI=" + dirUri);
+        return 1;
     }
 
     private String resolveEpochDest(String destMdn, String dirUri) {
@@ -4670,7 +4647,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
     private KnXcapDiffDirChgNotifyDTO cloneDirChgNotifyForWatcher(KnXcapDiffDirChgNotifyDTO source) throws KnException {
         KnXcapDiffDirChgNotifyDTO copy = (KnXcapDiffDirChgNotifyDTO) KnGeneralUtil.byteArrayToObject(
                 KnGeneralUtil.toByteArray(source));
-        copy.setNtfyOnAnyMDN(XCAP_NTFY_WATCHER_FANOUT);
+        copy.setNtfyOnAnyMDN(XCAP_NTFY_SELF_UNICAST);
         return copy;
     }
 
@@ -4684,7 +4661,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
     private KnXcapDiffNotifyDTO cloneDiffNotifyForWatcher(KnXcapDiffNotifyDTO source) throws KnException {
         KnXcapDiffNotifyDTO copy = (KnXcapDiffNotifyDTO) KnGeneralUtil.byteArrayToObject(
                 KnGeneralUtil.toByteArray(source));
-        copy.setNtfyOnAnyMDN(XCAP_NTFY_WATCHER_FANOUT);
+        copy.setNtfyOnAnyMDN(XCAP_NTFY_SELF_UNICAST);
         return copy;
     }
 
@@ -4724,7 +4701,8 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                             rs.getInt(5),
                             rs.getString(6));
                     Object payload = KnGeneralUtil.byteArrayToObject(rs.getBytes(4));
-                    if (payload instanceof KnXcapDiffDirChgNotifyDTO || !isSelfNotificationPayload(key.getDestId(), payload)) {
+                    if ((payload instanceof KnXcapDiffDirChgNotifyDTO || payload instanceof KnXcapDiffNotifyDTO)
+                            && !isSelfNotificationPayload(key.getDestId(), payload)) {
                         leftoverWatcherSelfRows.add(key);
                         continue;
                     }
@@ -4750,49 +4728,58 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                                            int maxRows) throws SQLException, KnException {
         int claimed = 0;
         int scanned = 0;
+        int heldInWindow = 0;
+        int skippedOtherDestType = 0;
         long cutoffMillis = nowMillis - periodMillis;
-        long nsThreshold = 10_000_000_000_000L;
-        long cutoffNs = cutoffMillis <= 0 ? 0L : cutoffMillis * 1_000_000L;
-        logPendingWatcherQueue(connection, cutoffMillis, cutoffNs);
+        logPendingWatcherQueue(connection, cutoffMillis, cutoffMillis <= 0 ? 0L : cutoffMillis * 1_000_000L);
+        // Prefer destType=2 without DEST_TYPE=? bind (TimesTen returned 0 for that).
+        // ORDER BY DEST_TYPE DESC puts watcher rows ahead of destType=1 self rows.
         String sql =
-                "SELECT FIRST " + maxRows + " INSERTION_TIME, DEST_ID, DEST_TYPE, PAYLOAD, MSG_TYPE, CID " +
+                "SELECT ROWS 1 TO " + Math.max(maxRows, 500) +
+                " INSERTION_TIME, DEST_ID, DEST_TYPE, PAYLOAD, MSG_TYPE, CID " +
                 "FROM DG.XCAP_PENDING_NOTIFYQ " +
-                "WHERE NOTIFY_STATUS = ? AND DEST_TYPE = ? AND (" +
-                "(INSERTION_TIME > ? AND INSERTION_TIME <= ?) OR " +
-                "(INSERTION_TIME <= ? AND INSERTION_TIME <= ?)" +
-                ") ORDER BY INSERTION_TIME ASC";
+                "WHERE NOTIFY_STATUS = 1 AND INSERTION_TIME <= ? " +
+                "ORDER BY DEST_TYPE DESC, INSERTION_TIME";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setInt(1, KnXcapNotifyConstants.NOTIFYSTATUS.PENDING.value());
-            ps.setInt(2, XCAP_DEST_WATCHER_EPOCH);
-            ps.setLong(3, nsThreshold);
-            ps.setLong(4, cutoffNs);
-            ps.setLong(5, nsThreshold);
-            ps.setLong(6, cutoffMillis);
+            ps.setLong(1, cutoffMillis);
             try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    scanned++;
-                    long insertionTime = rs.getLong(1);
-                    String destId = rs.getString(2);
-                    int destType = rs.getInt(3);
-                    KnNotificationKeyDTO key = new KnNotificationKeyDTO(
-                            insertionTime, destId, destType, rs.getInt(5), rs.getString(6));
-                    if (record.containsKey(key)) {
-                        continue;
-                    }
-                    Object payload = KnGeneralUtil.byteArrayToObject(rs.getBytes(4));
-                    applyQueueDestNtfy(payload, XCAP_DEST_WATCHER_EPOCH);
-                    seqList.add(key);
-                    record.put(key, payload);
-                    claimedOptimizedMdns.add(destId);
-                    claimed++;
+            while (rs.next()) {
+                scanned++;
+                long insertionTime = rs.getLong(1);
+                String destId = rs.getString(2);
+                int destType = rs.getInt(3);
+                if (destType != XCAP_DEST_WATCHER_EPOCH) {
+                    skippedOtherDestType++;
+                    continue;
                 }
+                if (isQueueRowInHoldWindow(insertionTime, nowMillis, periodMillis)) {
+                    heldInWindow++;
+                    continue;
+                }
+                KnNotificationKeyDTO key = new KnNotificationKeyDTO(
+                        insertionTime, destId, destType, rs.getInt(5), rs.getString(6));
+                if (record.containsKey(key)) {
+                    continue;
+                }
+                Object payload = KnGeneralUtil.byteArrayToObject(rs.getBytes(4));
+                applyQueueDestNtfy(payload, XCAP_DEST_WATCHER_EPOCH);
+                seqList.add(key);
+                record.put(key, payload);
+                claimedOptimizedMdns.add(destId);
+                claimed++;
+                knLogger.info("claimExpiredWatcherPending", FLOW_TAG
+                        + " STEP-HG3C Claimed destType=2 row. destId=" + destId
+                        + " insertionTime=" + insertionTime
+                        + " ageMillis=" + (nowMillis - toMillis(insertionTime)));
+            }
             }
         }
         knLogger.info("claimExpiredWatcherPending", FLOW_TAG
                 + " STEP-HG2A Expired watcher scan. scanned=" + scanned
+                + " skippedOtherDestType=" + skippedOtherDestType
+                + " heldInWindow=" + heldInWindow
                 + " eligibleCount=" + claimed
                 + " cutoffMillis=" + cutoffMillis
-                + " cutoffNs=" + cutoffNs
                 + " periodMillis=" + periodMillis);
         return claimed;
     }
@@ -4819,12 +4806,20 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
         String dest = normalizeMdn(destMdn);
         String owner = extractOwnerMdn(dirUri);
         if (dest == null || dest.isEmpty()) {
-            return true;
+            return owner == null || owner.isEmpty();
         }
         if (owner == null || owner.isEmpty()) {
             return dirUri != null && dirUri.contains(dest);
         }
         return dest.equals(owner);
+    }
+
+    /**
+     * destType=2 queue dests only. Document owners stay destType=1 and are not
+     * registered in MDN_NOTIFY_TRACKER.
+     */
+    public boolean isDelayedWatcherDest(String destMdn, String dirUri) {
+        return destMdn != null && !destMdn.trim().isEmpty() && !isSelfDest(destMdn, dirUri);
     }
 
     private String extractOwnerMdn(String dirUri) {
@@ -4886,9 +4881,12 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
     }
 
     private void applyQueueDestNtfy(Object payload, int destType) {
-        int ntfy = (destType == XCAP_DEST_WATCHER_EPOCH)
-                ? XCAP_NTFY_WATCHER_FANOUT
-                : XCAP_NTFY_SELF_UNICAST;
+        // destType=2 delayed watcher: BASE unicast to destId (CAT). Do not change
+        // destType=1 self ntfy — profile/PSEUDO ntfy=1 on the owner row stays intact.
+        if (destType != XCAP_DEST_WATCHER_EPOCH) {
+            return;
+        }
+        int ntfy = XCAP_NTFY_SELF_UNICAST;
         if (payload instanceof KnXcapDiffDirChgNotifyDTO dto) {
             dto.setNtfyOnAnyMDN(ntfy);
         } else if (payload instanceof KnXcapDiffNotifyDTO dto) {
@@ -4899,37 +4897,36 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
     }
 
     private void logPendingWatcherQueue(Connection connection, long cutoffMillis, long cutoffNs) {
-        String pendingSql = "SELECT COUNT(*), MIN(INSERTION_TIME), MAX(INSERTION_TIME) " +
-                "FROM DG.XCAP_PENDING_NOTIFYQ WHERE NOTIFY_STATUS = ? AND DEST_TYPE = ?";
-        String allSql = "SELECT COUNT(*), MIN(INSERTION_TIME), MAX(INSERTION_TIME) " +
-                "FROM DG.XCAP_PENDING_NOTIFYQ WHERE DEST_TYPE = ?";
-        try (PreparedStatement pendingPs = connection.prepareStatement(pendingSql);
-             PreparedStatement allPs = connection.prepareStatement(allSql)) {
-            pendingPs.setInt(1, KnXcapNotifyConstants.NOTIFYSTATUS.PENDING.value());
-            pendingPs.setInt(2, XCAP_DEST_WATCHER_EPOCH);
-            allPs.setInt(1, XCAP_DEST_WATCHER_EPOCH);
-            try (ResultSet pendingRs = pendingPs.executeQuery();
-                 ResultSet allRs = allPs.executeQuery()) {
-                long pendingCount = 0;
-                long pendingMin = 0;
-                long pendingMax = 0;
-                long allCount = 0;
-                if (pendingRs.next()) {
-                    pendingCount = pendingRs.getLong(1);
-                    pendingMin = pendingRs.getLong(2);
-                    pendingMax = pendingRs.getLong(3);
+        String breakdownSql =
+                "SELECT DEST_TYPE, NOTIFY_STATUS, COUNT(*), MIN(INSERTION_TIME), MAX(INSERTION_TIME) " +
+                "FROM DG.XCAP_PENDING_NOTIFYQ GROUP BY DEST_TYPE, NOTIFY_STATUS";
+        try (PreparedStatement ps = connection.prepareStatement(breakdownSql);
+             ResultSet rs = ps.executeQuery()) {
+            int destType2Count = 0;
+            int totalCount = 0;
+            StringBuilder breakdown = new StringBuilder();
+            while (rs.next()) {
+                int destType = rs.getInt(1);
+                int status = rs.getInt(2);
+                int count = rs.getInt(3);
+                totalCount += count;
+                if (destType == XCAP_DEST_WATCHER_EPOCH) {
+                    destType2Count += count;
                 }
-                if (allRs.next()) {
-                    allCount = allRs.getLong(1);
-                }
-                knLogger.info("logPendingWatcherQueue", FLOW_TAG
-                        + " STEP-HG2A Queue destType=2 pending. count=" + pendingCount
-                        + " allStatuses=" + allCount
-                        + " minInsertionTime=" + pendingMin
-                        + " maxInsertionTime=" + pendingMax
-                        + " cutoffMillis=" + cutoffMillis
-                        + " cutoffNs=" + cutoffNs);
+                breakdown.append(" destType=").append(destType)
+                        .append(" status=").append(status)
+                        .append(" count=").append(count)
+                        .append(" min=").append(rs.getLong(4))
+                        .append(" max=").append(rs.getLong(5))
+                        .append(";");
             }
+            knLogger.info("logPendingWatcherQueue", FLOW_TAG
+                    + " STEP-HG2A Queue destType=2 pending. count=" + destType2Count
+                    + " allStatuses=" + destType2Count
+                    + " totalRows=" + totalCount
+                    + " cutoffMillis=" + cutoffMillis
+                    + " cutoffNs=" + cutoffNs
+                    + " breakdown=" + breakdown);
         } catch (SQLException e) {
             knLogger.warn("logPendingWatcherQueue", FLOW_TAG + " STEP-HG2A Queue destType=2 count failed", e);
         }

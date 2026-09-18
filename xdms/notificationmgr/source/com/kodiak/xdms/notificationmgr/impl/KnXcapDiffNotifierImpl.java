@@ -634,12 +634,12 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
                 continue;
             }
             String mdn = resolveWatcherMdn(dto.getMdn(), dto.getDirURI());
-            if (mdn != null && !mdn.trim().isEmpty()) {
+            if (mdn != null && !mdn.trim().isEmpty()
+                    && xcapDiffNotifier.isDelayedWatcherDest(mdn, dto.getDirURI())) {
                 mdns.add(mdn.trim());
             } else {
-                knLogger.warn(methodName,
-                        "Could not resolve MDN from dirURI: " + dto.getDirURI()
-                                + " - skipping tracker registration for this DTO");
+                knLogger.debug(methodName,
+                        "Skipping tracker registration for dest=" + mdn + " dirURI=" + dto.getDirURI());
             }
         }
 
@@ -673,12 +673,12 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
                 continue;
             }
             String mdn = resolveWatcherMdn(dto.getMdn(), dto.getDirURI());
-            if (mdn != null && !mdn.trim().isEmpty()) {
+            if (mdn != null && !mdn.trim().isEmpty()
+                    && xcapDiffNotifier.isDelayedWatcherDest(mdn, dto.getDirURI())) {
                 mdns.add(mdn.trim());
             } else {
-                knLogger.warn(methodName,
-                        "Could not resolve MDN from dirURI: " + dto.getDirURI()
-                                + " - skipping tracker registration for this DTO");
+                knLogger.debug(methodName,
+                        "Skipping tracker registration for dest=" + mdn + " dirURI=" + dto.getDirURI());
             }
         }
 

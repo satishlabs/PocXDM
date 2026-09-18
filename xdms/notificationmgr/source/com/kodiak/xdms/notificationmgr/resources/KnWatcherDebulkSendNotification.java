@@ -168,8 +168,8 @@ public class KnWatcherDebulkSendNotification implements Runnable {
                         + " bundledCount=" + notifications.size());
 
         try {
-            if (seqId != null) {
-                int ntfy = seqId.getDestType() == KnXcapNotifyConstants.DESTTYPE.GROUP.value() ? 1 : 0;
+            if (seqId != null && seqId.getDestType() == KnXcapNotifyConstants.DESTTYPE.GROUP.value()) {
+                int ntfy = 0;
                 for (KnXcapDiffDirChgNotifyDTO dto : notifications) {
                     if (dto != null) {
                         dto.setNtfyOnAnyMDN(ntfy);
@@ -235,9 +235,17 @@ public class KnWatcherDebulkSendNotification implements Runnable {
             }
 
             // ── Step 6: Log outcome ─────────────���────────────────────────────────────
+            String allDirUris = notifications.stream()
+                    .filter(n -> n != null && n.getDirURI() != null)
+                    .map(KnXcapDiffDirChgNotifyDTO::getDirURI)
+                    .distinct()
+                    .collect(Collectors.joining(","));
             knLogger.info(methodName,
                     FLOW_TAG + " STEP-12 Worker completed. cid=" + safeValue(seqId != null ? seqId.getCid() : null)
                             + " watcher=" + safeValue(seqId != null ? seqId.getDestId() : null)
+                            + " destType=" + (seqId != null ? seqId.getDestType() : -1)
+                            + " ntfy=0"
+                            + " dirURI=" + allDirUris
                             + " bundledCount=" + notifications.size()
                             + " appliedRule=" + appliedRule
                             + " isSuccess=" + isSuccess);
