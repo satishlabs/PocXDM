@@ -131,13 +131,6 @@ import net.minidev.json.parser.JSONParser;
 public class KnXcapDiffNotifier {
     private static final KnLogger knLogger = KnLogger.getLogger(KnXcapDiffNotifier.class);
     private static final String FLOW_TAG = "[XCAP-DEBULK-FLOW]";
-    /**
-     * Jira primary: after a subscriber document change, SIP/CAT/Dispatcher
-     * watchers of that document get one XCAP notify after XCAP_NOTIFICATION_PERIOD.
-     * destType=1 ntfy=0 → document owner, immediate (subscriber handset).
-     * destType=2 ntfy=0 → other dests in the same save (CAT), delayed; payload
-     * dirURI is the subscriber document, not the watcher's own directory.xml.
-     */
     private static final int XCAP_DEST_SELF_IMMEDIATE = KnXcapNotifyConstants.DESTTYPE.MDN.value();
     private static final int XCAP_DEST_WATCHER_EPOCH = KnXcapNotifyConstants.DESTTYPE.GROUP.value();
     private static final int XCAP_NTFY_SELF_UNICAST = 0;
@@ -220,7 +213,7 @@ public class KnXcapDiffNotifier {
      * Applied after a batch is claimed so that MDNs with no further pending work are not
      * unnecessarily re-evaluated on the next poll cycle.
      *
-     * Condition: elapsed time since LAST_NOTIFIED_TIME >= XCAP_NOTIFICATION_PERIOD
+     * Condition: LAST_NOTIFIED_TIME <= Current_Time - XCAP_NOTIFICATION_PERIOD
      *
      * NOTE: DG.MDN_NOTIFY_TRACKER and DG.XCAP_PENDING_NOTIFYQ can live on different
      * datastores (secondary XDM_SHARED_DATA vs primary), so this can no longer be a single
@@ -3332,7 +3325,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                         continue;
                     }
                     count += enqueuePendingByDest(pStmt, timeInNanoSecond, watcherMdn,
-                            knXcapDiffDirChgNotifyDTO.getDirURI(), data, data, data,
+                            knXcapDiffDirChgNotifyDTO.getDirURI(), data,
                             notificationParamDTO, methodName, optimized);
                     if (count % batchSize == 0) {
                         knLogger.debug(methodName, "Executing batch of 100");
@@ -3344,11 +3337,6 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                 knLogger.debug(methodName, "time testing notification : ", end - start);
                 knLogger.info(methodName, FLOW_TAG + " STEP-SN3 Completed saveNotification(DirChg). insertedCount="
                         + count + " skippedLargePayload=" + skippedLargePayload + " elapsedMs=" + (end - start));
-                LinkedHashSet<String> snapshotMdns = knXcapDiffDirChgNotifyDTOs.stream()
-                        .map(dto -> resolveWatcherMdn(dto.getMdn(), dto.getDirURI()))
-                        .filter(Objects::nonNull)
-                        .collect(Collectors.toCollection(LinkedHashSet::new));
-                logQueueSnapshotForMdns("STEP-SN3A", snapshotMdns, persisterTxn);
                 if(ownedTxn) {
                     persisterTxn.save();
                 }
@@ -3419,7 +3407,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                         continue;
                     }
                     count += enqueuePendingByDest(pStmt, timeInNanoSecond, watcherMdn,
-                            knXcapDiffNotifyDTO.getDirURI(), data, data, data,
+                            knXcapDiffNotifyDTO.getDirURI(), data,
                             notificationParamDTO, methodName, optimized);
                     if (count % batchSize == 0) {
                         knLogger.debug(methodName, "Executing batch of 100");
@@ -3434,11 +3422,6 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                 knLogger.debug(methodName, "time testing notification : ", end - start);
                 knLogger.info(methodName, FLOW_TAG + " STEP-SN3 Completed saveNotification(DiffList). insertedCount="
                         + count + " skippedLargePayload=" + skippedLargePayload + " elapsedMs=" + (end - start));
-                LinkedHashSet<String> snapshotMdns = knXcapDiffNotifyDTOs.stream()
-                        .map(dto -> resolveWatcherMdn(dto.getMdn(), dto.getDirURI()))
-                        .filter(Objects::nonNull)
-                        .collect(Collectors.toCollection(LinkedHashSet::new));
-                logQueueSnapshotForMdns("STEP-SN3A", snapshotMdns, persisterTxn);
                 break;
             } catch (KnPersistenceException e) {
                 if(ownedTxn) {
@@ -3721,13 +3704,16 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
             if (optimizedMode) {
                 int immediateSelfCount = claimImmediateSelfPending(connection, seqList, record, 200);
                 knLogger.info(methodName, FLOW_TAG
-                        + " STEP-HG2S Immediate self Diff claimed. count=" + immediateSelfCount);
+                        + " STEP-HG2S Immediate own-change claimed. count=" + immediateSelfCount);
 
-                int expiredCount = claimExpiredWatcherPending(connection, seqList, record,
-                        claimedOptimizedMdns, nowMillis, periodMillis, 500);
+                List<String> eligibleMdns = fetchEligibleMdns(connection, trackerConnection,
+                        nowMillis, cutoffMillis, periodMillis, 100);
+                int claimedRows = claimPendingForEligibleMdns(connection, eligibleMdns,
+                        seqList, record, claimedOptimizedMdns);
                 knLogger.info(methodName, FLOW_TAG
-                        + " STEP-HG3 Claimed pending queue rows for eligible watchers. claimedRows="
-                        + expiredCount + " claimedMdns=" + claimedOptimizedMdns.size());
+                        + " STEP-HG3 Claimed pending watcher rows after epoch. claimedRows="
+                        + claimedRows + " claimedMdns=" + claimedOptimizedMdns.size()
+                        + " eligibleMdns=" + eligibleMdns.size());
             }
             // ─────────────────────────────────────────────────────────────────
             // Step 3b: LEGACY PATH – original priority-queue polling (unchanged)
@@ -3892,11 +3878,6 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
             knLogger.debug(methodName, "NOTIFY_INITIATED update count:", count.length);
             knLogger.info(methodName, FLOW_TAG
                     + " STEP-HG5 Marked rows as NOTIFY_INITIATED. updatedRows=" + count.length);
-            LinkedHashSet<String> queueSnapshotMdns = finalSeqList.stream()
-                    .map(KnNotificationKeyDTO::getDestId)
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toCollection(LinkedHashSet::new));
-            logQueueSnapshotForMdns("STEP-HG5A", queueSnapshotMdns, persisterTxn);
 
             // ─────────────────────────────────────────────────────────────────
             // Step 8: Advance tracker timestamps + housekeeping (optimized only)
@@ -3921,7 +3902,6 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
 
                 knLogger.info(methodName, FLOW_TAG
                         + " STEP-HG6 Tracker maintenance complete. updatedMdns=" + claimedOptimizedMdns.size());
-                logTrackerSnapshotForMdns("STEP-HG6C", claimedOptimizedMdns, persisterTxn);
             }
 
             persisterTxn.save();
@@ -3948,69 +3928,18 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
         return finalRecord;
     }
 
-    /**
-     * Removes {@code MDN_NOTIFY_TRACKER} rows for the given MDNs only when
-     * there are no remaining pending or in-progress queue rows for those MDNs.
-     *
-     * <p>Called by the debulk worker immediately after it successfully cleans up
-     * {@code XCAP_PENDING_NOTIFYQ}, ensuring the tracker does not accumulate stale
-     * rows between poll cycles.</p>
-     *
-     * @param mdns watcher MDNs whose tracker entry should be purged (if queue is empty)
-     */
-    public void cleanupTrackerForMdn(Collection<String> mdns) {
-        String methodName = "cleanupTrackerForMdn";
-        if (mdns == null || mdns.isEmpty()) {
-            return;
-        }
-        // No-op in legacy mode – tracker table is not used.
-        if (!isOptimizedNotificationEnabled()) {
-            return;
-        }
-        KnPersisterTxn persisterTxn = null;
+    private long resolveNotificationPeriodMillis() {
         try {
-            persisterTxn = KnPersisterTxn.getPersisterTxn();
-            persisterTxn.open();
-            String localPttId = KnDbUtil.getDBConfigInfo().getLocalPttId();
-            Connection queueConnection = persisterTxn.getDBConnection(localPttId, false);
-            Connection trackerConnection;
-            try {
-                trackerConnection = persisterTxn.getDBConnection(localPttId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
-            } catch (Exception e) {
-                trackerConnection = queueConnection;
-            }
-            String remainingSql =
-                    "SELECT COUNT(*) FROM DG.XCAP_PENDING_NOTIFYQ WHERE DEST_ID = ? AND NOTIFY_STATUS IN (?, ?)";
-            String deleteSql = "DELETE FROM DG.MDN_NOTIFY_TRACKER WHERE MDN = ?";
-            int totalDeleted = 0;
-            try (PreparedStatement remainingPs = queueConnection.prepareStatement(remainingSql);
-                 PreparedStatement deletePs = trackerConnection.prepareStatement(deleteSql)) {
-                for (String mdn : mdns) {
-                    if (mdn == null || mdn.trim().isEmpty()) continue;
-                    String trimmed = mdn.trim();
-                    remainingPs.setString(1, trimmed);
-                    remainingPs.setInt(2, KnXcapNotifyConstants.NOTIFYSTATUS.PENDING.value());
-                    remainingPs.setInt(3, KnXcapNotifyConstants.NOTIFYSTATUS.NOTIFY_INITIATED.value());
-                    int remaining = 0;
-                    try (ResultSet rs = remainingPs.executeQuery()) {
-                        if (rs.next()) {
-                            remaining = rs.getInt(1);
-                        }
-                    }
-                    if (remaining > 0) {
-                        continue;
-                    }
-                    deletePs.setString(1, trimmed);
-                    totalDeleted += deletePs.executeUpdate();
-                }
-                persisterTxn.save();
-                knLogger.info(methodName, FLOW_TAG
-                        + " STEP-12B Tracker cleanup post-send complete. mdnCount=" + mdns.size()
-                        + " deletedRows=" + totalDeleted);
-            }
+            int clusterId = Integer.parseInt(System.getenv(CLUSTERID_ENV_NAME));
+            Map<String, String> configMap =
+                    KnGenInfoUtil.getInstance().retrieveMSSvcsCommonConfig(clusterId);
+            int seconds = Integer.parseInt(
+                    configMap != null && configMap.get(XCAP_NOTIFICATION_PERIOD) != null
+                            ? configMap.get(XCAP_NOTIFICATION_PERIOD)
+                            : "120");
+            return (long) seconds * 1_000L;
         } catch (Exception e) {
-            rollback(persisterTxn);
-            knLogger.warn(methodName, FLOW_TAG + " STEP-12B Tracker cleanup post-send failed. mdnCount=" + mdns.size(), e);
+            return 120_000L;
         }
     }
 
@@ -4204,7 +4133,6 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                         + " datastore=" + (usedSecondary
                         ? KnDBConst.DataStores.XDM_SHARED_DATA.getValue() : "PRIMARY"));
             }
-            logTrackerSnapshotForMdns("STEP-SF4", mdns, persisterTxn);
 
         } catch (KnPersistenceException e) {
             if (ownedTxn) rollback(persisterTxn);
@@ -4249,11 +4177,9 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
         List<String> pendingDestIds = new ArrayList<>();
                 String pendingSql =
                 "SELECT FIRST " + (maxMdns * 5) + " DEST_ID FROM DG.XCAP_PENDING_NOTIFYQ " +
-                "WHERE NOTIFY_STATUS = ? AND DEST_TYPE != ? " +
+                "WHERE NOTIFY_STATUS = 1 AND DEST_TYPE = 2 " +
                 "ORDER BY INSERTION_TIME ASC";
         try (PreparedStatement ps = queueConnection.prepareStatement(pendingSql)) {
-            ps.setInt(1, KnXcapNotifyConstants.NOTIFYSTATUS.PENDING.value());
-            ps.setInt(2, KnXcapNotifyConstants.DESTTYPE.SUPPRESSMDN.value());
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     String destId = rs.getString(1);
@@ -4292,12 +4218,6 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
             if (lastNotified != null && lastNotified > cutoffMillis) {
                 continue;
             }
-            if (hasPendingWatcherRowsInHoldWindow(queueConnection, destId, nowMillis, periodMillis)) {
-                knLogger.info("fetchEligibleMdns", FLOW_TAG
-                        + " STEP-HG3H Watcher dest still in insertion hold. destId=" + destId
-                        + " trackerPresent=" + (lastNotified != null));
-                continue;
-            }
             eligibleMdns.add(destId);
         }
         knLogger.debug("fetchEligibleMdns",
@@ -4307,6 +4227,60 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                 + " pendingDestCount=" + pendingDestIds.size()
                 + " eligibleCount=" + eligibleMdns.size());
         return eligibleMdns;
+    }
+
+    private int claimPendingForEligibleMdns(Connection connection,
+                                            List<String> eligibleMdns,
+                                            List<KnNotificationKeyDTO> seqList,
+                                            Map<KnNotificationKeyDTO, Object> record,
+                                            Set<String> claimedOptimizedMdns) throws SQLException, KnException {
+        if (eligibleMdns == null || eligibleMdns.isEmpty()) {
+            return 0;
+        }
+        int claimed = 0;
+        final int chunkSize = 50;
+        for (int start = 0; start < eligibleMdns.size(); start += chunkSize) {
+            List<String> chunk = eligibleMdns.subList(start, Math.min(start + chunkSize, eligibleMdns.size()));
+            String inClause = String.join(",", Collections.nCopies(chunk.size(), "?"));
+            String sql =
+                    "SELECT ROWS 1 TO 500 INSERTION_TIME, DEST_ID, DEST_TYPE, PAYLOAD, MSG_TYPE, CID " +
+                    "FROM DG.XCAP_PENDING_NOTIFYQ " +
+                    "WHERE NOTIFY_STATUS = 1 AND DEST_TYPE = 2 AND DEST_ID IN (" + inClause + ") " +
+                    "ORDER BY INSERTION_TIME";
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                for (int i = 0; i < chunk.size(); i++) {
+                    ps.setString(i + 1, chunk.get(i));
+                }
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        KnNotificationKeyDTO key = new KnNotificationKeyDTO(
+                                rs.getLong(1), rs.getString(2), rs.getInt(3),
+                                rs.getInt(5), rs.getString(6));
+                        if (key.getDestType() == XCAP_DEST_SELF_IMMEDIATE) {
+                            continue;
+                        }
+                        if (record.containsKey(key)) {
+                            continue;
+                        }
+                        Object payload = KnGeneralUtil.byteArrayToObject(rs.getBytes(4));
+                        seqList.add(key);
+                        record.put(key, payload);
+                        if (key.getDestId() != null) {
+                            claimedOptimizedMdns.add(key.getDestId().trim());
+                        }
+                        claimed++;
+                        knLogger.info("claimPendingForEligibleMdns", FLOW_TAG
+                                + " STEP-HG3C Claimed queue row. destId=" + key.getDestId()
+                                + " destType=" + key.getDestType()
+                                + " insertionTime=" + key.getInsertionTime());
+                    }
+                }
+            }
+        }
+        knLogger.info("claimPendingForEligibleMdns", FLOW_TAG
+                + " STEP-HG3 Claimed pending rows for tracker-eligible MDNs. claimedRows=" + claimed
+                + " eligibleMdns=" + eligibleMdns.size());
+        return claimed;
     }
 
     /**
@@ -4337,19 +4311,9 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
     }
 
     /**
-     * Deletes stale rows from {@code DG.MDN_NOTIFY_TRACKER} where the epoch age
-     * has exceeded {@code periodMillis}, but only for MDNs that have no outstanding
-     * (PENDING/NOTIFY_INITIATED) rows left in {@code DG.XCAP_PENDING_NOTIFYQ}.
-     *
-     * {@code trackerConnection} and {@code queueConnection} may point at different
-     * datastores (secondary XDM_SHARED_DATA vs primary), so the two tables are queried
-     * separately instead of via a single cross-table SQL statement.
-     *
-     * @param trackerConnection open JDBC connection for DG.MDN_NOTIFY_TRACKER
-     * @param queueConnection   open JDBC connection for DG.XCAP_PENDING_NOTIFYQ (primary)
-     * @param cutoffMillis      LAST_NOTIFIED_TIME cutoff; rows at/older than this are stale candidates
-     * @param periodMillis      epoch duration in ms (for logging only)
-     * @throws SQLException on DB error
+     * Housekeeping: delete tracker rows where
+     * {@code LAST_NOTIFIED_TIME <= Current_Time - XCAP_NOTIFICATION_PERIOD}
+     * and the MDN has no PENDING/NOTIFY_INITIATED queue rows.
      */
     private void cleanupMdnNotifyTracker(Connection trackerConnection,
                                          Connection queueConnection,
@@ -4428,8 +4392,9 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
 
         knLogger.debug("cleanupMdnNotifyTracker", "Stale tracker rows deleted:", deleted);
         knLogger.info("cleanupMdnNotifyTracker", FLOW_TAG
-                + " STEP-HG6B Tracker cleanup complete. deletedRows=" + deleted
-                + " cutoffMillis=" + cutoffMillis + " periodMillis=" + periodMillis
+                    + " STEP-HG6B Tracker housekeeping. LAST_NOTIFIED_TIME <= now - period."
+                    + " deletedRows=" + deleted
+                    + " cutoffMillis=" + cutoffMillis + " periodMillis=" + periodMillis
                 + " staleCandidates=" + staleCandidates.size() + " busyMdns=" + busyMdns.size());
     }
 
@@ -4590,43 +4555,75 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                                      long insertionTime,
                                      String destMdn,
                                      String dirUri,
-                                     byte[] legacyPayload,
-                                     byte[] selfPayload,
-                                     byte[] watcherPayload,
+                                     byte[] payload,
                                      KnNotificationParamDTO notificationParamDTO,
                                      String methodName,
-                                     boolean optimized) throws SQLException {
-        if (!optimized) {
-            bindPendingNotifyInsert(pStmt, insertionTime, destMdn,
-                    XCAP_DEST_SELF_IMMEDIATE, legacyPayload, notificationParamDTO);
-            pStmt.addBatch();
-            knLogger.info(methodName, FLOW_TAG
-                    + " STEP-SN2A LEGACY destType=" + XCAP_DEST_SELF_IMMEDIATE
-                    + " destId=" + destMdn);
-            return 1;
-        }
-        if (isSelfDest(destMdn, dirUri)) {
-            bindPendingNotifyInsert(pStmt, insertionTime, destMdn,
-                    XCAP_DEST_SELF_IMMEDIATE, selfPayload, notificationParamDTO);
-            pStmt.addBatch();
-            knLogger.info(methodName, FLOW_TAG
-                    + " STEP-SN2A SELF destType=" + XCAP_DEST_SELF_IMMEDIATE
-                    + " ntfy=" + XCAP_NTFY_SELF_UNICAST
-                    + " destId=" + destMdn);
-            return 1;
-        }
+                                     boolean optimized,
+                                     Set<String> documentOwners) throws SQLException {
         if (destMdn == null || destMdn.trim().isEmpty()) {
             return 0;
         }
-        bindPendingNotifyInsert(pStmt, insertionTime, destMdn.trim(),
-                XCAP_DEST_WATCHER_EPOCH, watcherPayload, notificationParamDTO);
+        String dest = destMdn.trim();
+        if (!optimized) {
+            bindPendingNotifyInsert(pStmt, insertionTime, dest,
+                    XCAP_DEST_SELF_IMMEDIATE, payload, notificationParamDTO);
+            pStmt.addBatch();
+            knLogger.info(methodName, FLOW_TAG
+                    + " STEP-SN2A LEGACY destType=" + XCAP_DEST_SELF_IMMEDIATE
+                    + " destId=" + dest
+                    + " dirURI=" + dirUri);
+            return 1;
+        }
+        boolean relatedWatcher = isRelatedXcapWatcher(dest, dirUri, documentOwners);
+        int destType = relatedWatcher ? XCAP_DEST_WATCHER_EPOCH : XCAP_DEST_SELF_IMMEDIATE;
+        bindPendingNotifyInsert(pStmt, insertionTime, dest, destType, payload, notificationParamDTO);
         pStmt.addBatch();
-        knLogger.info(methodName, FLOW_TAG
-                + " STEP-SN2A WATCHER destType=" + XCAP_DEST_WATCHER_EPOCH
-                + " ntfy=" + XCAP_NTFY_SELF_UNICAST
-                + " destId=" + destMdn.trim()
-                + " dirURI=" + dirUri);
+            knLogger.info(methodName, FLOW_TAG
+                    + (relatedWatcher ? " STEP-SN2A WATCHER destType=" : " STEP-SN2A SELF destType=")
+                    + destType
+                    + " destId=" + dest
+                    + " dirURI=" + dirUri);
         return 1;
+    }
+
+    private Set<String> collectDocumentOwnerMdnsFromDirChg(List<KnXcapDiffDirChgNotifyDTO> dtos) {
+        Set<String> owners = new LinkedHashSet<>();
+        if (dtos == null) {
+            return owners;
+        }
+        for (KnXcapDiffDirChgNotifyDTO dto : dtos) {
+            if (dto == null) {
+                continue;
+            }
+            String dest = resolveWatcherMdn(dto.getMdn(), dto.getDirURI());
+            if (isSelfDest(dest, dto.getDirURI())) {
+                String owner = normalizeMdn(dest);
+                if (owner != null && !owner.isEmpty()) {
+                    owners.add(owner);
+                }
+            }
+        }
+        return owners;
+    }
+
+    private Set<String> collectDocumentOwnerMdnsFromDiff(List<KnXcapDiffNotifyDTO> dtos) {
+        Set<String> owners = new LinkedHashSet<>();
+        if (dtos == null) {
+            return owners;
+        }
+        for (KnXcapDiffNotifyDTO dto : dtos) {
+            if (dto == null) {
+                continue;
+            }
+            String dest = resolveWatcherMdn(dto.getMdn(), dto.getDirURI());
+            if (isSelfDest(dest, dto.getDirURI())) {
+                String owner = normalizeMdn(dest);
+                if (owner != null && !owner.isEmpty()) {
+                    owners.add(owner);
+                }
+            }
+        }
+        return owners;
     }
 
     private String resolveEpochDest(String destMdn, String dirUri) {
@@ -4732,8 +4729,6 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
         int skippedOtherDestType = 0;
         long cutoffMillis = nowMillis - periodMillis;
         logPendingWatcherQueue(connection, cutoffMillis, cutoffMillis <= 0 ? 0L : cutoffMillis * 1_000_000L);
-        // Prefer destType=2 without DEST_TYPE=? bind (TimesTen returned 0 for that).
-        // ORDER BY DEST_TYPE DESC puts watcher rows ahead of destType=1 self rows.
         String sql =
                 "SELECT ROWS 1 TO " + Math.max(maxRows, 500) +
                 " INSERTION_TIME, DEST_ID, DEST_TYPE, PAYLOAD, MSG_TYPE, CID " +
@@ -4748,7 +4743,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                 long insertionTime = rs.getLong(1);
                 String destId = rs.getString(2);
                 int destType = rs.getInt(3);
-                if (destType != XCAP_DEST_WATCHER_EPOCH) {
+                if (destType != XCAP_DEST_WATCHER_EPOCH && !isDispatcherWatcherDest(destId)) {
                     skippedOtherDestType++;
                     continue;
                 }
@@ -4818,8 +4813,37 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
      * destType=2 queue dests only. Document owners stay destType=1 and are not
      * registered in MDN_NOTIFY_TRACKER.
      */
-    public boolean isDelayedWatcherDest(String destMdn, String dirUri) {
-        return destMdn != null && !destMdn.trim().isEmpty() && !isSelfDest(destMdn, dirUri);
+    public boolean isRelatedXcapWatcher(String destMdn, String dirUri) {
+        return isRelatedXcapWatcher(destMdn, dirUri, null);
+    }
+
+    public boolean isRelatedXcapWatcher(String destMdn, String dirUri, Set<String> documentOwners) {
+        if (destMdn == null || destMdn.trim().isEmpty()) {
+            return false;
+        }
+        if (!isSelfDest(destMdn, dirUri)) {
+            return true;
+        }
+        String dest = normalizeMdn(destMdn);
+        if (dest == null || documentOwners == null) {
+            return false;
+        }
+        for (String owner : documentOwners) {
+            String other = normalizeMdn(owner);
+            if (other != null && !other.equals(dest) && other.length() < dest.length()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean isDocumentOwnerSelf(String destMdn, String dirUri) {
+        return isSelfDest(destMdn, dirUri);
+    }
+
+    public boolean isDispatcherWatcherDest(String destMdn) {
+        String dest = normalizeMdn(destMdn);
+        return dest != null && dest.length() >= 11;
     }
 
     private String extractOwnerMdn(String dirUri) {
@@ -4881,8 +4905,6 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
     }
 
     private void applyQueueDestNtfy(Object payload, int destType) {
-        // destType=2 delayed watcher: BASE unicast to destId (CAT). Do not change
-        // destType=1 self ntfy — profile/PSEUDO ntfy=1 on the owner row stays intact.
         if (destType != XCAP_DEST_WATCHER_EPOCH) {
             return;
         }

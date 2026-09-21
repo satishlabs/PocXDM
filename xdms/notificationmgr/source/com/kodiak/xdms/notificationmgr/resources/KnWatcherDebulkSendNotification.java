@@ -255,17 +255,6 @@ public class KnWatcherDebulkSendNotification implements Runnable {
                 xcapDiffNotifier.cleanUpRecord(seqIds);
                 knLogger.info(methodName, FLOW_TAG + " STEP-12A Worker queue cleanup complete. cleanedRows=" + seqIds.size()
                         + " watcher=" + safeValue(seqId != null ? seqId.getDestId() : null));
-
-                // Eagerly remove the MDN_NOTIFY_TRACKER row so the MDN does not
-                // re-appear as eligible until a new operation inserts it again.
-                // This prevents spurious empty-batch cycles and keeps the tracker bounded.
-                if (seqId != null && seqId.getDestId() != null
-                        && seqId.getDestType() == KnXcapNotifyConstants.DESTTYPE.GROUP.value()) {
-                    xcapDiffNotifier.cleanupTrackerForMdn(
-                            Collections.singletonList(seqId.getDestId().trim()));
-                    knLogger.info(methodName, FLOW_TAG + " STEP-12B Tracker row removed for watcher="
-                            + seqId.getDestId());
-                }
             } else if (!isSuccess) {
                 handleRetryOnSendFailure(methodName);
             }

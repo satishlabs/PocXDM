@@ -102,10 +102,6 @@ public class KnSendNotification implements Runnable {
             } else {
                 xcapDiffNotifier.cleanUpRecord(seqId);
             }
-            if (seqId != null && seqId.getDestId() != null
-                    && seqId.getDestType() == KnXcapNotifyConstants.DESTTYPE.GROUP.value()) {
-                xcapDiffNotifier.cleanupTrackerForMdn(Collections.singletonList(seqId.getDestId().trim()));
-            }
         } else {
             // Revert to PENDING so the row can be retried on the next poll cycle
             // without waiting for a service restart (startup recovery only).

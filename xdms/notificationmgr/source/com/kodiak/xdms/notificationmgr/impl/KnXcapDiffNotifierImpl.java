@@ -192,17 +192,14 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
                     xcapDiffNotifier.saveNotification(null, initialList, notificationParamDTO);
                     knLogger.info(methodName, FLOW_TAG + " STEP-P2 Saved notifications to DG.XCAP_PENDING_NOTIFYQ (DirChg)");
 
-                    // Anything after queue save must never undo / block the queue write.
                     try {
                         LinkedHashSet<String> watcherMdns = extractWatcherMdnsFromDirChg(initialList);
-                        xcapDiffNotifier.logQueueSnapshotForMdns("STEP-P2A", watcherMdns, null);
 
                         if (xcapDiffNotifier.isOptimizedNotificationEnabled()) {
                             try {
                                 xcapDiffNotifier.upsertMdnNotifyTracker(watcherMdns, null);
                                 knLogger.info(methodName, FLOW_TAG + " STEP-P3 Upserted MDN tracker entries (DirChg). uniqueMdns="
                                         + watcherMdns.size());
-                                xcapDiffNotifier.logTrackerSnapshotForMdns("STEP-P3B", watcherMdns, null);
                             } catch (Exception trackerEx) {
                                 knLogger.warn(methodName, FLOW_TAG + " STEP-P3 MDN tracker upsert failed for DirChg; queue rows remain saved. uniqueMdns="
                                         + watcherMdns.size(), trackerEx);
@@ -366,14 +363,12 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
 
                     try {
                         LinkedHashSet<String> watcherMdns = extractWatcherMdnsFromDiff(initialList);
-                        xcapDiffNotifier.logQueueSnapshotForMdns("STEP-P2A", watcherMdns, null);
 
                         if (xcapDiffNotifier.isOptimizedNotificationEnabled()) {
                             try {
                                 xcapDiffNotifier.upsertMdnNotifyTracker(watcherMdns, null);
                                 knLogger.info(methodName, FLOW_TAG + " STEP-P3 Upserted MDN tracker entries (DiffList). uniqueMdns="
                                         + watcherMdns.size());
-                                xcapDiffNotifier.logTrackerSnapshotForMdns("STEP-P3B", watcherMdns, null);
                             } catch (Exception trackerEx) {
                                 knLogger.warn(methodName, FLOW_TAG + " STEP-P3 MDN tracker upsert failed for DiffList; queue rows remain saved. uniqueMdns="
                                         + watcherMdns.size(), trackerEx);
@@ -499,14 +494,12 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
 
                     try {
                         LinkedHashSet<String> watcherMdns = extractWatcherMdnsFromDiff(initialList);
-                        xcapDiffNotifier.logQueueSnapshotForMdns("STEP-P2A", watcherMdns, null);
 
                         if (xcapDiffNotifier.isOptimizedNotificationEnabled()) {
                             try {
                                 xcapDiffNotifier.upsertMdnNotifyTracker(watcherMdns, null);
                                 knLogger.info(methodName, FLOW_TAG + " STEP-P3 Upserted MDN tracker entries (SingleDiff). uniqueMdns="
                                         + watcherMdns.size());
-                                xcapDiffNotifier.logTrackerSnapshotForMdns("STEP-P3B", watcherMdns, null);
                             } catch (Exception trackerEx) {
                                 knLogger.warn(methodName, FLOW_TAG + " STEP-P3 MDN tracker upsert failed for SingleDiff; queue rows remain saved. uniqueMdns="
                                         + watcherMdns.size(), trackerEx);
@@ -634,12 +627,8 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
                 continue;
             }
             String mdn = resolveWatcherMdn(dto.getMdn(), dto.getDirURI());
-            if (mdn != null && !mdn.trim().isEmpty()
-                    && xcapDiffNotifier.isDelayedWatcherDest(mdn, dto.getDirURI())) {
+            if (mdn != null && xcapDiffNotifier.isRelatedXcapWatcher(mdn, dto.getDirURI())) {
                 mdns.add(mdn.trim());
-            } else {
-                knLogger.debug(methodName,
-                        "Skipping tracker registration for dest=" + mdn + " dirURI=" + dto.getDirURI());
             }
         }
 
@@ -673,12 +662,8 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
                 continue;
             }
             String mdn = resolveWatcherMdn(dto.getMdn(), dto.getDirURI());
-            if (mdn != null && !mdn.trim().isEmpty()
-                    && xcapDiffNotifier.isDelayedWatcherDest(mdn, dto.getDirURI())) {
+            if (mdn != null && xcapDiffNotifier.isRelatedXcapWatcher(mdn, dto.getDirURI())) {
                 mdns.add(mdn.trim());
-            } else {
-                knLogger.debug(methodName,
-                        "Skipping tracker registration for dest=" + mdn + " dirURI=" + dto.getDirURI());
             }
         }
 
