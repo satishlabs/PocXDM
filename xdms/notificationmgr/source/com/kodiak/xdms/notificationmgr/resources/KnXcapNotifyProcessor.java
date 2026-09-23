@@ -220,14 +220,10 @@ public class KnXcapNotifyProcessor implements Runnable, IStatusMgrNotifyIntf {
         Map<String, List<KnXcapDiffDirChgNotifyDTO>> groupedDirChanges = new LinkedHashMap<>();
         Map<String, KnNotificationKeyDTO>              groupedKeys       = new LinkedHashMap<>();
         Map<String, List<KnNotificationKeyDTO>>        groupedSeqKeys    = new LinkedHashMap<>();
-        Map<String, List<KnXcapDiffNotifyDTO>>         groupedDiffs      = new LinkedHashMap<>();
-        Map<String, KnNotificationKeyDTO>              groupedDiffKeys   = new LinkedHashMap<>();
-        Map<String, List<KnNotificationKeyDTO>>        groupedDiffSeqKeys = new LinkedHashMap<>();
         int legacyDirTasks = 0;
         int diffTasks = 0;
         int mcsTasks = 0;
         int groupedPayloads = 0;
-        int groupedDiffPayloads = 0;
 
         // ── Main dispatch loop ────────────────────────────────────────────────────────
         for (Map.Entry<KnNotificationKeyDTO, Object> itr : record.entrySet()) {
@@ -253,14 +249,6 @@ public class KnXcapNotifyProcessor implements Runnable, IStatusMgrNotifyIntf {
                 // ── LEGACY: one worker per notification ───────────────────────────────
                 executor.submit(new KnXcapSendNotification(key, dto, mdnSubsInfoMap, baseMdnMap));
                 legacyDirTasks++;
-
-            } else if (optimizedMode && payload instanceof KnXcapDiffNotifyDTO dto) {
-                String fanoutKey = (dto.getNtfyOnAnyMDN() != null && dto.getNtfyOnAnyMDN() == 1) ? "F" : "U";
-                String bundleKey = key.getDestType() + "|" + key.getDestId() + "|" + fanoutKey;
-                groupedDiffs.computeIfAbsent(bundleKey, k -> new ArrayList<>()).add(dto);
-                groupedDiffSeqKeys.computeIfAbsent(bundleKey, k -> new ArrayList<>()).add(key);
-                groupedDiffKeys.putIfAbsent(bundleKey, key);
-                groupedDiffPayloads++;
 
             } else if (payload instanceof KnXcapDiffNotifyDTO dto) {
                 // ── Diff notifications: always dispatched individually ────────────────
@@ -307,36 +295,17 @@ public class KnXcapNotifyProcessor implements Runnable, IStatusMgrNotifyIntf {
             }
         }
 
-        if (optimizedMode && !groupedDiffs.isEmpty()) {
-            for (Map.Entry<String, List<KnXcapDiffNotifyDTO>> entry : groupedDiffs.entrySet()) {
-                String bundleKey = entry.getKey();
-                KnNotificationKeyDTO notifKey = groupedDiffKeys.get(bundleKey);
-                knLogger.info(methodName + " " + FLOW_TAG
-                        + " STEP-6A Bundled Diff watcher ready for dispatch. cid=" + notifKey.getCid()
-                        + " watcher=" + notifKey.getDestId()
-                        + " bundleKey=" + bundleKey
-                        + " bundledCount=" + entry.getValue().size());
-                executor.submit(new KnSendNotification(
-                        notifKey, groupedDiffSeqKeys.get(bundleKey), entry.getValue(), mdnSubsInfoMap, baseMdnMap));
-            }
-        }
-
         knLogger.info(methodName + " " + FLOW_TAG
                 + " STEP-6 Dispatch summary: optimizedMode=" + optimizedMode
                 + " groupedWatchers=" + groupedDirChanges.size()
                 + " groupedPayloads=" + groupedPayloads
-                + " groupedDiffWatchers=" + groupedDiffs.size()
-                + " groupedDiffPayloads=" + groupedDiffPayloads
                 + " legacyDirTasks=" + legacyDirTasks
                 + " diffTasks=" + diffTasks
                 + " mcsTasks=" + mcsTasks);
         int effectiveSendTasks = optimizedMode
-                ? groupedDirChanges.size() + groupedDiffs.size() + mcsTasks + legacyDirTasks
+                ? groupedDirChanges.size() + diffTasks + mcsTasks + legacyDirTasks
                 : legacyDirTasks + diffTasks + mcsTasks;
-        int fanoutReduction = optimizedMode
-                ? Math.max(groupedPayloads - groupedDirChanges.size(), 0)
-                + Math.max(groupedDiffPayloads - groupedDiffs.size(), 0)
-                : 0;
+        int fanoutReduction = optimizedMode ? Math.max(groupedPayloads - groupedDirChanges.size(), 0) : 0;
         knLogger.info(methodName + " " + FLOW_TAG
                 + " STEP-6B Fanout benchmark snapshot. optimizedMode=" + optimizedMode
                 + " effectiveSendTasks=" + effectiveSendTasks
