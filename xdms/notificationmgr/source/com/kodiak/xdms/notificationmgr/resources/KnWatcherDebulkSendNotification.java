@@ -49,11 +49,7 @@ import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -163,7 +159,11 @@ public class KnWatcherDebulkSendNotification implements Runnable {
         knLogger.info(methodName,
                 FLOW_TAG + " STEP-8 Worker started. cid=" + safeValue(seqId != null ? seqId.getCid() : null)
                         + " watcher=" + safeValue(seqId != null ? seqId.getDestId() : null)
-                        + " bundledCount=" + notifications.size());
+                        + " bundledCount=" + notifications.size()
+                        + " seqKeyCount=" + (seqIds != null ? seqIds.size() : 0)
+                        + " subscriberProfileCount=" + (mdnSubsInfoMap != null ? mdnSubsInfoMap.size() : 0)
+                        + " baseMdnGroupCount=" + (baseMdnsMap != null ? baseMdnsMap.size() : 0)
+                        + " holdAgeSummary=" + describeBundleHoldAge());
 
         try {
             // ── Step 1: Resolve the configured max diff payload size ───────────────────
@@ -230,6 +230,8 @@ public class KnWatcherDebulkSendNotification implements Runnable {
                     FLOW_TAG + " STEP-12 Worker completed. cid=" + safeValue(seqId != null ? seqId.getCid() : null)
                             + " watcher=" + safeValue(seqId != null ? seqId.getDestId() : null)
                             + " bundledCount=" + notifications.size()
+                            + " seqKeyCount=" + (seqIds != null ? seqIds.size() : 0)
+                            + " holdAgeSummary=" + describeBundleHoldAge()
                             + " appliedRule=" + appliedRule
                             + " isSuccess=" + isSuccess);
 
@@ -276,6 +278,19 @@ public class KnWatcherDebulkSendNotification implements Runnable {
             xcapDiffNotifier.resetMdnNotifyTrackerEpochForRetry(
                     Collections.singletonList(seqId.getDestId().trim()), periodMillis);
         }
+    }
+
+    private String describeBundleHoldAge() {
+        if (seqIds == null || seqIds.isEmpty()) {
+            return "n/a";
+        }
+        long now = System.currentTimeMillis();
+        LongSummaryStatistics stats = seqIds.stream()
+                .mapToLong(seq -> Math.max(0L, now - seq.getInsertionTime()))
+                .summaryStatistics();
+        return "oldestMs=" + stats.getMax()
+                + ",newestMs=" + stats.getMin()
+                + ",avgMs=" + Math.round(stats.getAverage());
     }
 
     // ─────────────────────────────────────────────────────────────────────────────────

@@ -190,11 +190,14 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
                             + watcherCount + " notificationCount=" + notificationCount);
                     // Queue commit is independent of tracker / post-processing.
                     xcapDiffNotifier.saveNotification(null, initialList, notificationParamDTO);
-                    knLogger.info(methodName, FLOW_TAG + " STEP-P2 Saved notifications to DG.XCAP_PENDING_NOTIFYQ (DirChg)");
+                    knLogger.info(methodName, FLOW_TAG + " STEP-P2 Saved notifications to DG.XCAP_PENDING_NOTIFYQ (DirChg)."
+                            + " inputCount=" + initialList.size());
 
                     // Anything after queue save must never undo / block the queue write.
                     try {
                         LinkedHashSet<String> watcherMdns = extractWatcherMdnsFromDirChg(initialList);
+                        knLogger.info(methodName, FLOW_TAG + " STEP-P2A Queue watcher snapshot prepared. uniqueMdns="
+                                + watcherMdns.size() + " sampleMdns=" + watcherMdns.stream().limit(10).collect(Collectors.toList()));
                         xcapDiffNotifier.logQueueSnapshotForMdns("STEP-P2A", watcherMdns, null);
 
                         if (xcapDiffNotifier.isOptimizedNotificationEnabled()) {

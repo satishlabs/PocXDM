@@ -36,7 +36,6 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
-import static com.kodiak.xdms.server.common.dao.persister.db.util.KnDbUtil.*;
 
 /**
  * Scheduled Runnable that drives the XCAP notification dispatch pipeline.
@@ -204,7 +203,8 @@ public class KnXcapNotifyProcessor implements Runnable, IStatusMgrNotifyIntf {
                     + " mdnSubsInfoMap=" + mdnSubsInfoMap.size());
             knLogger.info(methodName + " " + FLOW_TAG
                     + " STEP-5 Completed subscriber context fetch. mdnSubsInfoMap=" + mdnSubsInfoMap.size()
-                    + " baseMdnMap=" + baseMdnMap.size());
+                    + " baseMdnMap=" + baseMdnMap.size()
+                    + " sampleMdns=" + mdnListTogetSublistInfo.stream().distinct().limit(10).collect(Collectors.toList()));
 
         } catch (Exception e) {
             knLogger.error(methodName + " Exception during subscriber info prefetch: " + e);
@@ -280,13 +280,24 @@ public class KnXcapNotifyProcessor implements Runnable, IStatusMgrNotifyIntf {
                 knLogger.info(methodName
                         + " CID=" + notifKey.getCid()
                         + " watcher=" + notifKey.getDestId()
-                        + " bundledCount=" + notifications.size());
+                        + " bundledCount=" + notifications.size()
+                        + " seqKeyCount=" + groupedSeqKeys.get(watcherKey).size()
+                        + " subscriberProfileCount=" + mdnSubsInfoMap.size()
+                        + " baseMdnGroupCount=" + baseMdnMap.size());
                 knLogger.info(methodName + " " + FLOW_TAG
                         + " STEP-6A Bundled watcher ready for dispatch. cid=" + notifKey.getCid()
                         + " watcher=" + notifKey.getDestId()
                         + " watcherKey=" + watcherKey
                         + " bundledCount=" + notifications.size()
-                        + " seqKeyCount=" + groupedSeqKeys.get(watcherKey).size());
+                        + " seqKeyCount=" + groupedSeqKeys.get(watcherKey).size()
+                        + " sampleDocSelectors=" + notifications.stream()
+                            .filter(dto -> dto.getDocDiffObj() != null)
+                            .flatMap(dto -> dto.getDocDiffObj().stream())
+                            .map(com.kodiak.xdms.notificationmgr.beans.KnXcapDiffDocDTO::getDocumentSelector)
+                            .filter(java.util.Objects::nonNull)
+                            .distinct()
+                            .limit(5)
+                            .collect(Collectors.toList()));
 
                 // Submit one bundled Runnable for this watcher
                 executor.submit(new KnWatcherDebulkSendNotification(

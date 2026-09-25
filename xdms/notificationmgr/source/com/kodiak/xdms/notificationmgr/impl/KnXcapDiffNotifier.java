@@ -51,21 +51,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Calendar;
+import java.util.*;
 import java.util.stream.Collectors;
 
 
@@ -3891,6 +3877,16 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
             knLogger.info(methodName, FLOW_TAG
                     + " STEP-HG4 Final record assembly complete. finalSeqCount=" + finalSeqList.size()
                     + " computedPayloadUnits=" + currentSize);
+            if (!finalSeqList.isEmpty()) {
+                long holdAgeNowMillis = System.currentTimeMillis();
+                LongSummaryStatistics holdStats = finalSeqList.stream()
+                        .mapToLong(seq -> Math.max(0L, holdAgeNowMillis - seq.getInsertionTime()))
+                        .summaryStatistics();
+                knLogger.info(methodName, FLOW_TAG + " STEP-HG4A Hold-and-gather age summary. finalSeqCount="
+                        + finalSeqList.size() + " oldestHoldMs=" + holdStats.getMax()
+                        + " newestHoldMs=" + holdStats.getMin()
+                        + " avgHoldMs=" + Math.round(holdStats.getAverage()));
+            }
 
             // ─────────────────────────────────────────────────────────────────
             // Step 6: Suppressed-MDN batch (legacy path only; optimized path
@@ -4270,8 +4266,11 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                                             long periodMillis,
                                             int maxMdns) throws SQLException {
         List<String> eligibleMdns = new ArrayList<>();
+        long minAgeMs = Long.MAX_VALUE;
+        long maxAgeMs = Long.MIN_VALUE;
+        long maxOverdueMs = Long.MIN_VALUE;
         String sql =
-                "SELECT FIRST " + maxMdns + " MDN FROM DG.MDN_NOTIFY_TRACKER " +
+                "SELECT FIRST " + maxMdns + " MDN, LAST_NOTIFIED_TIME FROM DG.MDN_NOTIFY_TRACKER " +
                 "WHERE LAST_NOTIFIED_TIME <= ? " +
                 "ORDER BY LAST_NOTIFIED_TIME ASC";
 
@@ -4279,7 +4278,14 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
             ps.setLong(1, cutoffMillis);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    eligibleMdns.add(rs.getString(1));
+                    String mdn = rs.getString(1);
+                    long lastNotifiedTime = rs.getLong(2);
+                    long ageMs = Math.max(0L, cutoffMillis + periodMillis - lastNotifiedTime);
+                    long overdueMs = Math.max(0L, ageMs - periodMillis);
+                    eligibleMdns.add(mdn);
+                    minAgeMs = Math.min(minAgeMs, ageMs);
+                    maxAgeMs = Math.max(maxAgeMs, ageMs);
+                    maxOverdueMs = Math.max(maxOverdueMs, overdueMs);
                 }
             }
         }
@@ -4287,7 +4293,11 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                 "Eligible MDN count (cutoff=" + cutoffMillis + ", period>=" + periodMillis + "ms):" + eligibleMdns.size());
         knLogger.info("fetchEligibleMdns", FLOW_TAG
                 + " STEP-HG2A Eligible MDNs fetched. maxMdns=" + maxMdns
-                + " eligibleCount=" + eligibleMdns.size());
+                + " eligibleCount=" + eligibleMdns.size()
+                + " minEligibleAgeMs=" + (eligibleMdns.isEmpty() ? 0 : minAgeMs)
+                + " maxEligibleAgeMs=" + (eligibleMdns.isEmpty() ? 0 : maxAgeMs)
+                + " maxOverdueMs=" + (eligibleMdns.isEmpty() ? 0 : maxOverdueMs)
+                + " holdWindowMs=" + periodMillis);
         return eligibleMdns;
     }
 
