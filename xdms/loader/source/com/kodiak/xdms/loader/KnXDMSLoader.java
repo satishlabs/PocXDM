@@ -364,83 +364,13 @@ public class KnXDMSLoader {
 
     }
 
-    /**
-     * Schedules the XCAP notification poller thread.
-     *
-     * <p><b>Optimized epoch-based batching (XCAP_NOTIFICATION_OPTIMIZED=1):</b><br>
-     * When the optimized flag is enabled, the poller cadence is forced to <b>1 second</b>
-     * so that epoch-eligibility of each watcher MDN can be evaluated quickly.
-     * This is the "Hold and Gather" scheduler described in the epic.
-     *
-     * <p><b>Legacy behaviour (XCAP_NOTIFICATION_OPTIMIZED=0 or absent):</b><br>
-     * The interval configured by {@code NOTIFYJOB_AUDIT_INTRVAL} is used (default 1 s).
-     *
-     * @throws KnBOException if cluster-id cannot be resolved or config retrieval fails
-     */
     private static void notificationPoller() throws KnBOException {
-        String methodName = "notificationPoller";
-        knLogger.info(methodName, FLOW_TAG, "STEP-SCH1 Initializing XCAP notify poller scheduler");
-
-        // ---------------------------------------------------------------
-        // Step 1: Retrieve cluster-level runtime configuration
-        // ---------------------------------------------------------------
         int clusterId = Integer.parseInt(System.getenv(CLUSTERID_ENV_NAME));
-        Map<String, String> microServicesParamNameValueMap =
-                KnGenInfoUtil.getInstance().retrieveMSSvcsCommonConfig(clusterId);
-
-        // ---------------------------------------------------------------
-        // Step 2: Determine poll interval
-        //   - When optimized batching mode is ON  → always 1 second
-        //     (ensures epoch expiry is detected within 1 second of crossing)
-        //   - When off → use legacy NOTIFYJOB_AUDIT_INTRVAL (default 1 s)
-        // ---------------------------------------------------------------
-        String rawOptimizedFlag = microServicesParamNameValueMap.get(KnConstants.XCAP_NOTIFICATION_OPTIMIZED);
-        String rawConfiguredInterval = microServicesParamNameValueMap.get(NOTIFYJOB_AUDIT_INTRVAL);
-        boolean isXcapOptimized =
-                KnConstants.ENABLED_STRING.equals(rawOptimizedFlag);
-
-        int notifyJobAuditInterval;
-        if (isXcapOptimized) {
-            // Optimized batching: poller MUST fire every 1 second to honour epoch windows
-            notifyJobAuditInterval = 1;
-            knLogger.info(methodName,
-                    "XCAP_NOTIFICATION_OPTIMIZED=1 → overriding poll interval to 1 second");
-            knLogger.info(methodName, FLOW_TAG,
-                    "STEP-SCH2 Optimized mode detected. rawFlag=", rawOptimizedFlag,
-                    " configuredLegacyInterval=", rawConfiguredInterval,
-                    " effectiveIntervalSeconds=", notifyJobAuditInterval);
-        } else {
-            // Legacy mode: respect operator-configured audit interval
-            notifyJobAuditInterval = Integer.parseInt(rawConfiguredInterval != null ? rawConfiguredInterval : "1");
-            knLogger.info(methodName,
-                    "XCAP_NOTIFICATION_OPTIMIZED=0 → using configured interval =",
-                    notifyJobAuditInterval, "seconds");
-            knLogger.info(methodName, FLOW_TAG,
-                    "STEP-SCH2 Legacy mode detected. rawFlag=", rawOptimizedFlag,
-                    " configuredLegacyInterval=", rawConfiguredInterval,
-                    " effectiveIntervalSeconds=", notifyJobAuditInterval);
-        }
-
-        // ---------------------------------------------------------------
-        // Step 3: Schedule the processor at the determined cadence
-        // ---------------------------------------------------------------
+        Map<String, String> microServicesParamNameValueMap = KnGenInfoUtil.getInstance().retrieveMSSvcsCommonConfig(clusterId);
+        int notifyJobAuditInterval = Integer.parseInt(microServicesParamNameValueMap.get(NOTIFYJOB_AUDIT_INTRVAL) != null ? microServicesParamNameValueMap.get(NOTIFYJOB_AUDIT_INTRVAL) : "1");
         KnXcapNotifyProcessor xcapNotifyProcessor = KnXcapNotifyProcessor.getInstance();
-        ScheduledExecutorService notifyProcessorService =
-                KnThreadExecutors.newScheduledThreadPool(1, "XcapNotifyProcessor");
-        notifyProcessorService.scheduleAtFixedRate(
-                xcapNotifyProcessor,
-                30,                        // initial delay (seconds) – let system settle
-                notifyJobAuditInterval,
-                TimeUnit.SECONDS);
-
-        knLogger.info(methodName,
-                "XcapNotifyProcessor scheduled: initialDelay=30s, interval=",
-                notifyJobAuditInterval, "s, optimizedMode=", isXcapOptimized);
-        knLogger.info(methodName, FLOW_TAG,
-                "STEP-SCH3 Scheduler active. initialDelay=30s interval=", notifyJobAuditInterval,
-                " optimizedMode=", isXcapOptimized,
-                " rawFlag=", rawOptimizedFlag,
-                " configuredLegacyInterval=", rawConfiguredInterval);
+        ScheduledExecutorService notifyProcessorService = KnThreadExecutors.newScheduledThreadPool(1, "XcapNotifyProcessor");
+        notifyProcessorService.scheduleAtFixedRate(xcapNotifyProcessor, 30, notifyJobAuditInterval, TimeUnit.SECONDS);
     }
 
 

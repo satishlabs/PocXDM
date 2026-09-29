@@ -5527,6 +5527,9 @@ public class KnCorpGroupInfoController implements ICorpGroupInfoController {
                                     knCorpGroupMemDTO.setBroadcaster(corpGroupContactDTO.getIsBroadcaster());
                                     knCorpGroupMemDTO.setLocWatcher(corpGroupContactDTO.getIsLocSupervisor());
                                     knCorpGroupMemDTO.setIsOSMAuthorize(corpGroupContactDTO.getIsOSMAuthorized());
+                                    knCorpGroupMemDTO.setVideoCallInitiatePermission(corpGroupContactDTO.getVideoCallInitiateAllowed());
+                                    knCorpGroupMemDTO.setVideoCallReceivePermission(corpGroupContactDTO.getVideoCallReceiveAllowed());
+                                    knCorpGroupMemDTO.setVideoInCallPermission(corpGroupContactDTO.getVideoInCallAllowed());
                                 }
                             }
 
@@ -15823,6 +15826,7 @@ public class KnCorpGroupInfoController implements ICorpGroupInfoController {
                 throw new KnBOException(com.kodiak.xdms.server.common.resources.KnErrorCodes.BOEntity.UNAUTHORIZED_ERROR,
                         "Subscriber Profile info not found");
             }
+            Map<Integer, Integer> groupIdCorpIdMap = new HashMap<>();
             List<String> groupIdsfromURI = requestDTO.getGroupURIList();
             List<Integer> groupIdsInt = new ArrayList<>();
             if (groupIdsfromURI != null && !groupIdsfromURI.isEmpty()) {
@@ -15848,6 +15852,7 @@ public class KnCorpGroupInfoController implements ICorpGroupInfoController {
                         }
                         continue;
                     }
+                    groupIdCorpIdMap.put(groupPersistDTO.getGroupId(), groupPersistDTO.getCorpId());
                     knLogger.debug(methodName, "Group details obtained from the DB ", groupPersistDTO);
                     List<String> existingMemList = new ArrayList<>();
                     existingMemList = sublistInfoUtil.selectGroupMemberList(groupId, xdmPttServerId, true, persisterTxn);
@@ -15962,6 +15967,7 @@ public class KnCorpGroupInfoController implements ICorpGroupInfoController {
                 respDTO.setMdnAuthorized(Boolean.FALSE);
                 respDTO.setUnAuthorizedGroupURIList(unAuthorizedGroupURIList.stream().distinct().collect(Collectors.toList()));
             }
+            respDTO.setGrpIdToCorpIdMap(groupIdCorpIdMap);
         } catch (KnCorpBOException e) {
             knLogger.error(methodName, "KnCorpBOException occured while retrieving the ",
                     "authorization for the corp group " + e);
@@ -21513,13 +21519,30 @@ public class KnCorpGroupInfoController implements ICorpGroupInfoController {
                 respDTO.setMessage("Group(s) " + mismatchedGroupIds + " do not belong to corp: " + corpId);
                 return respDTO;
             }
-
             knLogger.info(methodName, "Validation passed. Updating PocHome to [", newPocHome, "] for groupIds - ", groupIds);
             Set<String> allAffectedMdns = new HashSet<>();
             //Update PocHome for each group
             for (Integer groupId : groupIds) {
+               // int isLargeGroupValue = groupInfoUtil.getIsLargeGroupValue(groupId, xdmsHome, persisterTxn);
+                LinkedList<String> mdnMembers;
+                List<String> tempMdnList = groupInfoUtil.getMdnMemberList(groupId, xdmsHome, persisterTxn);
+                if (tempMdnList instanceof LinkedList) {
+                    mdnMembers = (LinkedList<String>) tempMdnList;
+                } else {
+                    mdnMembers = new LinkedList<>(tempMdnList);
+                }
 
-                Collection<String> groupMembers = groupInfoUtil.getGroupMemberList(groupId, xdmsHome, persisterTxn);
+                if (mdnMembers != null && !mdnMembers.isEmpty()) {
+                    knLogger.info(methodName, "Found ", mdnMembers.size(), " MDN members. Updating pocHome to: ", newPocHome);
+
+                    groupInfoUtil.updateMdnPocHome(newPocHome, mdnMembers, corpId, xdmsHome, persisterTxn);
+
+                    knLogger.info(methodName, "Successfully updated pocHome for ", mdnMembers.size(), " MDNs in groupID: ", groupId);
+                    knLogger.debug(methodName, "Updated MDNs: ", KnGDPRTemplate.mdnList(mdnMembers));
+                } else {
+                    knLogger.warn(methodName, "No MDN members found for groupId: ", corpId, ". No updates performed.");
+                }
+                LinkedList<String> groupMembers = groupInfoUtil.getGroupMemberList(groupId, xdmsHome, persisterTxn);
                 if (groupMembers != null) {
                     allAffectedMdns.addAll(groupMembers);
                 }
@@ -21598,7 +21621,7 @@ public class KnCorpGroupInfoController implements ICorpGroupInfoController {
             respDTO.setChangeLogMap(changeLogMap);
             respDTO.setMdnCorpId(internalCorpId);
             respDTO.setStatus(com.kodiak.xdms.server.common.resources.KnConstants.RESPONSE_STATUS.SUCCESS.value());
-            respDTO.setStatusCode("SUCCESS");
+            respDTO.setStatusCode("00000");
             respDTO.setMessage("Group Rehome successful for groupIds: " + groupIds);
             knLogger.info(methodName, "EXIT : groupRehome completed successfully");
             knLogger.info(methodName, "ChangeLogMap data : ", changeLogMap.toString());

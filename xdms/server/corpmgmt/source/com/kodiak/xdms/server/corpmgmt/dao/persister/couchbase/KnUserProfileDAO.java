@@ -125,7 +125,8 @@ public class KnUserProfileDAO {
                     "SET p.mcpttPermissionsConfig = " +
                     "ARRAY g FOR g IN p.mcpttPermissionsConfig " +
                     "WHEN g.mdn NOT IN $mdnList END " +
-                    "WHERE corporateID = $corpId";
+                    "WHERE corporateID = $corpId " +
+                    "AND ANY g IN p.mcpttPermissionsConfig SATISFIES g.mdn IN $mdnList END";
 
     private static final String GET_USERPROFILELIST_BY_USER_PROFILE_ID = "select " + META_ID + KnConstants.COMMA
             + USER_PROFILE_NAME + KnConstants.COMMA + USER_PROFILE_INDEX + " from `pocdata` where "+META_ID+" IN "

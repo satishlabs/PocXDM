@@ -66,7 +66,7 @@ public class KnBulkGrpMemCountDispatchValidationRule extends KnValidatorRule {
                 dispatchGroupFailed.putAll(dispatchGroupsCount.entrySet().stream().filter(map -> map.getValue() >
                         groupBulkPersistDTO.getMaxMemPerLargeGroup()).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
             } else {
-                dispatchGroupFailed.putAll(dispatchGroupsCount.entrySet().stream().filter(map -> map.getValue() >=
+                dispatchGroupFailed.putAll(dispatchGroupsCount.entrySet().stream().filter(map -> map.getValue() >
                         groupBulkPersistDTO.getMaxSubscriberPerDispatchGroup()).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
             }
             if (!dispatchGroupFailed.isEmpty()) {
@@ -88,7 +88,7 @@ public class KnBulkGrpMemCountDispatchValidationRule extends KnValidatorRule {
                     dispatchGroupFailed.putAll(dispatchGroupsCount.entrySet().stream().filter(map -> map.getValue() >
                             groupBulkPersistDTO.getMaxMemPerLargeGroup()).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
                 } else {
-                    dispatchGroupFailed.putAll(dispatchGroupsCount.entrySet().stream().filter(map -> map.getValue() >=
+                    dispatchGroupFailed.putAll(dispatchGroupsCount.entrySet().stream().filter(map -> map.getValue() >
                             groupBulkPersistDTO.getMaxSubscriberPerDispatchGroup()).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
                 }
                 if (!dispatchGroupFailed.isEmpty()) {

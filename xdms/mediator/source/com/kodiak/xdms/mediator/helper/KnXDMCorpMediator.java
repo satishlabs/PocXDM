@@ -7612,6 +7612,7 @@ public class KnXDMCorpMediator {
             xdmRespDto.setMdnAuthorized(Boolean.FALSE);
             xdmRespDto.setUnAuthorizedGroupURIList(respDto.getUnAuthorizedGroupURIList());
         }
+        xdmRespDto.setGroupIdCorpIdMap(respDto.getGrpIdToCorpIdMap());
         knLogger.debug(methodName, " mdn authorization : ", xdmRespDto.getMdnAuthorized());
         knLogger.debug(methodName, " Failed GroupIds : ", xdmRespDto.getUnAuthorizedGroupURIList());
         return xdmRespDto;

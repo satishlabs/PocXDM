@@ -1024,4 +1024,47 @@ public class KnXDMCorpGroupDistInfoDAO implements ITableDAO {
         }
         return subsGroupMap;
     }
+    public LinkedList<String> getMdnMemberList(int groupIds, KnPersisterTxn persisterTxn) throws KnDAOException {
+        String methodName = "getMdnMemberList(int corpId, KnPersisterTxn persisterTxn)";
+        knLogger.debug(methodName, "Entry: Input DTO passed groupIds - ", groupIds, ", Txn - ", persisterTxn);
+        PreparedStatement pstmtStandard = null;
+        ResultSet rsStandard = null;
+
+        String query = null;
+
+        LinkedList<String> mdnList = new LinkedList<String>();
+
+        try {
+            Connection conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
+            KnQueryMapper queryMapper = KnQueryMapper.getInstance();
+
+            query = queryMapper.getQuery(SELECT_MDN_MEMBERS);
+
+                pstmtStandard = conn.prepareStatement(query);
+                pstmtStandard.setInt(1, groupIds);
+                rsStandard = pstmtStandard.executeQuery(); // Fixed from pstmt1
+
+                // Fetch MDNs and add to list
+                while (rsStandard.next()) {
+                    String mdn = rsStandard.getString(1).trim();
+                    if (!mdnList.contains(mdn)) {
+                        mdnList.add(mdn);
+                    }
+                }
+            return mdnList;
+
+        } catch (KnDAOException e) {
+            knLogger.error(methodName, "KnDAOException occurred while fetching group members-  ", e);
+            throw e;
+        } catch (Exception e) {
+            knLogger.error(methodName, "Unexpected Exception occurred while fetching group members- ", e);
+            throw KnDbUtil.processException(e, "Failed to getGroupMemberList " + e,
+                    pttServerId, KnDAOSourceTypes.XDM_CORP_GROUP_DIST_INFO, query);
+        } finally {
+            KnDbUtil.closeResultSet(rsStandard);
+            KnDbUtil.closeStatement(pstmtStandard);
+            knLogger.debug(methodName, "EXIT: No of Members found for the group - ", mdnList.size());
+        }
+    }
+
 }

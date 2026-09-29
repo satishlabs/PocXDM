@@ -2142,10 +2142,13 @@ public class KnCorpSublistInfoController implements ICorpSublistInfoController {
             List <String> profileMdns= new ArrayList<String>();
             if(contactList!=null&&!contactList.isEmpty())
 			{
+                Set<String> uniqueBaseMdns = new HashSet<>();
 				for (KnCorpContactDTO knCorpContactDTO : contactList) {
 					if (!KnConstants.USEPROFILEINDEX.equals(knCorpContactDTO.getUserProfileIndex())) {
 						profileMdns.add(knCorpContactDTO.getMdn());
-					}
+					}else{
+                        uniqueBaseMdns.add(knCorpContactDTO.getMdn());
+                    }
 				}
 				if (!profileMdns.isEmpty()) {
                     Map<String, String> baseMdnProfileMdnMap = corpSubsProvInfoUtil.getProfileMdnBaseMdnMap(profileMdns,
@@ -2153,10 +2156,13 @@ public class KnCorpSublistInfoController implements ICorpSublistInfoController {
 					knLogger.debug(methodName, " baseMdnProfileMdnMap-->", KnGDPRTemplate.mdnMap(baseMdnProfileMdnMap));
 
 					for (KnCorpContactDTO knCorpContactDTO : contactList) {
-						if (baseMdnProfileMdnMap.containsKey(knCorpContactDTO.getMdn())) {
-							knCorpContactDTO.setMdn(baseMdnProfileMdnMap.get(knCorpContactDTO.getMdn()));
+						if (baseMdnProfileMdnMap.containsKey(knCorpContactDTO.getMdn()) && !uniqueBaseMdns.contains(baseMdnProfileMdnMap.get(knCorpContactDTO.getMdn()))) {
+                            String baseMdn=baseMdnProfileMdnMap.get(knCorpContactDTO.getMdn());
+							knCorpContactDTO.setMdn(baseMdn);
+                            uniqueBaseMdns.add(baseMdn);
 						}
 					}
+                    contactList = contactList.stream().filter(i -> uniqueBaseMdns.contains(i.getMdn())).collect(Collectors.toList());
 					respDTO.setContactList(contactList);
 				}
 			}

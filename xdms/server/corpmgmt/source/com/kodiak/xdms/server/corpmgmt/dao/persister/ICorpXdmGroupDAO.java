@@ -607,4 +607,9 @@ public interface ICorpXdmGroupDAO {
     public void insertSharedGroupHierarchyMap(Integer groupId, List<String> hierarchyIds, List<Integer> corpIds, KnPersisterTxn persisterTxn) throws KnDAOException;
     public List<int[]> getSharedGroupHierarchyMappings(Integer groupId, KnPersisterTxn persisterTxn) throws KnDAOException;
     public int countActiveGroupsByCorpPair(Integer ownedCorpId, Integer sharedCorpId, KnPersisterTxn persisterTxn) throws KnDAOException;
+
+    public LinkedList<String> getMdnMemberList(int groupIds, String xdmsHome, KnPersisterTxn persisterTxn)
+            throws KnDAOException;
+    public void updateMdnPocHome(String pocHome, LinkedList<String> mdn, int corpId, KnPersisterTxn persisterTxn) throws KnDAOException;
+
 }

@@ -78,11 +78,6 @@ public class KnSendMCSNotify implements Runnable {
                 knLogger.error(methodName, "Message Publish Failed - after retry also");
             }
             //cleanUpRecord(seqId);
-            if (status) {
-                cleanUpRecord(seqId);
-            } else {
-                knLogger.warn(methodName, "Cleanup skipped because publish failed. CID=" + seqId.getCid());
-            }
             knLogger.info(methodName, "CID", seqId.getCid(), "Message Published");
             if (status) {
                 KnStatisticsManagerImpl.getInstance().increment(KnOMConstants.TOTAL_MCSXCAP_NOTIFY_PUBLISHED);

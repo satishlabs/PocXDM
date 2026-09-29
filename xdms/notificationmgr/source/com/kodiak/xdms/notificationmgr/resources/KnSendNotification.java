@@ -26,7 +26,6 @@ import com.kodiak.xdms.server.common.dto.common.KnNotificationKeyDTO;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -66,14 +65,7 @@ public class KnSendNotification implements Runnable {
             knXcapDiffNotifyDTOArrayList.add(knXcapDiffNotifyDTO);
             isSuccess = xcapDiffNotifier.generateDirNotification(knXcapDiffNotifyDTOArrayList, mdnSubsInfoMap, baseMdnsMap);
         }
-        if (isSuccess) {
-            xcapDiffNotifier.cleanUpRecord(seqId);
-        } else {
-            // Revert to PENDING so the row can be retried on the next poll cycle
-            // without waiting for a service restart (startup recovery only).
-            knLogger.warn(methodName, "Send failed; reverting row to PENDING for retry. CID=" + seqId.getCid());
-            xcapDiffNotifier.revertRecordsToPending(Collections.singletonList(seqId));
-        }
+        //xcapDiffNotifier.cleanUpRecord(seqId);
         knLogger.info(methodName, "CID :", seqId.getCid(), "isSuccess : ", isSuccess);
     }
 }

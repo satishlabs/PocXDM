@@ -256,7 +256,7 @@ public class KnPersisterConstants {
     public static final String GET_ACTIVATION_CODE_FOR_SUBSC = "228";
     public static final String SELECT_SUBSC_IS_DISPATCH_GRP_MEMBER_DETAILS = "229";
     public static final String GET_SUBSCRIBERS_GROUPS_LIST = "230";
-    public static final String GET_SUBSCRIBERS_GROUPS_LIST_WITH_CORP_ID = "739";
+    public static final String GET_SUBSCRIBERS_GROUPS_LIST_WITH_CORP_ID = "755";
     public static final String GET_SUBSCRIBER_DETAILS = "231";
     public static final String IS_ACTIVATION_CODE_EXIST = "232";
     public static final String GET_POC_SUSBCR_DETAILS = "233";
@@ -799,6 +799,9 @@ public class KnPersisterConstants {
     public static final String CORP_OSMLISTID_DEFAULT_BY_HIERARCHY_ID = "747";
     public static final String SELECT_GROUP_PROFILE_BY_ID_AND_HIERARCHY_ID = "748";
     public static final String SELECT_GROUP_PROFILE_BY_NAME_AND_HIERARCHY_ID = "749";
+
+    public static final String SELECT_MDN_MEMBERS = "753";
+    public static final String UPDATE_POCHOME_MDN_BASED = "754";
 
     public static final int MARK_FOR_DELETION = 1;
     public static final String PTT_SERVER_ID = "PTT_SERVER_ID";

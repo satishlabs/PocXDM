@@ -5513,6 +5513,31 @@ public class KnCorpGroupInfoUtil {
         return clusterId;
     }
 
+    public LinkedList<String> getMdnMemberList(int groupIds, String xdmsHome, KnPersisterTxn persisterTxn) throws KnCorpBOException {
+        String methodName = "getMdnMemberList(int groupIds, String xdmsHome, KnPersisterTxn persisterTxn)";
+        knLogger.debug(methodName, "Entry Point : groupIds - ", groupIds);
+        try {
+            ICorpXdmDAO xdmDAO = new KnCorpXdmDAO(xdmsHome);
+            return xdmDAO.getMdnMemberList(groupIds, xdmsHome, persisterTxn);
+        } catch (KnDAOException e) {
+            knLogger.error(methodName, "KnDAOException occured while retrieving members of MDN - ", e);
+            throw new KnCorpBOException(e.getErrorCode(), e.getErrorMessage(), e);
+        }
+    }
+
+    public void updateMdnPocHome(String pocHome, LinkedList<String> mdn, int corpId, String pttServerId,
+                              KnPersisterTxn persisterTxn) throws KnCorpBOException {
+        final String methodName = "updateMdnPocHome(String, int, List,,String, KnPersisterTxn)";
+        try {
+            knLogger.debug(methodName, "ENTRY Point :");
+            ICorpXdmDAO corpXdmDao = new KnCorpXdmDAO(pttServerId);
+            corpXdmDao.updateMdnPocHome(pocHome, mdn, corpId, persisterTxn);
+        } catch (KnDAOException e) {
+            knLogger.error(methodName, "KnDAOException occured while modifying the group name.", e);
+            throw new KnCorpBOException(e.getErrorCode(), e.getErrorMessage(), e);
+        }
+    }
+
     public String getPocHomeByHierarchyId(int corpid,String hierarchyId, String xdmsHome, KnPersisterTxn persisterTxn) throws KnDAOException {
         final String methodName = "getPocHomeByHierarchyId()";
         knLogger.debug(methodName, "ENTRY : hierarchyId - ", hierarchyId);

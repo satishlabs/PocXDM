@@ -9938,4 +9938,27 @@ public class KnCorpXdmDAO implements ICorpXdmDAO {
         }
         return pochome;
     }
+
+    public LinkedList<String> getMdnMemberList(int groupIds,
+                                                 String xdmsHome,
+                                                 KnPersisterTxn persisterTxn) throws KnDAOException {
+        String methodName = "getMdnMemberList(int, String, KnPersisterTxn)";
+        knLogger.debug(methodName, "ENTRY:");
+        KnXDMCorpGroupDistInfoDAO corpGroupDistInfoDAO =
+                KnCorpDBTablesRegistry.getDBXdmTableRegistry().createXDMCorpGroupDistInfoDAO(pttServerId);
+        LinkedList<String> mdnList = corpGroupDistInfoDAO.getMdnMemberList(groupIds, persisterTxn);
+        knLogger.debug(methodName, "EXIT");
+        return mdnList;
+    }
+
+    @Override
+    public void updateMdnPocHome(String pocHome, LinkedList<String> mdn, int corpId, KnPersisterTxn persisterTxn) throws KnDAOException {
+        String methodName = "updateMdnPocHome(String,List, int, KnPersisterTxn)";
+        knLogger.debug(methodName, "ENTRY:");
+        KnXDMCorpGroupInfoDAO corpGroupInfoDAO =
+                KnCorpDBTablesRegistry.getDBXdmTableRegistry().createXDMCorpGroupInfoDAO(pttServerId);
+        corpGroupInfoDAO.updateMdnPocHome(pocHome, mdn, persisterTxn);
+        knLogger.debug(methodName, "POC Home updated successfully");
+    }
+
 }

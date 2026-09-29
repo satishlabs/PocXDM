@@ -187,6 +187,8 @@ public class KnCorpResponseDTO implements ICorpResponseDTO {
     private Integer grpProfileId;
     private boolean removeExtContact;
 
+    private Map<Integer, Integer> grpIdToCorpIdMap;
+
     public boolean getRemoveExtContact() {
         return removeExtContact;
     }
@@ -1144,6 +1146,14 @@ public class KnCorpResponseDTO implements ICorpResponseDTO {
         this.osmListId = osmListId;
     }
 
+    public Map<Integer, Integer> getGrpIdToCorpIdMap() {
+        return grpIdToCorpIdMap;
+    }
+
+    public void setGrpIdToCorpIdMap(Map<Integer, Integer> grpIdToCorpIdMap) {
+        this.grpIdToCorpIdMap = grpIdToCorpIdMap;
+    }
+
     @Override
     public String toString() {
         return "KnCorpResponseDTO{" +
@@ -1270,6 +1280,7 @@ public class KnCorpResponseDTO implements ICorpResponseDTO {
                 ", additionalInfo=" + additionalInfo +
                 ", osmListId=" + osmListId +
                 ", removeExtContact=" + removeExtContact +
+                ", grpIdToCorpIdMap=" + grpIdToCorpIdMap +
                 '}';
     }
 

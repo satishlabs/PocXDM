@@ -3025,9 +3025,13 @@ public class KnCorpUserProfileController implements ICorpUserProfileController {
             String corpId = ipUserProfileDTO.getCorpId();
             String xdmsHome = ipUserProfileDTO.getPocPttServerId();
             List<String> mdnList = ipUserProfileDTO.getMdnList();
-            userProfileUtil.deleteMcpttPermConfig(mdn,corpId,xdmsHome);
+            //When a batch of MDNs is supplied use the single batched query; otherwise fall back to
+            //the single-MDN query. Running the single-MDN query with a null mdn would remove every
+            //entry from mcpttPermissionsConfig, so the two paths must be mutually exclusive.
             if(null != mdnList && !mdnList.isEmpty()){
                 userProfileUtil.deleteMcpttPermConfig(mdnList,corpId,xdmsHome);
+            } else {
+                userProfileUtil.deleteMcpttPermConfig(mdn,corpId,xdmsHome);
             }
             populate(respDTO);
         } catch (KnCorpBOException e) {

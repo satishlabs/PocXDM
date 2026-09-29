@@ -1281,7 +1281,6 @@ public class KnXDMCommonMediator {
                         }
                     }
                     KnXcapDiffDirChgNotifyDTO xcapDiffNotifyDTO = new KnXcapDiffDirChgNotifyDTO();
-                    xcapDiffNotifyDTO.setMdn(dirChgDTO.getMdn() != null ? dirChgDTO.getMdn() : entry.getKey());
                     xcapDiffNotifyDTO.setXcapRootUri(dirChgDTO.getXcapRootURI());
                     Collections.sort(diffDocList);
                     xcapDiffNotifyDTO.setDocDiffObj(diffDocList);
@@ -1516,6 +1515,103 @@ public class KnXDMCommonMediator {
             throw new KnException(KnErrorCodes.Initializer.INTERNAL_ERROR, "Exception occurred while starting job", e);
         }
     }
+
+    /**
+     * Method to initiate a dedicated micro service notification job for the group rehome event.
+     * Publishes a slim payload per affected group containing only:
+     *   id ("GroupRehome_&lt;grpId&gt;"), type ("groupRehome"), ver, grpId, corpid,
+     *   lmrInteropFlag and pocHome.
+     *
+     * @param changeLogMap   change log map produced by the rehome flow keyed by MDN
+     * @param corpId         corporate id of the rehomed group
+     * @param lmrInteropFlag LMR interop flag for the rehomed group (may be null)
+     * @throws KnException if the notification job cannot be scheduled
+     */
+    public void startNotifyGroupRehomeMicroServicesJob(Map<String, KnOPDirChgDTO> changeLogMap, int corpId,
+                                                       Integer lmrInteropFlag) throws KnException {
+        String methodName = "startNotifyGroupRehomeMicroServicesJob()";
+        try {
+            knLogger.info(methodName, "Entry corpId:", corpId, " lmrInteropFlag:", lmrInteropFlag);
+            if (changeLogMap == null || changeLogMap.isEmpty()) {
+                knLogger.info(methodName, "Exit, changeLogMap is empty, no group rehome notification published");
+                return;
+            }
+            List<KnCorpRehomeNotifyDto> notifyDtoList = buildGroupRehomeNotifyDtos(changeLogMap, corpId, lmrInteropFlag);
+            if (notifyDtoList.isEmpty()) {
+                knLogger.info(methodName, "Exit, no corp group changes found in changeLogMap, no notification published");
+                return;
+            }
+            knLogger.debug(methodName, "notifyDtoList - ", notifyDtoList);
+            knLogger.info(methodName, "notifyDtoList size:", notifyDtoList.size());
+            List<KnMicroServiceNotifyJob> jobList = new ArrayList<>();
+            for (KnCorpRehomeNotifyDto corpRehomeNotifyDto : notifyDtoList) {
+                jobList.add(new KnMicroServiceNotifyJob(corpRehomeNotifyDto));
+            }
+            scheduler.addRamJob(jobList, KnJobConstants.JOB_MICRO_SERVICE_NOTIFY);
+            knLogger.info(methodName, "Exit, group rehome job submitted");
+        } catch (KnJobSchedulerException jsex) {
+            knLogger.error(methodName, "KnJobSchedulerException occurred", jsex);
+            throw jsex;
+        } catch (Exception e) {
+            knLogger.error(methodName, "Exception occurred", e);
+            throw new KnException(KnErrorCodes.Initializer.INTERNAL_ERROR,
+                    "Exception occurred while starting group rehome notification job", e);
+        }
+    }
+
+    /**
+     * Builds the slim group rehome notification payload list from the change log map.
+     * Iterates corp group entries in the change log, deduplicates by groupId so that
+     * exactly one notification per rehomed group is published regardless of how many
+     * member MDNs were affected.
+     *
+     * @param changeLogMap   change log map produced by the rehome flow
+     * @param corpId         corporate id of the rehomed group
+     * @param lmrInteropFlag LMR interop flag for the rehomed group
+     * @return list of {@link KnCorpRehomeNotifyDto} carrying only the group rehome payload fields
+     */
+    private static List<KnCorpRehomeNotifyDto> buildGroupRehomeNotifyDtos(Map<String, KnOPDirChgDTO> changeLogMap,
+                                                                         int corpId, Integer lmrInteropFlag) {
+        final String methodName = "buildGroupRehomeNotifyDtos()";
+        knLogger.info(methodName, "Entry corpId:", corpId, " lmrInteropFlag:", lmrInteropFlag);
+        Map<Integer, KnCorpRehomeNotifyDto> notifyByGrpId = new HashMap<>();
+        for (Map.Entry<String, KnOPDirChgDTO> entry : changeLogMap.entrySet()) {
+            KnOPDirChgDTO opDirChgDTO = entry.getValue();
+            if (opDirChgDTO == null) {
+                continue;
+            }
+            String pocHome = opDirChgDTO.getPocHome();
+            Collection<KnOPDocChgDTO> changeDocList = opDirChgDTO.getDocChgDTO();
+            if (changeDocList == null) {
+                continue;
+            }
+            for (KnOPDocChgDTO docChgDTO : changeDocList) {
+                if (docChgDTO == null || docChgDTO.getDocUri() == null
+                        || !docChgDTO.getDocUri().contains(APP_UID_CORP_GROUP)) {
+                    continue;
+                }
+                Integer grpId = docChgDTO.getGroupId();
+                // grpId is auto-boxed from primitive int in KnOPDocChgDTO#getGroupId(); cannot be null.
+                if (notifyByGrpId.containsKey(grpId)) {
+                    continue;
+                }
+                KnCorpRehomeNotifyDto notifyDto = new KnCorpRehomeNotifyDto();
+                notifyDto.setId("GroupRehome_" + grpId);
+                notifyDto.setType(MICROSERVICES_EVENT_TYPE.GROUP_REHOME.value());
+                notifyDto.setVer(MICROSERVICE_NOTIFY_DOC_VER);
+                notifyDto.setGrpId(grpId);
+                notifyDto.setCorpid(corpId);
+                notifyDto.setLmrInteropFlag(lmrInteropFlag);
+                notifyDto.setPocHome(pocHome);
+                notifyDto.setNotifyEventType(MICROSERVICES_NOTIFY_EVENT_TYPE.GROUP_NOTIFY_EVENTS.value());
+                notifyByGrpId.put(grpId, notifyDto);
+                knLogger.debug(methodName, "Built group rehome notify dto for grpId:", grpId, " pocHome:", pocHome);
+            }
+        }
+        knLogger.info(methodName, "Exit notifyByGrpId size:", notifyByGrpId.size());
+        return new ArrayList<>(notifyByGrpId.values());
+    }
+
     /**
      * Method to get the group diff data from the change log map for sending micro services notification for group change events.
      *

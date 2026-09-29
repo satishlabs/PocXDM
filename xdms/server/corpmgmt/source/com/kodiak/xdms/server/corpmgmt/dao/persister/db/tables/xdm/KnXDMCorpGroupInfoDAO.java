@@ -3138,4 +3138,75 @@ public class KnXDMCorpGroupInfoDAO implements ITableDAO {
         }
         return nullPocHomeGroupIds;
     }
+    public void updateMdnPocHome(String pocHome, LinkedList<String> mdnList, KnPersisterTxn persisterTxn) throws KnDAOException {
+        // Removed unused corpId from signature
+        String methodName = "updateMdnPocHome(String, LinkedList<String>, KnPersisterTxn)";
+        knLogger.debug(methodName, "ENTRY : pocHome - ", pocHome, ", MDN count: ", (mdnList != null ? mdnList.size() : 0));
+
+        // Validate input
+        if (mdnList == null || mdnList.isEmpty()) {
+            knLogger.warn(methodName, "MDN list is null or empty. No updates to perform.");
+            return;
+        }
+
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        String query = null;
+        int totalUpdated = 0;
+
+        // Set a safe batch size limit
+        final int BATCH_SIZE = 1000;
+        int currentBatchCount = 0;
+
+        try {
+            KnQueryMapper queryMapper = KnQueryMapper.getInstance();
+            query = queryMapper.getQuery(UPDATE_POCHOME_MDN_BASED);
+            conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
+            pstmt = conn.prepareStatement(query);
+
+            knLogger.debug(methodName, "Executing batch update for ", mdnList.size(), " MDNs with query - '", query, "'");
+
+            // Add each MDN to the batch
+            for (String mdn : mdnList) {
+                if (mdn != null && !mdn.trim().isEmpty()) {
+                    pstmt.setString(1, pocHome);
+                    pstmt.setString(2, mdn);
+                    pstmt.addBatch();
+                    currentBatchCount++;
+                    knLogger.trace(methodName, "Added MDN to batch: ", mdn);
+
+                    // EXECUTE IN CHUNKS OF 1000 TO PREVENT OUT OF MEMORY ERRORS
+                    if (currentBatchCount % BATCH_SIZE == 0) {
+                        int[] updateCounts = pstmt.executeBatch();
+                        for (int count : updateCounts) {
+                            if (count > 0) totalUpdated += count;
+                        }
+                        pstmt.clearBatch(); // Clear the batch from memory after executing
+                    }
+                } else {
+                    knLogger.warn(methodName, "Skipping null or empty MDN in the list");
+                }
+            }
+
+            // Execute any remaining records in the final batch
+            if (currentBatchCount % BATCH_SIZE != 0) {
+                int[] finalUpdateCounts = pstmt.executeBatch();
+                for (int count : finalUpdateCounts) {
+                    if (count > 0) totalUpdated += count;
+                }
+            }
+
+            knLogger.debug(methodName, "EXIT: Batch update executed successfully. Total records updated: ", totalUpdated, " out of ", currentBatchCount, " valid MDNs");
+
+        } catch (KnDAOException e) {
+            knLogger.error(methodName, "KnDAOException occurred while updating pocHome for MDNs - ", e);
+            throw e;
+        } catch (Exception e) {
+            knLogger.error(methodName, "Unexpected Exception occurred while updating pocHome for MDNs - ", e);
+            throw KnDbUtil.processException(e, "Failed while updating pocHome for MDNs: " + e.getMessage(),
+                    pttServerId, KnDAOSourceTypes.XDM_CORP_GROUP_INFO, query);
+        } finally {
+            KnDbUtil.closeStatement(pstmt); // Make sure you use the exact method your KnDbUtil supports (closeStatement or closePreparedStatement)
+        }
+    }
 }

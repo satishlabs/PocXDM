@@ -34,17 +34,8 @@ import java.util.*;
 
 public class KnMCSDocChangeNotifier {
 
-    /**
-     * Optional hook registered by notificationmgr at XDM startup for optimized debulk tracker upserts.
-     */
-    public interface IMdnTrackerRegistrar {
-        void registerWatcherMdnsIfOptimized(Collection<String> watcherMdns);
-    }
-
     private static final KnLogger knLogger = KnLogger.getLogger(KnMCSDocChangeNotifier.class);
-    private static final String FLOW_TAG = "[XCAP-DEBULK-FLOW]";
     private static KnMCSDocChangeNotifier mcsDocChangeNotifierObj = null;
-    private static volatile IMdnTrackerRegistrar trackerRegistrar = null;
     private KnGenInfoUtil genInfoUtil = null;
     private KnGeneralUtil generalUtil = null;
     private static KnGeneralCacheUtil generalCacheUtil = null;
@@ -95,13 +86,6 @@ public class KnMCSDocChangeNotifier {
         return mcsDocChangeNotifierObj;
     }
 
-    /**
-     * Registers the optional tracker hook supplied by notificationmgr at XDM startup.
-     */
-    public static void setTrackerRegistrar(IMdnTrackerRegistrar registrar) {
-        trackerRegistrar = registrar;
-    }
-
 
     public boolean generateMCSNotification(KnMCSNotifyDTO mcsNotifyDTO) {
 
@@ -130,16 +114,10 @@ public class KnMCSDocChangeNotifier {
     public boolean generateMCSNotification(List<KnMCSNotifyDTO> mcsNotifyDTOs, KnNotificationParamDTO notificationParamDTO, KnPersisterTxn persisterTxn) {
         String methodName = "generateMCSNotification(KnMCSNotifyDTO)";
         boolean isSuccess = false;
-        knLogger.info(methodName, FLOW_TAG + " STEP-MCS-G0 MCS notification batch received. batchSize="
-                + (mcsNotifyDTOs != null ? mcsNotifyDTOs.size() : 0)
-                + " priority=" + (notificationParamDTO != null ? notificationParamDTO.getPriority() : null));
-        int notificationCount = mcsNotifyDTOs != null && !mcsNotifyDTOs.isEmpty() ? mcsNotifyDTOs.size() : 0;
+        knLogger.info(methodName);
+        int notificationCount = 1;
         boolean ownedTxn = false;
         try {
-            if (mcsNotifyDTOs == null || mcsNotifyDTOs.isEmpty()) {
-                knLogger.info(methodName, FLOW_TAG + " STEP-MCS-SKIP Empty MCS batch; no queue insert attempted");
-                return true;
-            }
             if (persisterTxn == null) {
                 persisterTxn = KnPersisterTxn.getPersisterTxn();
                 persisterTxn.open();
@@ -149,11 +127,7 @@ public class KnMCSDocChangeNotifier {
                 notificationParamDTO = new KnNotificationParamDTO();
             }
             if (isSaveNotification(notificationParamDTO, notificationCount, persisterTxn)) {
-                // Save-first: queue rows must commit independently of caller txn (epic / XCAP-DEBULK-001).
-                saveNotification(mcsNotifyDTOs, notificationParamDTO, null);
-                knLogger.info(methodName, FLOW_TAG + " STEP-MCS-SAVE Queue persist completed for MCS batch. batchSize="
-                        + mcsNotifyDTOs.size() + " priority=" + notificationParamDTO.getPriority());
-                registerWatcherMdnsAfterQueueSave(mcsNotifyDTOs);
+                saveNotification(mcsNotifyDTOs, notificationParamDTO, persisterTxn);
             } else if (isSaveSuppressNotification(persisterTxn)) {
                 knLogger.info(methodName, "Notification get suppressed for mcsxcap notify");
                 KnStatisticsManagerImpl.getInstance().increment(KnOMConstants.NUM_MCSXCAP_NOTIFY_SUPPRESSED);
@@ -197,40 +171,6 @@ public class KnMCSDocChangeNotifier {
             mcsNotifyDTOS.add(mcsNotifyDTO);
         }
         saveEtagMdnNotification(mcsNotifyDTOS, notificationParamDTO, persisterTxn);
-    }
-
-    private void registerWatcherMdnsAfterQueueSave(List<KnMCSNotifyDTO> mcsNotifyDTOs) {
-        if (trackerRegistrar == null) {
-            return;
-        }
-        LinkedHashSet<String> watcherMdns = extractWatcherMdnsFromMcsNotify(mcsNotifyDTOs);
-        if (!watcherMdns.isEmpty()) {
-            trackerRegistrar.registerWatcherMdnsIfOptimized(watcherMdns);
-        }
-    }
-
-    private LinkedHashSet<String> extractWatcherMdnsFromMcsNotify(List<KnMCSNotifyDTO> mcsNotifyDTOs) {
-        LinkedHashSet<String> watcherMdns = new LinkedHashSet<>();
-        if (mcsNotifyDTOs == null) {
-            return watcherMdns;
-        }
-        for (KnMCSNotifyDTO mcsNotifyDTO : mcsNotifyDTOs) {
-            if (mcsNotifyDTO == null || mcsNotifyDTO.getDocumentChange() == null) {
-                continue;
-            }
-            for (KnDocumentChangeDTO docChange : mcsNotifyDTO.getDocumentChange()) {
-                if (docChange == null) {
-                    continue;
-                }
-                if (docChange.getDocType() == KnMCSNotifyConstants.DOCTYPE.MDN.value()) {
-                    String mdn = docChange.getMdn();
-                    if (mdn != null && !mdn.trim().isEmpty()) {
-                        watcherMdns.add(mdn.trim());
-                    }
-                }
-            }
-        }
-        return watcherMdns;
     }
 
     private boolean isSaveNotification(KnNotificationParamDTO notificationParamDTO, int notificationCount, KnPersisterTxn persisterTxn) {
@@ -324,15 +264,12 @@ public class KnMCSDocChangeNotifier {
                 if (ownedTxn) {
                     persisterTxn.save();
                 }
-                knLogger.info(methodName, FLOW_TAG + " STEP-MCS-SN3 MCS queue insert complete. insertedCount="
-                        + count + " priority=" + (notificationParamDTO != null ? notificationParamDTO.getPriority() : null));
                 knLogger.exit(methodName);
                 break;
             } catch (KnPersistenceException e) {
                 if (ownedTxn) {
                     KnDbUtil.rollback(persisterTxn);
                 }
-                knLogger.error(methodName, FLOW_TAG + " STEP-MCS-ERR MCS queue insert failed (persister)", e);
                 knLogger.error(methodName, "Persister Txn occurred - ", e);
                 if (attempt < MAX_RETRY) {
                     try {
@@ -347,7 +284,6 @@ public class KnMCSDocChangeNotifier {
                 if (ownedTxn) {
                     KnDbUtil.rollback(persisterTxn);
                 }
-                knLogger.error(methodName, FLOW_TAG + " STEP-MCS-ERR MCS queue insert failed (unexpected)", e);
                 knLogger.error(methodName, "Unexpected Exception occurred - ", e);
                 break;
             } finally {
@@ -431,7 +367,6 @@ public class KnMCSDocChangeNotifier {
                 if (ownedTxn) {
                     KnDbUtil.rollback(persisterTxn);
                 }
-                knLogger.error(methodName, FLOW_TAG + " STEP-MCS-ERR MCS queue insert failed (unexpected)", e);
                 knLogger.error(methodName, "Unexpected Exception occurred - ", e);
                 break;
             } finally {

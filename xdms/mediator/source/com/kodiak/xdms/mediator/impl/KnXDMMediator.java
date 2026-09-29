@@ -24112,17 +24112,16 @@ public KnCorpResponseDTO setUserProfileAssignPermission(KnXDMCorpUserProfileResp
             }
             persisterTxn.save();
 
-            //2. Send Microservice Notification (XDMDataIntf)
+            //2. Send Microservice Notification (XDMDataIntf) - dedicated REHOME_CORP_GROUP event
             if (xcapMobileSync && corpRespDto.getChangeLogMap() != null && !corpRespDto.getChangeLogMap().isEmpty()) {
                 knLogger.info(methodName, "Publishing micro service notification for group rehome");
-                commonMediator.startNotifyMicroServicesJob(
+                commonMediator.startNotifyGroupRehomeMicroServicesJob(
                         corpRespDto.getChangeLogMap(),
                         corpRespDto.getMdnCorpId(),
-                        corpRespDto.getGroupCreatedBy(),
-                        corpRespDto.getLmrInteropFlag(),
-                        corpRespDto.getMcxGrpInd()
+                        corpRespDto.getLmrInteropFlag()
                 );
             }
+
         } catch (KnXDMServerException e) {
             rollback(persisterTxn);
             knLogger.error(methodName, "KnXDMServerException occurred during groupRehome", e);

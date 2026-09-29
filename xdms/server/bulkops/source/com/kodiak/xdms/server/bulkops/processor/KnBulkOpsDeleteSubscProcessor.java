@@ -338,13 +338,19 @@ public class KnBulkOpsDeleteSubscProcessor {
             Set<String> allMcsXcapUris = genInfoUtil.getMCSXCAPRootURIs(persisterTxn);
 
             //Remove mdn from mcpttPermissionsConfig from CBS upm doc
-            for(String mdn: bulkOpsInfoUtil.fetchMDNFromSubscriberList(bulkSubsProvInfoDTO.getSubscriberList())) {
-                KnIPUserProfileDTO delMcpttReqDto = new KnIPUserProfileDTO();
-                delMcpttReqDto.setMdn(mdn);
-                delMcpttReqDto.setCorpId(String.valueOf(corpId));
-                delMcpttReqDto.setPocPttServerId(existingProfilesMap.get(mdn).getPocHome());
-
-                if (persisterTxn.getTransactionStatus() == KnCorpCommonInfoUtil.TXN_STATE.STARTED.ordinal()) {
+            //Group MDNs by their PocHome so that all MDNs sharing the same PocHome (i.e. the same
+            //target CBS server) are removed in a single batched query instead of one CBS call per MDN.
+            if (persisterTxn.getTransactionStatus() == KnCorpCommonInfoUtil.TXN_STATE.STARTED.ordinal()) {
+                Map<String, List<String>> pocHomeToMdnListMap = new HashMap<>();
+                for (String mdn : bulkOpsInfoUtil.fetchMDNFromSubscriberList(bulkSubsProvInfoDTO.getSubscriberList())) {
+                    String pocHome = existingProfilesMap.get(mdn).getPocHome();
+                    pocHomeToMdnListMap.computeIfAbsent(pocHome, key -> new ArrayList<>()).add(mdn);
+                }
+                for (Map.Entry<String, List<String>> pocHomeEntry : pocHomeToMdnListMap.entrySet()) {
+                    KnIPUserProfileDTO delMcpttReqDto = new KnIPUserProfileDTO();
+                    delMcpttReqDto.setMdnList(pocHomeEntry.getValue());
+                    delMcpttReqDto.setCorpId(String.valueOf(corpId));
+                    delMcpttReqDto.setPocPttServerId(pocHomeEntry.getKey());
                     corpClientIntf.deleteMcpttPermConfig(delMcpttReqDto, persisterTxn);
                 }
             }

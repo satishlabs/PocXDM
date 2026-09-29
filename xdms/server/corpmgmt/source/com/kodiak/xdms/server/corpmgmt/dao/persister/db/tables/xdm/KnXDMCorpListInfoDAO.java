@@ -281,15 +281,17 @@ public class KnXDMCorpListInfoDAO implements ITableDAO {
 
             KnQueryMapper queryMapper = KnQueryMapper.getInstance();
             query = queryMapper.getQuery(GET_SUBSC_SUBLIST_DETAILS);
-            conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
-            pstmt = conn.prepareStatement(query);
             if(null != contactDTO.getMdnList() && !contactDTO.getMdnList().isEmpty()){
                 query = "SELECT CORPLISTID, LISTTYPE, LISTDISPLAYNAME, LISTDISTRIBUTIONPOLICY FROM DG.CORPLISTINFO WHERE CORPLISTID IN( SELECT CORPLISTID FROM DG.CORPLISTDISTINFO WHERE RECIPIENTMDN IN (MDNLIST)) AND CORPLISTID != ? AND CORPID=?";
                 query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(contactDTO.getMdnList(),query,"MDNLIST");
+            }
+            conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
+            pstmt = conn.prepareStatement(query);
+            if(null != contactDTO.getMdnList() && !contactDTO.getMdnList().isEmpty()){
                 for(String mdn : contactDTO.getMdnList()) {
                     pstmt.setString(index++, mdn);
                 }
-                pstmt.setInt(index, privateListId);
+                pstmt.setInt(index++, privateListId);
                 pstmt.setInt(index, contactDTO.getCorpId());
             }else {
                 String mdn = contactDTO.getMdn();
@@ -1637,8 +1639,8 @@ public class KnXDMCorpListInfoDAO implements ITableDAO {
             for(String mdn : mdnList){
                 pstmt.setString(index++, mdn);
             }
-            pstmt.setInt(2, corpListId);
-            pstmt.setInt(3,corpId);
+            pstmt.setInt(index++, corpListId);
+            pstmt.setInt(index,corpId);
             knLogger.debug(methodName, "Executing query - ", "'", query, "'");
             rs = pstmt.executeQuery();
             knLogger.debug(methodName, "Query executed successfully");

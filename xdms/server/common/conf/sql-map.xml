@@ -2957,10 +2957,6 @@ Motorola Solutions Confidential Restricted
     <query id="741">
         <query-string>SELECT COUNT(*) FROM DG.CORPGRP_SHAREDLIST WHERE OWNEDCORPID=? AND SHAREDCORPID=?</query-string>
     </query>
-    <query id="739">
-        <query-string>SELECT GM.CORPGROUPID, GM.MEMBERMDN, GI.CORPID FROM DG.CORPGROUPMEMBERLIST GM INNER JOIN DG.CORPGROUPINFO GI ON GM.CORPGROUPID = GI.CORPGROUPID WHERE GM.MEMBERMDN IN (MDNLIST)
-        </query-string>
-    </query>
     <query id="742">
         <query-string>SELECT COUNT(*) FROM DG.GROUP_HIERARCHY_MAP WHERE ID_VALUE=? AND ID_TYPE=4</query-string>
     </query>
@@ -3012,4 +3008,15 @@ Motorola Solutions Confidential Restricted
     <query id="752">
         <query-string>SELECT DISTINCT PSI.PTTSERVERID AS POCHOME FROM DG.DEPLOY_SITE_INFO DSI INNER JOIN DG.SIGNALINGCARD_SITE_MAP SSM ON DSI.CLUSTERID = SSM.CLUSTERID INNER JOIN DG.PTTSERVERIPINFO PSI ON SSM.SIGNALINGCARDID = PSI.SIGNALINGCARDID WHERE PSI.SIGNALINGCARDTYPE = 32 and DSI.GEOCODE in (GEOCODELIST);</query-string>
     </query>
+    <query id="753">
+        <query-string>SELECT p.MEMBERMDN FROM DG.CORPGROUPMEMBERLIST p JOIN DG.POCSUBSCRINFO c ON p.MEMBERMDN = c.MDN WHERE p.CORPGROUPID = ? AND c.CLIENT_TYPE ='8'</query-string>
+    </query>
+    <query id="754">
+        <query-string>UPDATE DG.POCSUBSCRINFO SET POCHOME = ? WHERE MDN= ?</query-string>
+    </query>
+    <query id="755">
+        <query-string>SELECT GM.CORPGROUPID, GM.MEMBERMDN, GI.CORPID FROM DG.CORPGROUPMEMBERLIST GM INNER JOIN DG.CORPGROUPINFO GI ON GM.CORPGROUPID = GI.CORPGROUPID WHERE GM.MEMBERMDN IN (MDNLIST)
+        </query-string>
+    </query>
+
 </sql-map-corporate>
