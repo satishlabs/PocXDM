@@ -821,14 +821,14 @@ public class KnPubMCPTTController implements IPubMCPTTController {
                 List<String> baseOfProfileMdn = pubInfoUtil.getRealMdns(tuList, true, persisterTxn);
                 //getting map of profile mdn of base mdn.
                 Map<String, List<String>> profileOFBaseMdnMap = pubInfoUtil.getProfileMdnListByBaseMdnsList(baseOfProfileMdn, true, persisterTxn);
+                Integer finalDiscreteEnabled = null;
+                Long mergedPermBits = null;
 
                 // Getting the external contact details
                 Map<String,KnMemberDTO> extContactMemMap = xdmServerDAO.getExtContactListByContactMDN((List<String>)memberMdnsForCorpListId, subsProfilePublic.getCorpId(), persisterTxn);
                 Set<String> addedSharedcallUris = new HashSet<>();
                 for (String memberMdnCorp : memberMdnsForCorpListId) {
                     //get MC_PTTID from  DG.POCSUBSCRINFO where MDN = MEMBERMDN
-                    Integer finalDiscreteEnabled = null;
-                    Long mergedPermBits = null;
                     KnXDMMdnInfoDTO xdmMdnInfoDTO = new KnXDMMdnInfoDTO();
                     KnSubsProfileDTO subsProfilePublicForCorpListId = pubInfoUtil.getProfileDetails(memberMdnCorp,
                             KnProfileTypes.PUBLIC_PROFILE, true, KnConstants.FALSE, persisterTxn);

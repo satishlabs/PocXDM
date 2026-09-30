@@ -171,6 +171,7 @@ public class KnCorpResponseDTO implements ICorpResponseDTO {
     private Long lastUpdateprofileTime;
     private Integer videoPermission;
     private String osmListId;
+    private boolean osmListAdded;
 
     private Map<Integer, Collection<KnCorpContactDTO>> addedGroupMembersMap;
     private Collection<KnCorpGroupMemberDTO> modifiedGrpMembers;
@@ -186,8 +187,6 @@ public class KnCorpResponseDTO implements ICorpResponseDTO {
 
     private Integer grpProfileId;
     private boolean removeExtContact;
-
-    private Map<Integer, Integer> grpIdToCorpIdMap;
 
     public boolean getRemoveExtContact() {
         return removeExtContact;
@@ -1146,12 +1145,12 @@ public class KnCorpResponseDTO implements ICorpResponseDTO {
         this.osmListId = osmListId;
     }
 
-    public Map<Integer, Integer> getGrpIdToCorpIdMap() {
-        return grpIdToCorpIdMap;
+    public boolean isOsmListAdded() {
+        return osmListAdded;
     }
 
-    public void setGrpIdToCorpIdMap(Map<Integer, Integer> grpIdToCorpIdMap) {
-        this.grpIdToCorpIdMap = grpIdToCorpIdMap;
+    public void setOsmListAdded(boolean osmListAdded) {
+        this.osmListAdded = osmListAdded;
     }
 
     @Override
@@ -1280,7 +1279,6 @@ public class KnCorpResponseDTO implements ICorpResponseDTO {
                 ", additionalInfo=" + additionalInfo +
                 ", osmListId=" + osmListId +
                 ", removeExtContact=" + removeExtContact +
-                ", grpIdToCorpIdMap=" + grpIdToCorpIdMap +
                 '}';
     }
 

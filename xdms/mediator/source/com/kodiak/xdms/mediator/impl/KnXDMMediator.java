@@ -127,6 +127,7 @@ import com.kodiak.xdms.server.subsmgmt.resources.KnProvConstants;
 import com.kodiak.xdms.server.subsmgmt.resources.KnProvOperationTypes;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import com.kodiak.common.commdto.common.KnNotificationParamDTO;
 
 import java.util.*;
 import java.util.Map.Entry;
@@ -936,8 +937,30 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                     knLogger.debug(methodName, "Notification DTO generated - ", xcapDiffList);
                     KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
                     notificationParamDTO.setCid(message.getCorrelationId());
+                    knLogger.debug(methodName, "provRespDTO noti## ::" , provRespDTO.isSubsNameChanged(), " :: ", provRespDTO.isSubsTypeChanged());
+                    if (provRespDTO.isSubsNameChanged()) {
+                        notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_SELF_CLIENT_ON_SUBS_NAME_CHANGE.value());
+                        knLogger.debug(methodName, " ==> : Notification status - 10003" );  // not called during NC
+                    } else if (provRespDTO.isSubsTypeChanged()) {
+                        notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_UPDATED_CLIENT_ON_CLIENT_TYPE_CHANGE.value());
+                        knLogger.debug(methodName, " ==> : Notification status - 10009" );
+                    } else {
+                        notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_UPDATED_CLIENT_ON_ACTIVE_FS_CHANGE.value());
+                        knLogger.debug(methodName, " ==> : Notification status - 10011" );
+                    }
                     boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, notificationParamDTO);
                     knLogger.debug(methodName, "Notification status - ", isNotified);
+                    // Commented out because it is a new notification which we are sending to watcher
+//                    KnNotificationParamDTO notificationParamDTOWatcher = new KnNotificationParamDTO();
+//                    notificationParamDTOWatcher.setCid(message.getCorrelationId());
+//                    if (provRespDTO.isSubsNameChanged()) {
+//                        notificationParamDTOWatcher.setOpsCode(KnConstants.OPS_CODE.XCAP_WATCHER_CLIENTS_ON_SUBS_NAME_CHANGE.value());
+//                    } else if (provRespDTO.isSubsTypeChanged()) {
+//                        notificationParamDTOWatcher.setOpsCode(KnConstants.OPS_CODE.XCAP_WATCHER_CLIENTS_ON_CLIENT_TYPE_CHANGE.value());
+//                    } else {
+//                        notificationParamDTOWatcher.setOpsCode(KnConstants.OPS_CODE.XCAP_WATCHER_CLIENTS_ON_ACTIVE_FS_CHANGE.value());
+//                    }
+//                    notifier.sendXcapDiffNotifications(xcapDiffList, notificationParamDTOWatcher);
                 }
             }
 
@@ -976,8 +999,25 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             notifier.setMaxNotfnsPerJob(2);
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            if (provRespDTO.isSubsNameChanged()) {
+                notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_SELF_CLIENT_ON_SUBS_NAME_CHANGE.value());
+                knLogger.debug(methodName, " ==> : Notification status - 10003" ); // not called during NC
+            } else {
+                notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_UPDATED_CLIENT_ON_ACTIVE_FS_CHANGE.value());
+                knLogger.debug(methodName, " ==> : Notification status - 10011" );
+            }
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
             knLogger.debug(methodName, "Notification status - ", isNotified);
+
+            // New notification to send the watcher
+//            KnNotificationParamDTO notificationParamDTO10012 = new KnNotificationParamDTO();
+//            notificationParamDTO10012.setCid(message.getCorrelationId());
+//            if (provRespDTO.isSubsNameChanged()) {
+//                notificationParamDTO10012.setOpsCode(KnConstants.OPS_CODE.XCAP_WATCHER_CLIENTS_ON_SUBS_NAME_CHANGE.value());
+//            } else {
+//                notificationParamDTO10012.setOpsCode(KnConstants.OPS_CODE.XCAP_WATCHER_CLIENTS_ON_ACTIVE_FS_CHANGE.value());
+//            }
+//            notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO10012);
 
             commonMediator.sendTGSModeChangeNotification(corpResp.getTgsModeChgMap());
 
@@ -1258,9 +1298,16 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             commonMediator.startNotifyMicroServicesJob(notifyDtoList);
             knLogger.debug(methodName, "micro service notify for clientTypeChange event - Sent");
             notifier.setMaxNotfnsPerJob(KnMediatorConstants.DEFAULT_NOTIFY_SIZE);
-            boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList);
+            KnNotificationParamDTO xcapUpdatedClientOnClientTypeChangeNotificationParamDTO = new KnNotificationParamDTO();
+            xcapUpdatedClientOnClientTypeChangeNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_UPDATED_CLIENT_ON_CLIENT_TYPE_CHANGE.value());
+            boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, xcapUpdatedClientOnClientTypeChangeNotificationParamDTO);
+
 
             knLogger.debug(methodName, "Notification status - ", isNotified);
+            //New Notification
+//            KnNotificationParamDTO notificationParamDTO10010 = new KnNotificationParamDTO();
+//            notificationParamDTO10010.setOpsCode(KnConstants.OPS_CODE.XCAP_WATCHER_CLIENTS_ON_CLIENT_TYPE_CHANGE.value());
+//            notifier.sendXcapDiffNotifications(xcapDiffList, notificationParamDTO10010);
             KnStatisticsManagerImpl.getInstance().increment(
                     KnOMConstants.XDM_NUM_SUBSCR_UPDATED, mdnDispatchChgDTOMap.size());
             return commonMediator.getSuccessResponse(responseDTO);
@@ -1608,7 +1655,12 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             knLogger.debug(methodName, "xcapMobileSync",xcapMobileSync);
             KnOPProvDTO opProvDTO = provClientIntf.actionOnTGSSDoc(subsProfileInfoDTO.getMdn(),provRespDTO.getActiveFs2(),subsProfileInfoDTO.getActiveFS2(),persisterTxn);
             KnNotificationParamDTO knNotificationParamDTO = new KnNotificationParamDTO();
-            knNotificationParamDTO.setPriority(NOTIFICATION_PRIORITY.HIGH.value());
+            knNotificationParamDTO.setPriority(NOTIFICATION_PRIORITY.CRITICAL.value());
+            knNotificationParamDTO.setOpsCode(
+                    subStatusInfoDTO.getServiceAuthStatus() == KnConstants.SERVICE_AUTH_STATUS.ACTIVATED.value()
+                            ? KnConstants.OPS_CODE.XCAP_RESUMED_CLIENT_ON_SUBS_RESUME.value()
+                            : KnConstants.OPS_CODE.XCAP_SUSPENDED_CLIENT_ON_SUBS_SUSPEND.value());      //// suspend or resume call
+            knLogger.info(methodName, "==> : notification status self  - suspend or resume ");
             if(opProvDTO.getDirChgDTO()!=null){
                 knLogger.debug(methodName, "TGSS doc changed sending notification");
                 commonMediator.sendXcapNotification(opProvDTO.getDirChgDTO(),pv, knNotificationParamDTO );
@@ -1734,6 +1786,23 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                 knLogger.debug(methodName, "Notification DTO generated - ", xcapDiffList);
                 boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, knNotificationParamDTO);
                 knLogger.debug(methodName, "Notification status - ", isNotified);
+                // New Notification
+                // Watcher clients must also be notified on subscriber suspend (10006) / resume (10008).
+                // The self diff entry is fanned out to the watcher recipients downstream based on the
+                // watcher opsCode, so we resend the SAME diff list with the watcher opsCode - but ONLY
+                // when the subscriber actually has watchers (reverse contacts). For a self-only
+                // subscriber (no watchers) only the self opsCode (10005/10007) is emitted.
+//                if (subscriberHasWatchers(provRespDTO.getMdn(), String.valueOf(provRespDTO.getCorpid()),
+//                        subStatusInfoDTO.getHierarchyType(), persisterTxn)) {
+//                    KnNotificationParamDTO knNotificationParamDTOWatcher = new KnNotificationParamDTO();
+//                    knNotificationParamDTOWatcher.setPriority(NOTIFICATION_PRIORITY.CRITICAL.value());
+//                    knNotificationParamDTOWatcher.setOpsCode(
+//                            subStatusInfoDTO.getServiceAuthStatus() == KnConstants.SERVICE_AUTH_STATUS.ACTIVATED.value()
+//                                    ? KnConstants.OPS_CODE.XCAP_WATCHER_CLIENTS_ON_SUBS_RESUME.value()
+//                                    : KnConstants.OPS_CODE.XCAP_WATCHER_CLIENTS_ON_SUBS_SUSPEND.value());
+//                    boolean isWatcherNotified = notifier.sendXcapDiffNotifications(xcapDiffList, knNotificationParamDTOWatcher);
+//                    knLogger.debug(methodName, "==> : Watcher notification status (10006/10008) - ", isWatcherNotified);
+//                }
             }
 
             KnStatisticsManagerImpl.getInstance().increment(KnOMConstants.XDM_NUM_SUBSCR_UPDATED);
@@ -1991,7 +2060,12 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                 }
             }
             KnNotificationParamDTO knNotificationParamDTO = new KnNotificationParamDTO();
-            knNotificationParamDTO.setPriority(NOTIFICATION_PRIORITY.HIGH.value());
+            knNotificationParamDTO.setPriority(NOTIFICATION_PRIORITY.CRITICAL.value());
+            knNotificationParamDTO.setOpsCode(
+                    serviceAuthStatus == KnConstants.SERVICE_AUTH_STATUS.ACTIVATED.value()
+                            ? KnConstants.OPS_CODE.XCAP_RESUMED_CLIENT_ON_SUBS_RESUME.value()
+                            : KnConstants.OPS_CODE.XCAP_SUSPENDED_CLIENT_ON_SUBS_SUSPEND.value());
+
             notifier.setMaxNotfnsPerJob(KnMediatorConstants.DEFAULT_NOTIFY_SIZE);
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, knNotificationParamDTO);
             knLogger.debug(methodName, "Notification status - ", isNotified);
@@ -2509,6 +2583,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                 notifier.setMaxNotfnsPerJob(2);
                 KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
                 notificationParamDTO.setCid(message.getCorrelationId());
+                notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_RESUMED_CLIENT_ON_SUBS_RESUME.value());
                 boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
                 knLogger.debug(methodName, "Notification status - ", isNotified);
             }
@@ -2771,6 +2846,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                 notifier.setMaxNotfnsPerJob(2);
                 KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
                 notificationParamDTO.setCid(message.getCorrelationId());
+                notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_UPDATED_CLIENT_ON_ACTIVE_FS_CHANGE.value());
                 boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
                 knLogger.debug(methodName, "Notification status - ", isNotified);
             }
@@ -3089,7 +3165,10 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             String xdmPttServerId = genInfoUtil.retrieveLocalXDMPttServerId();
             xcapDiffList = commonMediator.fetchXcapDiffList(xcapDiffList, xdmPttServerId, null);
             knLogger.debug(methodName, "Sending notifications - ", xcapDiffList);
-            boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn);
+            KnNotificationParamDTO xcapDeletedClientOnSubsDeleteNotificationParamDTO = new KnNotificationParamDTO();
+            xcapDeletedClientOnSubsDeleteNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_DELETED_CLIENT_ON_SUBS_DELETE.value());
+            knLogger.debug(methodName, "==> : Sending self notification for delete - 10001");
+            boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn, xcapDeletedClientOnSubsDeleteNotificationParamDTO);
             knLogger.debug(methodName, "Notification status - ", isNotified);
             Collection<String> deletedMemberList = corpResp.getDisabledDispatchMemList();
             knLogger.debug(methodName, "deletedMemberList - ", KnGDPRTemplate.mdnList(deletedMemberList));
@@ -3210,7 +3289,9 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                 //knLogger.debug(methodName, "Notification DTO generated - ", xcapDiffNotifyDTO);
 
                 KnXcapDiffNotifier xcapDiffNotifier = KnXcapDiffNotifier.getInstance();
-                boolean notificationStatus = notifier.sendXcapDiffNotifications(xcapDiffNotifyDTO);
+                KnNotificationParamDTO xcapDeletedClientOnSubsDeleteDeregisterNotificationParamDTO = new KnNotificationParamDTO();
+                xcapDeletedClientOnSubsDeleteDeregisterNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_DELETED_CLIENT_ON_SUBS_DELETE.value());
+                boolean notificationStatus = notifier.sendXcapDiffNotifications(xcapDiffNotifyDTO, xcapDeletedClientOnSubsDeleteDeregisterNotificationParamDTO);
                 if (notificationStatus) {
                     knLogger.debug(methodName, "Successfully sent the notification");
                 }
@@ -3459,6 +3540,8 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             knLogger.debug(methodName, "Sending notifications - ", xcapDiffList);
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_WATCHER_CLIENTS_ON_SUBS_NAME_CHANGE.value());
+            knLogger.debug(methodName, " ==> : Notification status - 10004" );
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn, notificationParamDTO);
             knLogger.debug(methodName, "Notification status - ", isNotified);
 
@@ -3542,7 +3625,10 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             knLogger.debug(methodName, "Notification DTO generated - ", xcapDiffNotifyDTO);
 
             KnXcapDiffNotifier xcapDiffNotifier = KnXcapDiffNotifier.getInstance();
-            boolean notificationStatus = notifier.sendXcapDiffNotifications(xcapDiffNotifyDTO);
+            KnNotificationParamDTO xcapSelfClientOnSubsNameChangeNotificationParamDTO = new KnNotificationParamDTO();
+            xcapSelfClientOnSubsNameChangeNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_SELF_CLIENT_ON_SUBS_NAME_CHANGE.value()); // not called during NC
+            boolean notificationStatus = notifier.sendXcapDiffNotifications(xcapDiffNotifyDTO, xcapSelfClientOnSubsNameChangeNotificationParamDTO);
+
 
             for (KnOPDirChgDTO profileMdnDirChgDTO : provRespDTO.getDirChgDTOs()) {
                 KnXcapDiffNotifyDTO profilrMdnXcapDiffNotifyDTO = new KnXcapDiffNotifyDTO();
@@ -3555,7 +3641,9 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                 profilrMdnXcapDiffNotifyDTO.setPresenceHome(provRespDTO.getPresenceHome());
                 profilrMdnXcapDiffNotifyDTO.setNtfyOnAnyMDN(profileMdnDirChgDTO.getNtfyOnAnyMDN());
                 knLogger.debug(methodName, "Notification DTO generated for Profile MDN- ", profilrMdnXcapDiffNotifyDTO);
-                notificationStatus = notifier.sendXcapDiffNotifications(profilrMdnXcapDiffNotifyDTO);
+                KnNotificationParamDTO xcapSelfClientOnSubsNameChangeProfileMdnNotificationParamDTO = new KnNotificationParamDTO();
+                xcapSelfClientOnSubsNameChangeProfileMdnNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_SELF_CLIENT_ON_SUBS_NAME_CHANGE.value()); // not called during NC
+                notificationStatus = notifier.sendXcapDiffNotifications(profilrMdnXcapDiffNotifyDTO, xcapSelfClientOnSubsNameChangeProfileMdnNotificationParamDTO);
 
             }
 
@@ -3808,6 +3896,8 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                 notifier.setMaxNotfnsPerJob(2);
                 KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
                 notificationParamDTO.setCid(message.getCorrelationId());
+                notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_WATCHER_CLIENTS_ON_SUBS_NAME_CHANGE.value()); // 10004
+                knLogger.debug(methodName, " ==> : Notification status - 10003" );
                 boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
                 knLogger.debug(methodName, "Notification status - ", isNotified);
 
@@ -3947,6 +4037,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                     knLogger.debug(methodName, "Sending notifications - ", xcapDiffList);
                     KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
                     notificationParamDTO.setCid(message.getCorrelationId());
+                    notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_UPDATED_MEMBER_ON_MEMBER_PROPERTIES_CHANGE.value());
                     boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn, notificationParamDTO);
                     knLogger.debug(methodName, "Notification status - ", isNotified);
                 }
@@ -4421,6 +4512,8 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                 notifier.setMaxNotfnsPerJob(2);
                 KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
                 notificationParamDTO.setCid(message.getCorrelationId());
+                notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_UPDATED_CLIENT_ON_ACTIVE_FS_CHANGE.value());
+                knLogger.debug(methodName, " ==> : Notification status - 10011" );
                 boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
                 knLogger.debug(methodName, "Notification status - ", isNotified);
             }
@@ -6205,6 +6298,10 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             notifier.setMaxNotfnsPerJob(2);
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            notificationParamDTO.setOpsCode(
+                    (xdmRequestDTO.getRemovedMdnList() != null && !xdmRequestDTO.getRemovedMdnList().isEmpty())
+                            ? KnConstants.OPS_CODE.XCAP_REMOVED_CONTACT_ON_CONTACTLIST_REMOVE.value()
+                            : KnConstants.OPS_CODE.XCAP_ADDED_CONTACT_ON_CONTACTLIST_ADD.value());
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
             knLogger.debug(methodName, "Notification status - ", isNotified);
             knLogger.debug(methodName, "Sending log LI request");
@@ -6264,6 +6361,14 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             persisterTxn.save();
             KnStatisticsManagerImpl.getInstance().increment(
                     KnOMConstants.XDM_NUM_CORP_SUBLIST_DIST_LIST_MDN_ADDED);
+            // notify added sublist member
+//            Collection<KnXcapDiffDirChgNotifyDTO> pushXcapDiffList = commonMediator.prepareNotification(resp);
+//            if (pushXcapDiffList != null && !pushXcapDiffList.isEmpty()) {
+//                KnNotificationParamDTO pushNotificationParamDTO = new KnNotificationParamDTO();
+//                pushNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_ADDED_SUBLIST_MEMBER_ON_AUTOPAIRED_SUBLIST_ADD.value());
+//                knLogger.debug(methodName, " ==> : Notification status - 20004" );
+//                notifier.sendXcapDiffNotifications(pushXcapDiffList, null, pushNotificationParamDTO);
+//            }
 
         } catch (KnPersistenceException e) {
             rollback(persisterTxn);
@@ -6323,8 +6428,13 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             knLogger.debug(methodName, "Sending notifications - ", xcapDiffList);
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_EXISTING_SUBLIST_MEMBERS_ON_AUTOPAIRED_SUBLIST_DELETE.value());
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
             knLogger.debug(methodName, "Notification status - ", isNotified);
+//            KnNotificationParamDTO notificationParamDTO20006 = new KnNotificationParamDTO();
+//            notificationParamDTO20006.setCid(message.getCorrelationId());
+//            notificationParamDTO20006.setOpsCode(KnConstants.OPS_CODE.XCAP_REMOVED_SUBLIST_MEMBER_ON_AUTOPAIRED_SUBLIST_REMOVE.value());
+//            notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO20006);
             KnStatisticsManagerImpl.getInstance().increment(
                     KnOMConstants.XDM_NUM_CORP_SUBLIST_DIST_LIST_MDN_DELETED);
 
@@ -6401,6 +6511,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = commonMediator.prepareNotification(respDto);
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_ADDED_MEMBER_ON_GROUP_MEMBER_ADD.value());
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn, notificationParamDTO);
             knLogger.debug(methodName, "Notification status - ", isNotified);
             knLogger.debug(methodName, "After call to add External Contacts to the corporate. Response - ", xdmRespDto);
@@ -6489,6 +6600,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = commonMediator.prepareNotification(resp);
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_UPDATED_MEMBER_ON_MEMBER_PROPERTIES_CHANGE.value());
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn, notificationParamDTO);
             knLogger.debug(methodName, "Notification status - ", isNotified);
 
@@ -6571,6 +6683,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = commonMediator.prepareNotification(serverRespDto);
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_REMOVED_MEMBER_ON_GROUP_MEMBER_REMOVE.value());
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
             knLogger.debug(methodName, "Notification status - ", isNotified);
             knLogger.debug(methodName, "Sending log LI request");
@@ -6700,6 +6813,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             notifier.setMaxNotfnsPerJob(2);
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_SUBLIST_MEMBERS_ON_AUTOPAIRED_SUBLIST_CREATE.value());
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
             knLogger.debug(methodName, "Notification status - ", isNotified);
 
@@ -6822,9 +6936,31 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             notifier.setMaxNotfnsPerJob(2);
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            notificationParamDTO.setOpsCode(
+                    (xdmRequestDTO.getRemovedMdnList() != null && !xdmRequestDTO.getRemovedMdnList().isEmpty())
+                            ? KnConstants.OPS_CODE.XCAP_EXISTING_SUBLIST_MEMBERS_ON_AUTOPAIRED_SUBLIST_REMOVE.value()
+                            : KnConstants.OPS_CODE.XCAP_EXISTING_SUBLIST_MEMBERS_ON_AUTOPAIRED_SUBLIST_ADD.value());
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
             knLogger.debug(methodName, "Notification status - ", isNotified);
 
+//            KnNotificationParamDTO addedMemberNotifParam = new KnNotificationParamDTO();
+//            addedMemberNotifParam.setCid(message.getCorrelationId());
+//            addedMemberNotifParam.setOpsCode(KnConstants.OPS_CODE.XCAP_ADDED_SUBLIST_MEMBER_ON_AUTOPAIRED_SUBLIST_ADD.value());
+//
+//            //Send notification with seperate Ops-code for newly added members and existing sublist members / Removed members
+//            Set<String> addedMdns = new HashSet<>(xdmRequestDTO.getMdnList());
+//            List<KnXcapDiffDirChgNotifyDTO> addedMemberDiffs = new ArrayList<>();
+//            List<KnXcapDiffDirChgNotifyDTO> existingMemberDiffs = new ArrayList<>();
+//            for (KnXcapDiffDirChgNotifyDTO dto : xcapDiffList) {
+//                String destMdn = KnXcapDiffNotifier.getMDNFromURI(dto.getDirURI());
+//                (addedMdns.contains(destMdn) ? addedMemberDiffs : existingMemberDiffs).add(dto);
+//            }
+//            boolean isNotified = notifier.sendXcapDiffNotifications(existingMemberDiffs, null, notificationParamDTO); // 20005/20006
+//            knLogger.debug(methodName, "Notification status for existing members - ", isNotified, "existingMemberDiffs: ",existingMemberDiffs);
+//            if (!addedMemberDiffs.isEmpty()) {
+//                isNotified = notifier.sendXcapDiffNotifications(addedMemberDiffs, null, addedMemberNotifParam); // 20004
+//                knLogger.debug(methodName, "Notification status for added members - ", isNotified, "addedMemberDiffs: ", addedMemberDiffs);
+//            }
             knLogger.debug(methodName, "Sending log LI request");
             KnLIEventHandler.logLI(respDto.getLiEventList());
             knLogger.debug(methodName, "After log LI request sent");
@@ -6923,6 +7059,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             notifier.setMaxNotfnsPerJob(2);
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_EXISTING_SUBLIST_MEMBERS_ON_AUTOPAIRED_SUBLIST_DELETE.value());
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
             knLogger.debug(methodName, "Notification status - ", isNotified);
 
@@ -7349,6 +7486,9 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = commonMediator.prepareNotification(respDto);
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            notificationParamDTO.setOpsCode(xdmRequestDto.getClientType() == AREA_BASED_DYNAMIC_GROUP
+                    ? KnConstants.OPS_CODE.XCAP_GROUP_MEMBERS_ON_AREA_BASED_GROUP_CREATE.value()
+                    : KnConstants.OPS_CODE.XCAP_GROUP_MEMBERS_ON_GROUP_CREATE.value());
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
             knLogger.info(methodName, "Notification status - ", isNotified);
             knLogger.info(methodName, "Returning Create group response - ", xdmRespDto);
@@ -7474,8 +7614,96 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             xcapDiffList = commonMediator.fetchXcapDiffList(xcapDiffList, xdmPttServerId, null);
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            boolean membersAdded = (respDto.getAddedGroupMember() != null && !respDto.getAddedGroupMember().isEmpty())
+                    || (respDto.getAddedGroupMembersMap() != null && !respDto.getAddedGroupMembersMap().isEmpty());
+            boolean membersRemoved = respDto.getDeletedGrpMembers() != null && !respDto.getDeletedGrpMembers().isEmpty();
+            boolean membersModified = respDto.getModifiedGrpMembers() != null && !respDto.getModifiedGrpMembers().isEmpty();
+            boolean isAbdg = xdmRequestDto.getClientType() == AREA_BASED_DYNAMIC_GROUP;
+            knLogger.debug(methodName, "membersAdded: ", membersAdded, ", membersRemoved: ", membersRemoved,
+                    ", membersModified: ", membersModified,
+                    ", isAbdg: ", isAbdg, ", newGroupDisplayName: ", respDto.getNewGroupDisplayName());
+            if (respDto.getNewGroupDisplayName() != null) {
+                notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_GROUP_MEMBERS_ON_GROUP_NAME_CHANGE.value());
+            } else if (membersAdded) {
+                notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_EXISTING_MEMBERS_ON_GROUP_MEMBER_ADD.value());
+            } else if (membersRemoved) {
+                notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_EXISTING_MEMBERS_ON_GROUP_MEMBER_REMOVE.value());
+            } else if (membersModified) {
+                notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_EXISTING_MEMBERS_ON_MEMBER_PROPERTIES_CHANGE.value());
+            } else {
+                notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_GROUP_MEMBERS_ON_GROUP_PROPERTIES_CHANGE.value());
+            }
+            knLogger.debug(methodName, "Existing members opsCode: ", notificationParamDTO.getOpsCode());
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
             knLogger.debug(methodName, "Notification status - ", isNotified);
+
+            // Notification to added member(s) on group member addition
+            // ABDG: 30012 (added member on area-based group member add) - also covers ABDG fence-in
+            // Corp: 30006 (added member on group member add)
+//            if (membersAdded) {
+//                KnNotificationParamDTO addedMemberNotifParam = new KnNotificationParamDTO();
+//                addedMemberNotifParam.setCid(message.getCorrelationId());
+//                addedMemberNotifParam.setOpsCode(isAbdg
+//                        ? KnConstants.OPS_CODE.XCAP_ADDED_MEMBER_ON_AREA_BASED_GROUP_MEMBER_ADD.value()
+//                        : KnConstants.OPS_CODE.XCAP_ADDED_MEMBER_ON_GROUP_MEMBER_ADD.value());
+//                knLogger.debug(methodName, "Added member opsCode: ", addedMemberNotifParam.getOpsCode());
+//                notifier.sendXcapDiffNotifications(xcapDiffList, null, addedMemberNotifParam);
+//                // ABDG watcher clients must also be notified on member add / fence-in (30014)
+//                if (isAbdg) {
+//                    KnNotificationParamDTO addedMemberWatcherNotifParam = new KnNotificationParamDTO();
+//                    addedMemberWatcherNotifParam.setCid(message.getCorrelationId());
+//                    addedMemberWatcherNotifParam.setOpsCode(
+//                            KnConstants.OPS_CODE.XCAP_WATCHER_CLIENTS_ON_AREA_BASED_GROUP_MEMBER_ADD.value());
+//                    knLogger.debug(methodName, "Added member watcher opsCode: ", addedMemberWatcherNotifParam.getOpsCode());
+//                    notifier.sendXcapDiffNotifications(xcapDiffList, null, addedMemberWatcherNotifParam);
+//                }
+//            }
+            // Notification to removed member(s) on group member removal
+            // ABDG: 30015 (removed member on area-based group member remove) - also covers ABDG fence-out
+            // Corp: 30008 (removed member on group member remove)
+//            if (membersRemoved) {
+//                KnNotificationParamDTO removedMemberNotifParam = new KnNotificationParamDTO();
+//                removedMemberNotifParam.setCid(message.getCorrelationId());
+//                removedMemberNotifParam.setOpsCode(isAbdg
+//                        ? KnConstants.OPS_CODE.XCAP_REMOVED_MEMBER_ON_AREA_BASED_GROUP_MEMBER_REMOVE.value()
+//                        : KnConstants.OPS_CODE.XCAP_REMOVED_MEMBER_ON_GROUP_MEMBER_REMOVE.value());
+//                notifier.sendXcapDiffNotifications(xcapDiffList, null, removedMemberNotifParam);
+//                // ABDG watcher clients must also be notified on member remove / fence-out (30017)
+//                if (isAbdg) {
+//                    KnNotificationParamDTO removedMemberWatcherNotifParam = new KnNotificationParamDTO();
+//                    removedMemberWatcherNotifParam.setCid(message.getCorrelationId());
+//                    removedMemberWatcherNotifParam.setOpsCode(
+//                            KnConstants.OPS_CODE.XCAP_WATCHER_CLIENTS_ON_AREA_BASED_GROUP_MEMBER_REMOVE.value());
+//                    knLogger.debug(methodName, "Removed member watcher opsCode: ", removedMemberWatcherNotifParam.getOpsCode());
+//                    notifier.sendXcapDiffNotifications(xcapDiffList, null, removedMemberWatcherNotifParam);
+//                }
+//            }
+            // Notification to the updated member(s) on group-member properties change
+            // Corp: 30004 (updated member on member properties change)
+//            if (membersModified) {
+//                KnNotificationParamDTO updatedMemberNotifParam = new KnNotificationParamDTO();
+//                updatedMemberNotifParam.setCid(message.getCorrelationId());
+//                updatedMemberNotifParam.setOpsCode(
+//                        KnConstants.OPS_CODE.XCAP_UPDATED_MEMBER_ON_MEMBER_PROPERTIES_CHANGE.value());
+//                knLogger.debug(methodName, "Updated member opsCode: ", updatedMemberNotifParam.getOpsCode());
+//                notifier.sendXcapDiffNotifications(xcapDiffList, null, updatedMemberNotifParam);
+//            }
+//            // OSM list change notifications: 30027 (ADD), 30028 (CHANGE), 30030 (REMOVE)
+            // Guard: only fire when request explicitly carries an OSM list ID change
+//            String newOsmListId = xdmRequestDto.getOSMListId();
+//            if (newOsmListId != null) {
+//                KnNotificationParamDTO osmNotifParam = new KnNotificationParamDTO();
+//                osmNotifParam.setCid(message.getCorrelationId());
+//                if (newOsmListId.isEmpty()) {
+//                    osmNotifParam.setOpsCode(KnConstants.OPS_CODE.XCAP_GROUP_MEMBERS_ON_GROUP_MODIFY_REMOVE_OSM.value());
+//                } else if (respDto.isOsmListAdded()) {
+//                    osmNotifParam.setOpsCode(KnConstants.OPS_CODE.XCAP_GROUP_MEMBERS_ON_GROUP_MODIFY_ADD_OSM.value());
+//                } else {
+//                    osmNotifParam.setOpsCode(KnConstants.OPS_CODE.XCAP_GROUP_MEMBERS_ON_GROUP_MODIFY_CHANGE_OSM_ID.value());
+//                }
+//                notifier.sendXcapDiffNotifications(xcapDiffList, null, osmNotifParam);
+//            }
+
             knLogger.debug(methodName, "Returning modify group Response - ", xdmRespDto);
             knLogger.debug(methodName, "Sending log LI request");
             KnLIEventHandler.logLI(respDto.getLiEventList());
@@ -7588,6 +7816,9 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = commonMediator.prepareNotification(respDto);
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            notificationParamDTO.setOpsCode(xdmRequestDto.getClientType() == AREA_BASED_DYNAMIC_GROUP
+                    ? KnConstants.OPS_CODE.XCAP_GROUP_MEMBERS_ON_AREA_BASED_GROUP_DELETE.value()
+                    : KnConstants.OPS_CODE.XCAP_GROUP_MEMBERS_ON_GROUP_DELETE.value());
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
             knLogger.debug(methodName, "Notification status - ", isNotified);
             knLogger.debug(methodName,"Returning delete corp Group response - ", xdmRespDto);
@@ -9588,7 +9819,17 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                 notifier.setMaxNotfnsPerJob(2);
                 KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
                 notificationParamDTO.setCid(message.getCorrelationId());
-                notificationParamDTO.setPriority(KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
+                notificationParamDTO.setPriority(NOTIFICATION_PRIORITY.CRITICAL.value());
+                int scanOpsCode;
+                if ((talkGrpDTO.getAddedCampGrpList() != null && !talkGrpDTO.getAddedCampGrpList().isEmpty())
+                        || (talkGrpDTO.getRemovedCampGrpList() != null && !talkGrpDTO.getRemovedCampGrpList().isEmpty())) {
+                    scanOpsCode = KnConstants.OPS_CODE.XCAP_ON_SCANLIST_UPDATE_ADD_REMOVE_GROUPS.value();
+                } else if (talkGrpDTO.getModifiedCampGrpList() != null && !talkGrpDTO.getModifiedCampGrpList().isEmpty()) {
+                    scanOpsCode = KnConstants.OPS_CODE.XCAP_ON_SCANLIST_UPDATE_CHANGE_PRIORITY.value();
+                } else {
+                    scanOpsCode = KnConstants.OPS_CODE.XCAP_ON_SCANLIST_UPDATE.value();
+                }
+                notificationParamDTO.setOpsCode(scanOpsCode);
                 boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn, notificationParamDTO);
                 knLogger.debug(methodName, "Notification status - ", isNotified);
                 persisterTxn.save();
@@ -9751,6 +9992,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                 Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = commonMediator.prepareNotification(corpResponseDTO);
                 KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
                 notificationParamDTO.setCid(message.getCorrelationId());
+                notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_DELETED_CLIENT_ON_SUBS_DELETE.value());
                 boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
                 knLogger.debug(methodName, "Notification status - ", isNotified);
                 knLogger.debug(methodName, "Sending log LI request");
@@ -10267,6 +10509,72 @@ public class KnXDMMediator implements IXDMMediatorIntf {
     }
 
     /**
+     * Determines whether the given subscriber currently has any watcher clients, i.e. other
+     * subscribers that have this subscriber in their contact list (reverse contacts).
+     * <p>
+     * This is used to decide whether the watcher-specific XCAP opsCodes (10002/10004/10006/10008)
+     * must be generated in addition to the self opsCode. When the subscriber has no watchers only
+     * the self notification is emitted; when watchers exist both the self and watcher notifications
+     * are emitted. The already open persister transaction is reused to keep the lookup lightweight.
+     *
+     * @param subscriberMdn subscriber MDN
+     * @param corpId        corporate id of the subscriber
+     * @param hierarchyType hierarchy type of the corp
+     * @param persisterTxn  active persister transaction (reused, not newly opened)
+     * @return true if the subscriber has at least one watcher, false otherwise
+     */
+//    private boolean subscriberHasWatchers(String subscriberMdn, String corpId,
+//                                          com.kodiak.common.resources.KnConstants.HIERARCHY_TYPE hierarchyType, KnPersisterTxn persisterTxn) {
+//        String methodName = "subscriberHasWatchers(String, String, HIERARCHY_TYPE, KnPersisterTxn newwwwww)";
+//        // Forward-direction watcher check: a subscriber's watchers are the members present in that
+//        // subscriber's OWN contact list (DG.CORPCONTACTLIST WHERE MDN = subscriberMdn). i.e. when
+//        // 9036847985 -> contains 9036847986, then 9036847986 is treated as a watcher of 9036847985.
+//        // We reuse the existing utility KnCorpContactInfoUtil.getSubscribersContactList(...) instead of
+//        // the reverse lookup. A dedicated short-lived read-only transaction is used because the caller's
+//        // txn may already be committed by the time this runs; it is released (rollback) in the finally.
+//        KnPersisterTxn watcherTxn = null;
+//        try {
+//            if (subscriberMdn == null) {
+//                return false;
+//            }
+//            watcherTxn = KnPersisterTxn.getPersisterTxn();
+//            watcherTxn.open();
+//            String xdmPttServerId = genInfoUtil.retrieveLocalXDMPttServerId();
+//            KnCorpContactInfoUtil corpContactInfoUtil = new KnCorpContactInfoUtil();
+//            Map<String, Collection<String>> subsContactMap = corpContactInfoUtil
+//                    .getSubscribersContactList(Collections.singletonList(subscriberMdn), xdmPttServerId, watcherTxn);
+//            boolean hasContactWatchers = subsContactMap != null && !subsContactMap.isEmpty();
+//            if (hasContactWatchers) {
+//                knLogger.debug(methodName, "subscriber has watchers (forward contact list) - ", true);
+//                return true;
+//            }
+//            // Talkgroup check: a subscriber that is a member of any talk group is also treated as having
+//            // watchers (the other talkgroup members watch its presence). selectSubsGroupList (via
+//            // getSubsGroupListForXcap) returns the actual talk groups the subscriber belongs to - a
+//            // non-empty list means the subscriber has talkgroup watchers. NOTE: the DISPATCH_GRP_MEMBER
+//            // flag only tracks dispatch/ODL groups, so it cannot be used to detect regular talkgroups.
+//            boolean hasTalkgroupWatchers = false;
+//            if (corpId != null && !corpId.trim().isEmpty()) {
+//                com.kodiak.xdms.server.corpmgmt.dto.clientdat.KnIPCorpContactDTO grpContactDTO = new com.kodiak.xdms.server.corpmgmt.dto.clientdat.KnIPCorpContactDTO();
+//                grpContactDTO.setMdn(subscriberMdn);
+//                grpContactDTO.setCorpId(Integer.parseInt(corpId.trim()));
+//                java.util.Collection<com.kodiak.xdms.server.corpmgmt.dto.persistdat.KnCorpGroupInfoPersistDTO> subsGroupList =
+//                        new com.kodiak.xdms.server.corpmgmt.business.helper.KnCorpGroupInfoUtil()
+//                                .getSubsGroupListForXcap(grpContactDTO, 0, xdmPttServerId, true, watcherTxn);
+//                hasTalkgroupWatchers = subsGroupList != null && !subsGroupList.isEmpty();
+//            }
+//            knLogger.debug(methodName, "subscriber has watchers (talkgroup membership) - ", hasTalkgroupWatchers);
+//            return hasTalkgroupWatchers;
+//        } catch (Exception e) {
+//            knLogger.error(methodName, "Failed to determine watcher presence; defaulting to no watchers - ", e);
+//            return false;
+//        } finally {
+//            // read-only lookup: release the dedicated transaction without committing any changes
+//            rollback(watcherTxn);
+//        }
+//    }
+
+    /**
      * Method to return the subscriber list where the request MDN exist as contact.
      *
      * @param subscriberCorpInfo
@@ -10421,6 +10729,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = commonMediator.prepareNotification(respDto);
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_REMOVED_MEMBER_ON_GROUP_MEMBER_REMOVE.value());
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
             knLogger.debug(methodName, "Notification status - ", isNotified);
             knLogger.debug(methodName, "Returning removeSubscribersContacts response - ", xdmRespDto);
@@ -10501,6 +10810,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = commonMediator.prepareNotification(respDto);
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_REMOVED_MEMBER_ON_GROUP_MEMBER_REMOVE.value());
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
             knLogger.debug(methodName, "Notification status - ", isNotified);
             knLogger.debug(methodName, "Returning removeSubscribersAllSublist response - ", xdmRespDto);
@@ -10586,6 +10896,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             knLogger.debug(methodName, "xcapDiffListSSSS - ", xcapDiffList);
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_REMOVED_MEMBER_ON_GROUP_MEMBER_REMOVE.value());
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
             knLogger.debug(methodName, "Notification status - ", isNotified);
             knLogger.debug(methodName, "Returning removeSubscribersAllGroups response - ", xdmRespDto);
@@ -10958,6 +11269,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                 knLogger.debug(methodName, "Sending notifications - ", xcapDiffList);
                 KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
                 notificationParamDTO.setCid(message.getCorrelationId());
+                notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_SELF_ON_PROFILE_UNASSIGN.value());
                 boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn, notificationParamDTO);
                 knLogger.debug(methodName, "Notification status - ", isNotified);
 
@@ -11224,6 +11536,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             notifier.setMaxNotfnsPerJob(KnMediatorConstants.DEFAULT_NOTIFY_SIZE);
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_UPDATED_CLIENT_ON_ACTIVE_FS_CHANGE.value());
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, notificationParamDTO);
             knLogger.debug(methodName, "Notification status - ", isNotified);
             // For CorpResourceList notification - ActiveFS change.
@@ -11795,6 +12108,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             notifier.setMaxNotfnsPerJob(2);
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_UPDATED_CLIENT_ON_CLIENT_TYPE_CHANGE.value());
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
             knLogger.debug(methodName, "Notification status - ", isNotified);
             commonMediator.sendTGSModeChangeNotification(corpRespDTO.getTgsModeChgMap());
@@ -12272,8 +12586,25 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             }
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_SELF_CLIENT_ON_SUBS_NAME_CHANGE.value()); // called during NC
+            knLogger.debug(methodName, "==> : Notification status NC for self - ");
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
             knLogger.debug(methodName, "Notification status - ", isNotified);
+
+            // Watcher clients must also be notified on subscriber name change (10004).
+            // The self diff entry is fanned out to the watcher recipients downstream based on the
+            // watcher opsCode, so we resend the SAME diff list with the watcher opsCode - but ONLY
+            // when the subscriber actually has watchers (reverse contacts). For a self-only
+            // subscriber (no watchers) only the self opsCode (10003) is emitted.
+//            if (subscriberHasWatchers(reqDto.getSubscriberMdn(), reqDto.getCorpId(),
+//                    reqDto.getHierarchyType(), persisterTxn)) {
+//                KnNotificationParamDTO notificationParamDTOWatcherNC = new KnNotificationParamDTO();
+//                notificationParamDTOWatcherNC.setCid(message.getCorrelationId());
+//                notificationParamDTOWatcherNC.setOpsCode(KnConstants.OPS_CODE.XCAP_WATCHER_CLIENTS_ON_SUBS_NAME_CHANGE.value());
+//                knLogger.debug(methodName, "==> : Notification status NC for watcher - 10004 ");
+//                boolean isWatcherNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTOWatcherNC);
+//                knLogger.debug(methodName, "Watcher notification status - 10004 - ", isWatcherNotified);
+//            }
             KnXcapDiffNotifier xcapDiffNotifier = KnXcapDiffNotifier.getInstance();
             if (corpResponseDTO.isProfileChanged()) {
                 List<KnOPDirChgDTO> dirChgDTOs = corpResponseDTO.getDirChgDTOs();
@@ -12328,7 +12659,9 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                     xcapDiffNotifyDTO.setPocHome(opDirChgDTO.getPocHome());
                     xcapDiffNotifyDTO.setPresenceHome(opDirChgDTO.getPresenceHome());
                     xcapConfigDiffList.add(xcapDiffNotifyDTO);
-                    boolean notificationStatus = notifier.sendXcapDiffNotifications(xcapDiffNotifyDTO);
+                    KnNotificationParamDTO xcapSelfClientOnSubsNameChangeNotificationParamDTO = new KnNotificationParamDTO();
+                    xcapSelfClientOnSubsNameChangeNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_SELF_CLIENT_ON_SUBS_NAME_CHANGE.value()); // called during NC
+                    boolean notificationStatus = notifier.sendXcapDiffNotifications(xcapDiffNotifyDTO, xcapSelfClientOnSubsNameChangeNotificationParamDTO);
                     if (notificationStatus) {
                         knLogger.debug(methodName, "Successfully sent the notification");
                     }
@@ -13317,6 +13650,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = commonMediator.prepareNotification(libRespDto);
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_PERMISSIONS.value());
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
             knLogger.info(methodName, "Notification status - ", isNotified);
             //forming notification on success
@@ -13546,7 +13880,8 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             }
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
-            notificationParamDTO.setPriority(NOTIFICATION_PRIORITY.HIGH.value());
+            notificationParamDTO.setPriority(NOTIFICATION_PRIORITY.CRITICAL.value());
+            notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_EMERGENCY_CONFIG.value());
 
             // Ensure that the operation type is not null or empty, then validate the subscriber's authorization status.
             if (xdmRequestDTO.getOperationType() != null && !xdmRequestDTO.getOperationType().isEmpty()) {
@@ -13874,7 +14209,8 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                 notifier.setMaxNotfnsPerJob(KnProvConstants.DEFAULT_NOTIFY_SIZE);
                 KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
                 notificationParamDTO.setCid(message.getCorrelationId());
-                notificationParamDTO.setPriority(KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
+                notificationParamDTO.setPriority(NOTIFICATION_PRIORITY.CRITICAL.value());
+                notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_SUSPENDED_CLIENT_ON_SUBS_SUSPEND.value());
                 boolean status = notifier.sendXcapDiffNotifications(xcapDiffList, notificationParamDTO);
                 knLogger.info(methodName, "Notification status - ", status);
             }
@@ -14057,6 +14393,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = commonMediator.prepareNotification(corpResponseDTO);
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_SELF_CLIENT_ON_SUBS_NAME_CHANGE.value()); // not called during NC
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
             knLogger.debug(methodName, "Notification status - ", isNotified);
             if(corpResponseDTO.isProfileChanged()) {
@@ -14284,7 +14621,8 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             List<KnXcapDiffNotifyDTO> xcapConfigDiffList = new ArrayList<KnXcapDiffNotifyDTO>();
             KnNotificationParamDTO knNotificationParamDTO = new KnNotificationParamDTO();
             knNotificationParamDTO.setCid(message.getCorrelationId());
-            knNotificationParamDTO.setPriority(NOTIFICATION_PRIORITY.HIGH.value());
+            knNotificationParamDTO.setPriority(NOTIFICATION_PRIORITY.CRITICAL.value());
+            knNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_UPDATED_CLIENT_ON_ACTIVE_FS_CHANGE.value());
             for (KnOPDirChgDTO opDirChgDTO : dirChgDTOs) {
                 KnXcapDiffNotifyDTO xcapDiffNotifyDTO = new KnXcapDiffNotifyDTO();
                 Map<String, String> updateTimeMap = respDto.getUpdateTimeMap();
@@ -15233,6 +15571,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = commonMediator.prepareNotification(corpResponseDTO);
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_ON_SCANLIST_UPDATE.value());
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
             knLogger.info(methodName, "Notification status - ", isNotified);
             knLogger.info(methodName, "Returning modifySubscriberTGList response - ", respDto);
@@ -15327,6 +15666,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = commonMediator.prepareNotification(corpResponseDTO);
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_ON_SCANLIST_UPDATE.value());
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
             knLogger.info(methodName, "Notification status - ", isNotified);
             knLogger.info(methodName, "Returning deleteTGList response - ", respDto);
@@ -15878,6 +16218,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = commonMediator.prepareNotification(corpResponseDTO);
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_ADDED_MEMBER_ON_GROUP_MEMBER_ADD.value());
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
             knLogger.info(methodName, "Notification status - ", isNotified);
             knLogger.info(methodName, "Returning addBulkGroupsToSubscriber response - ", respDto);
@@ -16006,6 +16347,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             notifier.setMaxNotfnsPerJob(2);
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_SELF_CLIENT_ON_GROUP_COPY_PASTE.value());
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn, notificationParamDTO);
             knLogger.debug(methodName, "Notification status - ", isNotified);
             knLogger.debug(methodName, "Sending log LI request");
@@ -16556,6 +16898,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = commonMediator.prepareNotification(corpResponseDTO);
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_ON_SCANLIST_UPDATE.value());
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
             knLogger.info(methodName, "Notification status - ", isNotified);
             knLogger.info(methodName, "Returning createSubsATGScanList response - ", respDto);
@@ -16600,6 +16943,13 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             }
             persisterTxn.save();
             KnStatisticsManagerImpl.getInstance().increment(KnOMConstants.XDM_NUM_OSM_LIST_ADDED);
+            // notify group members that OSM list was updated
+//            if (corpResponseDTO.getChangeLogMap() != null && !corpResponseDTO.getChangeLogMap().isEmpty()) {
+//                Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = commonMediator.prepareNotification(corpResponseDTO);
+//                KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
+//                notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_ON_OSM_LIST_UPDATE.value());
+//                notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
+//            }
             knLogger.info(methodName, "Returning createOSMList response - ", respDto);
         } catch (KnXDMServerException e) {
             rollback(persisterTxn);
@@ -16653,6 +17003,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                 Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = commonMediator.prepareNotification(corpResponseDTO);
                 knLogger.info(methodName, "preparing notification - ", xcapDiffList);
                 KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
+                notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_ON_OSM_LIST_UPDATE.value());
                 boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
                 knLogger.info(methodName, "sendXcapDiffNotifications  isNotified- ", isNotified);
             }
@@ -16722,6 +17073,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                 knLogger.info(methodName, "preparing notification - ", xcapDiffList);
                 KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
                 notificationParamDTO.setCid(message.getCorrelationId());
+                notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_ON_OSM_LIST_UPDATE.value());
                 boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
                 knLogger.info(methodName, "sendXcapDiffNotifications  isNotified- ", isNotified);
             }
@@ -16896,6 +17248,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                 knLogger.info(methodName, "preparing notification - ", xcapDiffList);
                 KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
                 notificationParamDTO.setCid(message.getCorrelationId());
+                notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_UPDATED_MEMBER_ON_MEMBER_PROPERTIES_CHANGE.value());
                 boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
                 knLogger.info(methodName, "sendXcapDiffNotifications  isNotified- ", isNotified);
             }
@@ -17133,7 +17486,10 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                     xcapDiffNotifyDTO.setPresenceHome(opDirChgDTO.getPresenceHome());
                     // xcapDiffNotifyDTO.setSubscribeNotify(true);
                     xcapConfigDiffList.add(xcapDiffNotifyDTO);
-                    boolean notificationStatus = notifier.sendXcapDiffNotifications(xcapDiffNotifyDTO);
+                    KnNotificationParamDTO xcapUpdatedClientOnActiveFsChangeNotificationParamDTO = new KnNotificationParamDTO();
+                    xcapUpdatedClientOnActiveFsChangeNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_UPDATED_CLIENT_ON_ACTIVE_FS_CHANGE.value());
+                    boolean notificationStatus = notifier.sendXcapDiffNotifications(xcapDiffNotifyDTO, xcapUpdatedClientOnActiveFsChangeNotificationParamDTO);
+
 
                     knLogger.debug(methodName, "xcapDiffNotifyDTO- " + xcapDiffNotifyDTO + " xcapConfigDiffList::" + xcapConfigDiffList + " notificationStatus::" + notificationStatus);
 
@@ -17145,6 +17501,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                     notifier.setMaxNotfnsPerJob(KnMediatorConstants.DEFAULT_NOTIFY_SIZE);
                     KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
                     notificationParamDTO.setCid(message.getCorrelationId());
+                    notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_UPDATED_CLIENT_ON_CLIENT_TYPE_CHANGE.value());
                     boolean isConfigNotified = notifier.sendXcapDiffNotifications(xcapConfigDiffList, notificationParamDTO);
                     knLogger.debug(methodName, "Notification status for isConfigNotified - ", isConfigNotified);
                 }
@@ -17372,6 +17729,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                         notifier.setMaxNotfnsPerJob(2);
                         KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
                         notificationParamDTO.setCid(message.getCorrelationId());
+                        notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_PROPERTY.value());
                         boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
                         knLogger.debug(methodName, "Notification status - ", isNotified);
 
@@ -18433,6 +18791,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                 notifier.setMaxNotfnsPerJob(2);
                 KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
                 notificationParamDTO.setCid(message.getCorrelationId());
+                notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.OIDCXCAP_ON_UPDATE_EMERGENCY_CONFIG.value());
                 boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
                 knLogger.debug(methodName, "Notification status - ", isNotified);
             }
@@ -18605,6 +18964,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                 notifier.setMaxNotfnsPerJob(2);
                 KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
                 notificationParamDTO.setCid(message.getCorrelationId());
+                notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.OIDCXCAP_ON_UPDATE_EMERGENCY_CONFIG.value());
                 boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
                 knLogger.debug(methodName, "Notification status - ", isNotified);
             }
@@ -18735,6 +19095,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                 notifier.setMaxNotfnsPerJob(2);
                 KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
                 notificationParamDTO.setCid(message.getCorrelationId());
+                notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.OIDCXCAP_ON_UPDATE_EMERGENCY_CONFIG.value());
                 boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
                 knLogger.debug(methodName, "Notification status - ", isNotified);
             }
@@ -19205,6 +19566,12 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                 throw new KnXDMServerException(respDto.getResponseCode(), respDto.getResponseMessage());
             }
             persisterTxn.save();
+            // 40014: profile document deleted — send xcap diff notification
+//            Collection<KnXcapDiffDirChgNotifyDTO> deleteXcapDiffList = commonMediator.prepareNotification(corpResponseDTO);
+//            KnXcapDiffNotifierImpl deleteNotifier = new KnXcapDiffNotifierImpl();
+//            KnNotificationParamDTO notifParam40014 = new KnNotificationParamDTO();
+//            notifParam40014.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_DELETE.value());
+//            deleteNotifier.sendXcapDiffNotifications(deleteXcapDiffList, null, notifParam40014);
             KnStatisticsManagerImpl.getInstance().increment(KnOMConstants.NUM_DELETE_USER_PROFILE_REQ_SUCC);
             knLogger.info(methodName, "Returning deleteUserProfile response - ", respDto);
         } catch (KnXDMServerException e) {
@@ -19732,8 +20099,13 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             knLogger.debug(methodName, "Sending notifications - ", xcapDiffList);
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_SELF_ON_PROFILE_UNASSIGN.value());
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn, notificationParamDTO);
             knLogger.info(methodName, "Notification status - ", isNotified);
+//            KnNotificationParamDTO notificationParamDTO40004 = new KnNotificationParamDTO();
+//            notificationParamDTO40004.setCid(message.getCorrelationId());
+//            notificationParamDTO40004.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_WATCHER_CLIENTS_ON_PROFILE_UNASSIGN.value());
+//            notifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn, notificationParamDTO40004);
             Collection<String> deletedMemberList = corpResp.getDisabledDispatchMemList();
             knLogger.debug(methodName, "deletedMemberList - ", KnGDPRTemplate.mdnList(deletedMemberList));
             commonMediator.sendTGSModeChangeNotification(corpResp.getTgsModeChgMap());
@@ -19817,7 +20189,9 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                 xcapDiffNotifyDTO.setPresenceHome(provRespDTO.getPresenceServerHome());
                 knLogger.debug(methodName, "Notification DTO generated - ", xcapDiffNotifyDTO);
                 KnXcapDiffNotifier xcapDiffNotifier = KnXcapDiffNotifier.getInstance();
-                boolean notificationStatus = notifier.sendXcapDiffNotifications(xcapDiffNotifyDTO);
+                KnNotificationParamDTO xcapDeletedClientOnSubsDeleteNotificationParamDTO = new KnNotificationParamDTO();
+                xcapDeletedClientOnSubsDeleteNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_DELETED_CLIENT_ON_SUBS_DELETE.value());
+                boolean notificationStatus = notifier.sendXcapDiffNotifications(xcapDiffNotifyDTO, xcapDeletedClientOnSubsDeleteNotificationParamDTO);
                 if (notificationStatus) {
                     knLogger.debug(methodName, "Successfully sent the notification");
                 }
@@ -20099,6 +20473,11 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             // Step:
             // save the transaction
             persisterTxn.save();
+//            Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList40005 = commonMediator.prepareNotification(corpResponseDTO);
+//            knLogger.debug(methodName, "Sending default profile update notifications - ", xcapDiffList40005);
+//            KnNotificationParamDTO notificationParamDTO40005 = new KnNotificationParamDTO();
+//            notificationParamDTO40005.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_ON_UPDATE_DEFAULT_PROFILE.value());
+//            notifier.sendXcapDiffNotifications(xcapDiffList40005, persisterTxn, notificationParamDTO40005);
             //KnStatisticsManagerImpl.getInstance().increment(KnOMConstants.XDM_NUM_GET_USER_PROFILE_ASSIGN_MDNS_SUCC);
         } catch (KnXDMServerException e) {
             rollback(persisterTxn);
@@ -20949,6 +21328,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = commonMediator.prepareNotification(corpLibRespDto);
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_UPDATED_MEMBER_ON_MEMBER_PROPERTIES_CHANGE.value());
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
             knLogger.info(methodName, "Notification status - ", isNotified);
             knLogger.debug(methodName, "sending MCSGrp notification");
@@ -21045,6 +21425,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = commonMediator.prepareNotification(corpLibRespDto);
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_GROUP_MEMBERS_ON_GROUP_DELETE.value());
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
             knLogger.info(methodName, "Notification status - ", isNotified);
             knLogger.debug(methodName, "sending MCSGrp notification");
@@ -21708,6 +22089,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             knLogger.debug(methodName, "Notification DTO generated - ", xcapDiffList);
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_UPDATED_CLIENT_ON_CLIENT_TYPE_CHANGE.value());
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, notificationParamDTO);
             knLogger.debug(methodName, "Notification status - ", isNotified);
 
@@ -21793,6 +22175,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             //sending or adding xcap notify to job
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_GROUP_MEMBERS_ON_GROUP_PROPERTIES_CHANGE.value());
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn, notificationParamDTO);
             knLogger.debug(methodName," isNotified :",isNotified);
             //preparing mcsxcap group notify
@@ -21924,6 +22307,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             knLogger.debug(methodName, "Sending notifications - ", xcapDiffList);
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_ADDED_CONTACT_ON_CONTACTLIST_ADD.value());
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
             knLogger.debug(methodName, "Notification status - ", isNotified);
             //profile mdn notfication
@@ -21982,6 +22366,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             knLogger.debug(methodName, "Sending notifications - ", xcapDiffList);
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
+            notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_REMOVED_CONTACT_ON_CONTACTLIST_REMOVE.value());
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
             knLogger.debug(methodName, "Notification status - ", isNotified);
             //ccl removed from base mdn is not reflecting on userprofile - sending profile mdn notification
@@ -23023,6 +23408,7 @@ public KnCorpResponseDTO setUserProfileAssignPermission(KnXDMCorpUserProfileResp
                     xcapDiffList = commonMediator.fetchXcapDiffList(xcapDiffList, xdmPttServerId, null);
                     KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
                     notificationParamDTO.setCid(null);
+                    notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_EXISTING_MEMBERS_ON_GROUP_MEMBER_ADD.value());
                     boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
                     knLogger.info(methodName, "Notification status - ", isNotified);
                 }
@@ -23052,6 +23438,7 @@ public KnCorpResponseDTO setUserProfileAssignPermission(KnXDMCorpUserProfileResp
                     xcapDiffList = commonMediator.fetchXcapDiffList(xcapDiffList, xdmPttServerId, null);
                     KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
                     notificationParamDTO.setCid(null);
+                    notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_EXISTING_MEMBERS_ON_GROUP_MEMBER_ADD.value());
                     boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
                     knLogger.info(methodName, "Notification status - ", isNotified);
                 }
@@ -23106,6 +23493,7 @@ public KnCorpResponseDTO setUserProfileAssignPermission(KnXDMCorpUserProfileResp
                 xcapDiffList = commonMediator.fetchXcapDiffList(xcapDiffList, xdmPttServerId, null);
                 KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
                 notificationParamDTO.setCid(null);
+                notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_ADDED_MEMBER_ON_GROUP_MEMBER_ADD.value());
                 boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
                 knLogger.info(methodName, "Notification status - ", isNotified);
             }
@@ -23158,6 +23546,7 @@ public KnCorpResponseDTO setUserProfileAssignPermission(KnXDMCorpUserProfileResp
                 xcapDiffList = commonMediator.fetchXcapDiffList(xcapDiffList, xdmPttServerId, null);
                 KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
                 notificationParamDTO.setCid(null);
+                notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_EXISTING_MEMBERS_ON_GROUP_MEMBER_REMOVE.value());
                 boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
                 knLogger.info(methodName, "Notification status - ", isNotified);
             }
@@ -23502,6 +23891,7 @@ public KnCorpResponseDTO setUserProfileAssignPermission(KnXDMCorpUserProfileResp
                         xcapDiffNotifyDTO.setDirPrevEtag(dirChgDTO.getDirPrevEtag());
                         xcapDiffNotifyDTO.setDirURI(dirChgDTO.getDirUri());
                         xcapDiffNotifyDTO.setXcapRootUri(dirChgDTO.getXcapRootURI());
+                        xcapDiffNotifyDTO.setReason(KnConstants.REASON.USER_DELETE.value());
                         xcapDiffNotifyDTO.setProtocolVersion(dirChgDTO.getProtoVersion());
                         xcapDiffNotifyDTO.setPocHome(dirChgDTO.getPocHome());
                         xcapDiffNotifyDTO.setPresenceHome(dirChgDTO.getPresenceHome());
@@ -23509,6 +23899,7 @@ public KnCorpResponseDTO setUserProfileAssignPermission(KnXDMCorpUserProfileResp
                     }
                 }
                 knLogger.debug(methodName, "Sending deRegister notifications - ", xcapDiffList, ":::", knNotificationParamDTO);
+                knNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_DELETED_CLIENT_ON_SUBS_DELETE.value());
                 boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, knNotificationParamDTO);
                 knLogger.debug(methodName, "DeRegister Notification status - ", isNotified);
             }

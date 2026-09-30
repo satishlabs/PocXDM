@@ -122,6 +122,7 @@ import com.kodiak.xdms.server.common.dto.common.KnSubscriberDTO;
 import com.kodiak.xdms.server.common.dto.common.KnTargetPermsInfoDTO;
 import com.kodiak.xdms.server.common.resources.KnCacheKeys;
 import com.kodiak.xdms.server.common.resources.KnConstants;
+import com.kodiak.xdms.notificationmgr.beans.KnNotifPriorityConfigDTO;
 
 import net.minidev.json.JSONObject;
 import net.minidev.json.parser.JSONParser;
@@ -3154,6 +3155,16 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
 
     void saveNotification(KnPersisterTxn persisterTxn, List<KnXcapDiffDirChgNotifyDTO> knXcapDiffDirChgNotifyDTOs, KnNotificationParamDTO notificationParamDTO) {
         String methodName = "saveNotification(KnPersisterTxn, List<KnXcapDiffDirChgNotifyDTO>, KnNotificationParamDTO)";
+        if (notificationParamDTO != null && notificationParamDTO.getOpsCode() > 0) {
+            KnNotifPriorityConfigDTO config = KnNotificationPriorityService.getInstance()
+                    .getPriorityConfig(notificationParamDTO.getOpsCode());
+            if (config != null && config.getPriorityLevel().equalsIgnoreCase(KnXcapNotifyConstants.PRIORITY_LEVEL_LOW)) {
+                knLogger.info(methodName, "Skipping DB insert: LOW priority (PRIORITY_LEVEL=0) opsCode=",
+                        notificationParamDTO.getOpsCode(),
+                        " — changes will surface via client 30-min periodic refresh");
+                return;
+            }
+        }
         knXcapDiffDirChgNotifyDTOs.forEach(obj -> {
             knLogger.debug("saving now ..................................................................");
             knLogger.debug(methodName, "knXcapDiffDirChgNotifyDTOs ", obj);
@@ -3240,6 +3251,17 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
 
     void saveNotification(List<KnXcapDiffNotifyDTO> knXcapDiffNotifyDTOs, KnNotificationParamDTO notificationParamDTO,KnPersisterTxn persisterTxn) {
         String methodName = "saveNotification(List<KnXcapDiffNotifyDTO>, notificationParamDTO)";
+        knLogger.info(methodName,"KnNotificationParamDTO:", notificationParamDTO);
+        if (notificationParamDTO != null && notificationParamDTO.getOpsCode() > 0) {
+            KnNotifPriorityConfigDTO config = KnNotificationPriorityService.getInstance()
+                    .getPriorityConfig(notificationParamDTO.getOpsCode());
+            if (config != null && config.getPriorityLevel().equalsIgnoreCase(KnXcapNotifyConstants.PRIORITY_LEVEL_LOW)) {
+                knLogger.info(methodName, "Skipping DB insert: LOW priority (PRIORITY_LEVEL=0) opsCode=",
+                        notificationParamDTO.getOpsCode(),
+                        " — changes will surface via client 30-min periodic refresh");
+                return;
+            }
+        }
         knXcapDiffNotifyDTOs.forEach(obj -> {
             knLogger.debug("saving now..................................................................");
             knLogger.debug(methodName, "knXcapDiffDirChgNotifyDTOs ", obj);

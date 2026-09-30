@@ -66,7 +66,7 @@ public class KnBulkGrpMemCountBCValidationRule extends KnValidatorRule {
                 broadcastGroupFailed.putAll(broadcastGroupsCount.entrySet().stream().filter(map -> map.getValue() >
                         groupBulkPersistDTO.getMaxMemPerLargeBCGroup()).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
             } else {
-                broadcastGroupFailed.putAll(broadcastGroupsCount.entrySet().stream().filter(map -> map.getValue() >
+                broadcastGroupFailed.putAll(broadcastGroupsCount.entrySet().stream().filter(map -> map.getValue() >=
                         groupBulkPersistDTO.getMaxAllowedMemPerBCG()).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
             }
             if (!broadcastGroupFailed.isEmpty()) {
@@ -88,7 +88,7 @@ public class KnBulkGrpMemCountBCValidationRule extends KnValidatorRule {
                     broadcastGroupFailed.putAll(broadcastGroupsCount.entrySet().stream().filter(map -> map.getValue() >
                             groupBulkPersistDTO.getMaxMemPerLargeBCGroup()).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
                 } else {
-                    broadcastGroupFailed.putAll(broadcastGroupsCount.entrySet().stream().filter(map -> map.getValue() >
+                    broadcastGroupFailed.putAll(broadcastGroupsCount.entrySet().stream().filter(map -> map.getValue() >=
                             groupBulkPersistDTO.getMaxAllowedMemPerBCG()).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
                 }
                 if (!broadcastGroupFailed.isEmpty()) {

@@ -1060,11 +1060,11 @@ public class KnCorpSubsProvInfoUtil {
                     lrgGrpCountBG[0]++;
                 }
             } else {
-                if ((value.getGroupType() == STANDARD_GROUP && value.getGroupMemCount() + 1 > persistDTO.getMaxNumberOfMembers())
-                        || (value.getGroupType() == DISPATCH_GROUP && value.getGroupMemCount() + 1 > persistDTO.getMaxSubscriberPerDispatchGroup())) {
+                if ((value.getGroupType() == STANDARD_GROUP && value.getGroupMemCount() + 1 >= persistDTO.getMaxNumberOfMembers())
+                        || (value.getGroupType() == DISPATCH_GROUP && value.getGroupMemCount() + 1 >= persistDTO.getMaxSubscriberPerDispatchGroup())) {
                     lrgGrpCount[0]++;
                     grpIdNormalToLrgTran.put(grpId, value.getGroupType());
-                } else if (value.getGroupType() == BROADCAST_GROUP && value.getGroupMemCount() + 1 > persistDTO.getMaxAllowedMemPerBCG()) {
+                } else if (value.getGroupType() == BROADCAST_GROUP && value.getGroupMemCount() + 1 >= persistDTO.getMaxAllowedMemPerBCG()) {
                     lrgGrpCountBG[0]++;
                     grpIdNormalToLrgTran.put(grpId, value.getGroupType());
                 }

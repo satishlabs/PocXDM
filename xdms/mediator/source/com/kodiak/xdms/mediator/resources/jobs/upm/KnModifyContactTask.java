@@ -122,6 +122,8 @@ public class KnModifyContactTask extends KnAbstractTask {
 
                 knLogger.debug(methodName, "corpRespDto",corpRespDto);
                 taskResult.setContactEtagToBeUpdated(true);
+                taskResult.setContactAdded(!addedSublistIds.isEmpty());
+                taskResult.setContactRemoved(!removedSublistIds.isEmpty());
             }
             knLogger.info(methodName, "Done modify contact for profilemdnList :");
             taskResult.setTaskStatus(STATUS_SUCCESS);

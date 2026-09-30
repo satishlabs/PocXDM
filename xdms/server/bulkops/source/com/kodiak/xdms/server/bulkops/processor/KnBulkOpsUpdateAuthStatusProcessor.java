@@ -183,7 +183,11 @@ public class KnBulkOpsUpdateAuthStatusProcessor {
             knLogger.debug(methodName, "xcapMobileSync",xcapMobileSync);
             List<com.kodiak.xdms.server.bulkops.dto.common.KnSubscrEXDMSNotifyDto> notifyDtoList = new ArrayList<>();
             KnNotificationParamDTO knNotificationParamDTO = new KnNotificationParamDTO();
-            knNotificationParamDTO.setPriority(KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
+            knNotificationParamDTO.setPriority(KnConstants.NOTIFICATION_PRIORITY.CRITICAL.value());
+            knNotificationParamDTO.setOpsCode(
+                    bulkSubsProvInfoDTO.getServiceAuthStatus().value() == KnConstants.SERVICE_AUTH_STATUS.ACTIVATED.value()
+                            ? KnConstants.OPS_CODE.XCAP_RESUMED_CLIENT_ON_SUBS_RESUME.value()
+                            : KnConstants.OPS_CODE.XCAP_SUSPENDED_CLIENT_ON_SUBS_SUSPEND.value());
 
             Map<String, KnOPProvDTO> opProvDTOMap = bulkOpsNotifyUtil.actionOnTGSSDocBulk(bulkSubsProvInfoDTO,
                     updateAuthStatusResponseMap,

@@ -860,7 +860,9 @@ public class KnXDMCommonMediator {
         knLogger.debug(methodName, "Getting the Notifier Instance:");
         KnXcapDiffNotifier xcapDiffNotifier = KnXcapDiffNotifier.getInstance();
         knLogger.debug(methodName, "Sending the Notificaton: Diff DTO : ", xcapDiffNotifyDTO);
-        boolean notificationStatus = notifier.sendXcapDiffNotifications(xcapDiffNotifyDTO);
+        KnNotificationParamDTO xcapUpdatedClientOnActiveFsChangeNotificationParamDTO = new KnNotificationParamDTO();
+        xcapUpdatedClientOnActiveFsChangeNotificationParamDTO.setOpsCode(com.kodiak.xdms.server.common.resources.KnConstants.OPS_CODE.XCAP_UPDATED_CLIENT_ON_ACTIVE_FS_CHANGE.value());
+        boolean notificationStatus = notifier.sendXcapDiffNotifications(xcapDiffNotifyDTO, xcapUpdatedClientOnActiveFsChangeNotificationParamDTO);
         knLogger.debug(methodName, "Notificaton Status :", notificationStatus);
 
         return notificationStatus;

@@ -63,6 +63,8 @@ public class KnTaskResult {
     Set<KnCorpGroupListInfoDTO>upmGroups;
     private int mcxGrpInd;
     private KnCorpResponseDTO assignGroupResp;
+    private boolean contactAdded;
+    private boolean contactRemoved;
     public String getTaskId() {
         return taskId;
     }
@@ -285,6 +287,22 @@ public class KnTaskResult {
         this.assignGroupResp = assignGroupResp;
     }
 
+    public boolean isContactAdded() {
+        return contactAdded;
+    }
+
+    public void setContactAdded(boolean contactAdded) {
+        this.contactAdded = contactAdded;
+    }
+
+    public boolean isContactRemoved() {
+        return contactRemoved;
+    }
+
+    public void setContactRemoved(boolean contactRemoved) {
+        this.contactRemoved = contactRemoved;
+    }
+
     @Override
     public String toString() {
         return "KnTaskResult{" +
@@ -314,6 +332,8 @@ public class KnTaskResult {
                 ", upmGroups=" + upmGroups +
                 ", mcxGrpInd=" + mcxGrpInd +
                 ", assignGroupResp=" + assignGroupResp +
+                ", contactAdded=" + contactAdded +
+                ", contactRemoved=" + contactRemoved +
                 '}';
     }
 }

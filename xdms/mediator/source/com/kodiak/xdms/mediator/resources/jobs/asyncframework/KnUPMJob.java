@@ -8,7 +8,9 @@ package com.kodiak.xdms.mediator.resources.jobs.asyncframework;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-
+import com.kodiak.common.commdto.common.KnNotificationParamDTO;
+import com.kodiak.xdms.notificationmgr.beans.KnXcapDiffDirChgNotifyDTO;
+import com.kodiak.xdms.notificationmgr.impl.KnXcapDiffNotifierImpl;
 import com.kodiak.common.commdto.common.KnCorpGroupContactDTO;
 import com.kodiak.common.commdto.request.KnXDMSubsInfoDTO;
 import com.kodiak.common.commdto.response.KnXDMCorpUserProfileRespDTO;
@@ -434,6 +436,15 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
         List<KnAssignEXDMSNotifyDto> notifyDtoList = new ArrayList<>();
         KnOPSubsProfileInfoDTO subsProfileInfo = provClientIntf.getSubscriberDetails(subscriberInfoDTO, userProfileNotificationTxn);
         userProfileNotificationTxn.save();
+        // send xcap diff notifications for profile assign (self + watcher)
+        Collection<KnXcapDiffDirChgNotifyDTO> assignXcapDiffList = commonMediator.prepareNotification(profileNotifyResp);
+        KnXcapDiffNotifierImpl upmNotifier = new KnXcapDiffNotifierImpl();
+        KnNotificationParamDTO mcsxcapSelfOnProfileAssignNotificationParamDTO = new KnNotificationParamDTO();
+        mcsxcapSelfOnProfileAssignNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_SELF_ON_PROFILE_ASSIGN.value());
+        upmNotifier.sendXcapDiffNotifications(assignXcapDiffList, userProfileNotificationTxn, mcsxcapSelfOnProfileAssignNotificationParamDTO);
+//        KnNotificationParamDTO notifParam40002 = new KnNotificationParamDTO();
+//        notifParam40002.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_WATCHER_CLIENTS_ON_PROFILE_ASSIGN.value());
+//        upmNotifier.sendXcapDiffNotifications(assignXcapDiffList, userProfileNotificationTxn, notifParam40002);
         List<KnCorpEXDMSNotifyDto> microserviceNotify = new ArrayList<>();
         knLogger.info(methodName, "xcapMobileSync:: ", xcapMobileSync);
         if (xcapMobileSync) {
@@ -674,6 +685,8 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
         String methodName = "modifyUpmEachProfile(KnCorpResponseDTO, Integer , AtomicInteger, AtomicInteger, KnTaskResult, String)";
         KnPersisterTxn modifyUpmTxn = null;
         Map<Integer, Collection<KnCorpContactDTO>> getAddedGroupMembersMap = new HashMap<>();
+        boolean contactAdded = false;
+        boolean contactRemoved = false;
         try {
             knLogger.entry(methodName, "Start: profileMdn- ", profileMdn, " failedTxnCount- ", failedTxnCount, " cbsDocUpdateCount-", cbsDocUpdateCount);
             //open transaction
@@ -707,6 +720,8 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
             if (taskResult != null && taskResult.getTaskStatus() == KnConstants.STATUS_SUCCESS) {
                 taskResult = modifyUpmContact(profileMdn, modifyUpmTxn, dbSublistId);
                 userProfileDetails.setContactEtagToBeUpdated(taskResult.isContactEtagToBeUpdated());
+                contactAdded = taskResult.isContactAdded();
+                contactRemoved = taskResult.isContactRemoved();
                 knLogger.debug(methodName, " taskResult- ", taskResult, "isContactEtagToBeUpdated-", taskResult.isContactEtagToBeUpdated());
             }
 
@@ -750,7 +765,19 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
                         xcapDirChgDTO.setPresenceHome(dirChgDTOs.getPresenceHome());
                         xcapDirChgDTO.setDirNewEtag(dirChgDTOs.getDirNewEtag());
                         //Sending Directory Notify
-                        commonMediator.sendXcapNotification(xcapDirChgDTO);
+                        if (contactRemoved && !contactAdded) {
+                            KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
+                            notificationParamDTO.setOpsCode(
+                                    KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_REMOVE_CONTACT.value());
+                            commonMediator.sendXcapNotification(xcapDirChgDTO, null, notificationParamDTO);
+                        } else if (contactAdded) {
+                            KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
+                            notificationParamDTO.setOpsCode(
+                                    KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_ADD_CONTACT.value());
+                            commonMediator.sendXcapNotification(xcapDirChgDTO, null, notificationParamDTO);
+                        } else {
+                            commonMediator.sendXcapNotification(xcapDirChgDTO);
+                        }
                     }
                 }
                 //Sending MCS Events
@@ -814,8 +841,64 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
                 if (null != taskResult.getMicroserviceNotify() && !taskResult.getMicroserviceNotify().isEmpty()) {
                     commonMediator.startNotifyMicroServicesJob(microserviceNotify);
                 }
-                if (null != taskResult)
+                if (null != taskResult) {
                     modifyUpmTxn.save();
+//                    // send xcap diff notifications for profile modify operations
+//                    Collection<KnXcapDiffDirChgNotifyDTO> modifyXcapDiffList = commonMediator.prepareNotification(etagResp);
+//                    KnXcapDiffNotifierImpl modifyNotifier = new KnXcapDiffNotifierImpl();
+//                    if (modifyGroupTaskResult.getAddGroupResp() != null) {
+//                        KnNotificationParamDTO notifParam40008 = new KnNotificationParamDTO();
+//                        notifParam40008.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_ADD_GROUP.value());
+//                        modifyNotifier.sendXcapDiffNotifications(modifyXcapDiffList, modifyUpmTxn, notifParam40008);
+//                    }
+//                    if (modifyGroupTaskResult.getRemoveGroupResp() != null) {
+//                        KnNotificationParamDTO notifParam40009 = new KnNotificationParamDTO();
+//                        notifParam40009.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_REMOVE_GROUP.value());
+//                        modifyNotifier.sendXcapDiffNotifications(modifyXcapDiffList, modifyUpmTxn, notifParam40009);
+//                    }
+//                    if (modifyGroupTaskResult.getModifyGroupMemPropResp() != null) {
+//                        KnNotificationParamDTO notifParam40011 = new KnNotificationParamDTO();
+//                        notifParam40011.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_GROUP_PROPERTY.value());
+//                        modifyNotifier.sendXcapDiffNotifications(modifyXcapDiffList, modifyUpmTxn, notifParam40011);
+//                    }
+//                    if (userProfileDetails.isContactEtagToBeUpdated()) {
+//                        KnIPUserProfileDTO ipProfileForContact = KnCorpCommonInfoUtil.jsonToObject(asyncJobDTO.getPayLoad(), KnIPUserProfileDTO.class);
+//                        Integer reqSubListId = ipProfileForContact.getModifiedUserProfileDTO() != null ? ipProfileForContact.getModifiedUserProfileDTO().getContactListID() : null;
+//                        if (reqSubListId != null && reqSubListId != -1) {
+//                            KnNotificationParamDTO notifParam40006 = new KnNotificationParamDTO();
+//                            notifParam40006.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_ADD_CONTACT.value());
+//                            modifyNotifier.sendXcapDiffNotifications(modifyXcapDiffList, modifyUpmTxn, notifParam40006);
+//                        }
+//                        if (reqSubListId == null || reqSubListId == -1 || (reqSubListId != null && !reqSubListId.equals(dbSublistId))) {
+//                            KnNotificationParamDTO notifParam40007 = new KnNotificationParamDTO();
+//                            notifParam40007.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_REMOVE_CONTACT.value());
+//                            modifyNotifier.sendXcapDiffNotifications(modifyXcapDiffList, modifyUpmTxn, notifParam40007);
+//                        }
+//                    }
+//                    // 40010: profile property update (name, FS, etc.)
+//                    KnIPUserProfileDTO ipProfilePayload = KnCorpCommonInfoUtil.jsonToObject(asyncJobDTO.getPayLoad(), KnIPUserProfileDTO.class);
+//                    if (ipProfilePayload.getUserProfileName() != null || ipProfilePayload.getUserProfileFSDto() != null) {
+//                        KnNotificationParamDTO notifParam40010 = new KnNotificationParamDTO();
+//                        notifParam40010.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_PROPERTY.value());
+//                        modifyNotifier.sendXcapDiffNotifications(modifyXcapDiffList, modifyUpmTxn, notifParam40010);
+//                    }
+//                    // 40012: emergency config updated
+//                    if (userProfileDetails.isEmergencyEtagToBeUpdated()) {
+//                        KnNotificationParamDTO notifParam40012 = new KnNotificationParamDTO();
+//                        notifParam40012.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_EMERGENCY_CONFIG.value());
+//                        modifyNotifier.sendXcapDiffNotifications(modifyXcapDiffList, modifyUpmTxn, notifParam40012);
+//                        // 40013 (OIDCXCAP): emergency config updated — OIDC client notification
+//                        KnNotificationParamDTO notifParam40013Emerg = new KnNotificationParamDTO();
+//                        notifParam40013Emerg.setOpsCode(KnConstants.OPS_CODE.OIDCXCAP_ON_UPDATE_EMERGENCY_CONFIG.value());
+//                        modifyNotifier.sendXcapDiffNotifications(modifyXcapDiffList, modifyUpmTxn, notifParam40013Emerg);
+//                    }
+//                    // 40013 (MCSXCAP): permissions updated
+//                    if (userProfileDetails.isPermissionEtagToBeUpdated()) {
+//                        KnNotificationParamDTO notifParam40013Perm = new KnNotificationParamDTO();
+//                        notifParam40013Perm.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_PERMISSIONS.value());
+//                        modifyNotifier.sendXcapDiffNotifications(modifyXcapDiffList, modifyUpmTxn, notifParam40013Perm);
+//                    }
+                }
 
                 if (modifyGroupTaskResult != null) {
                     initiateDispatchGrpJob(modifyGroupTaskResult, asyncJobDTO.getCorpId());

@@ -119,6 +119,7 @@ public class KnGenInfoUtil implements Observer {
         tableMap.put(com.kodiak.common.resources.KnConstants.CACHE_TABLE_LIST.ADDL_PROFILE_INFO.value(), KnCacheKeys.ADDL_PROFILE_INFO_BY_PKGTYPE);
         tableMap.put(com.kodiak.common.resources.KnConstants.CACHE_TABLE_LIST.DATA_PACKAGE_INFO.value(), KnCacheKeys.DATA_PACKAGE_INFO);
         tableMap.put(com.kodiak.common.resources.KnConstants.CACHE_TABLE_LIST.QPP_PCRF_PROFILE.value(), KnCacheKeys.QPP_PCRF_PROFILE);
+        tableMap.put(com.kodiak.common.resources.KnConstants.CACHE_TABLE_LIST.XCAP_NOTIFICATION_PRIORITY.value(), KnCacheKeys.XCAP_NOTIFY_PRIORITY_CONFIG);
 
         tableInfo.put(com.kodiak.common.resources.KnConstants.CACHE_TABLE_LIST.POC_SUPPORTED_DEVICES.value(), null);
         tableInfo.put(com.kodiak.common.resources.KnConstants.CACHE_TABLE_LIST.POC_BLACKLIST_DEVICES.value(), null);
@@ -145,6 +146,8 @@ public class KnGenInfoUtil implements Observer {
         tableInfo.put(com.kodiak.common.resources.KnConstants.CACHE_TABLE_LIST.ADDL_PROFILE_INFO.value(), null);
         tableInfo.put(com.kodiak.common.resources.KnConstants.CACHE_TABLE_LIST.DATA_PACKAGE_INFO.value(), null);
         tableInfo.put(com.kodiak.common.resources.KnConstants.CACHE_TABLE_LIST.QPP_PCRF_PROFILE.value(), null);
+        tableInfo.put(com.kodiak.common.resources.KnConstants.CACHE_TABLE_LIST.XCAP_NOTIFICATION_PRIORITY.value(), null);
+
         knLogger.info("KnGenInfoUtil", "Maps initialized ");
     }
 
@@ -2708,6 +2711,48 @@ public class KnGenInfoUtil implements Observer {
             return groupPocHome;
         }
         return corpPocHome;
+    }
+
+
+    /**
+     * Checks if dynamic XCAP notification suppression feature is enabled.
+     *
+     * @return true if the feature is enabled (value is "1", "true", or any non-zero number),
+     *         false otherwise (value is "0", "false", null, empty, or invalid)
+     */
+    public boolean isDynamicXcapNotificationSuppressionEnabled() {
+        try {
+            int clusterId = Integer.parseInt(System.getenv(CLUSTERID_ENV_NAME));
+            Map<String, String> microServicesParamNameValueMap = retrieveMSSvcsCommonConfig(clusterId);
+
+            if (microServicesParamNameValueMap == null) {
+                return false;
+            }
+
+            String featureValue = microServicesParamNameValueMap.get("DYN_XCAP_NOTIF_SUPP_FEATURE");
+            if (featureValue == null || featureValue.trim().isEmpty()) {
+                return false;
+            }
+
+            featureValue = featureValue.trim();
+
+            // Treat numeric values: 0 = false, any non-zero = true
+            try {
+                return Integer.parseInt(featureValue) != 0;
+            } catch (NumberFormatException e) {
+                knLogger.warn("isDynamicXcapNotificationSuppressionEnabled",
+                        "Invalid feature value for DYN_XCAP_NOTIF_SUPP_FEATURE: " + featureValue + ", defaulting to false");
+                return false;
+            }
+        } catch (KnBOException e) {
+            knLogger.error("isDynamicXcapNotificationSuppressionEnabled",
+                    "Error retrieving microservices config", e);
+            return false;
+        } catch (NumberFormatException e) {
+            knLogger.error("isDynamicXcapNotificationSuppressionEnabled",
+                    "Invalid cluster ID in environment variable", e);
+            return false;
+        }
     }
 }
 

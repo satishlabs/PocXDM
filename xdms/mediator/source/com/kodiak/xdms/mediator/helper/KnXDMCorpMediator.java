@@ -85,6 +85,7 @@ import com.kodiak.xdms.server.corpmgmt.resources.KnErrorCodes;
 import com.kodiak.xdms.server.corpmgmt.resources.KnOperationTypes;
 import com.kodiak.xdms.server.corpmgmt.resources.KnConstants.CREATED_BY;
 import com.kodiak.xdms.server.subsmgmt.dto.clientdat.KnOPSubsProfileInfoDTO;
+import com.kodiak.common.commdto.common.KnNotificationParamDTO;
 
 import java.sql.Timestamp;
 import java.util.*;
@@ -3571,7 +3572,9 @@ public class KnXDMCorpMediator {
         //prepare notification and send to notification mgr
         Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = prepareNotification(respDto);
         knLogger.debug(methodName, "Sending notifications - ", xcapDiffList);
-        boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn);
+        KnNotificationParamDTO xcapExistingSublistMembersOnAutopairedSublistAddNotificationParamDTO = new KnNotificationParamDTO();
+        xcapExistingSublistMembersOnAutopairedSublistAddNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_EXISTING_SUBLIST_MEMBERS_ON_AUTOPAIRED_SUBLIST_ADD.value());
+        boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn, xcapExistingSublistMembersOnAutopairedSublistAddNotificationParamDTO);
         knLogger.debug(methodName, "Notification status - ", isNotified);
         xdmRespDto.setEnabledDispatchMemList(respDto.getEnabledDispatchMemList());
         knLogger.debug(methodName, "Returning Response - ", xdmRespDto);
@@ -3751,7 +3754,9 @@ public class KnXDMCorpMediator {
         //prepare notification and send to notification mgr
         Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = prepareNotification(respDto);
         knLogger.debug(methodName, "Sending notifications - ", xcapDiffList);
-        boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn);
+        KnNotificationParamDTO xcapAddedMemberOnGroupMemberAddNotificationParamDTO = new KnNotificationParamDTO();
+        xcapAddedMemberOnGroupMemberAddNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_ADDED_MEMBER_ON_GROUP_MEMBER_ADD.value());
+        boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn, xcapAddedMemberOnGroupMemberAddNotificationParamDTO);
         knLogger.debug(methodName, "Notification status - ", isNotified);
         knLogger.debug(methodName, "Returning Response - ", xdmRespDto);
 
@@ -7612,7 +7617,6 @@ public class KnXDMCorpMediator {
             xdmRespDto.setMdnAuthorized(Boolean.FALSE);
             xdmRespDto.setUnAuthorizedGroupURIList(respDto.getUnAuthorizedGroupURIList());
         }
-        xdmRespDto.setGroupIdCorpIdMap(respDto.getGrpIdToCorpIdMap());
         knLogger.debug(methodName, " mdn authorization : ", xdmRespDto.getMdnAuthorized());
         knLogger.debug(methodName, " Failed GroupIds : ", xdmRespDto.getUnAuthorizedGroupURIList());
         return xdmRespDto;

@@ -57,6 +57,7 @@ import com.kodiak.xdms.server.subsmgmt.dto.clientdat.KnOPDeleteSubsRespDTO;
 import com.kodiak.xdms.server.subsmgmt.dto.clientdat.KnOPSubsProfileInfoDTO;
 import com.kodiak.xdms.server.subsmgmt.resources.KnErrorCodes;
 import com.kodiak.xdms.server.subsmgmt.resources.KnProvConstants;
+import com.kodiak.common.commdto.common.KnNotificationParamDTO;
 
 import static com.kodiak.common.resources.KnConstants.MICROSERVICES_EVENT_TYPE.UNASSIGN_USER_PROFILE;
 import static com.kodiak.common.resources.KnConstants.MICROSERVICES_NOTIFY_EVENT_TYPE.USER_NOTIFY_EVENTS;
@@ -153,7 +154,9 @@ public class KnDeleteUserProfileMdnTask extends KnAbstractTask {
               //prepare notification and send to notification mgr
               Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = commonMediator.prepareNotification(corpResp);
               knLogger.debug(methodName, "Sending notifications - ", xcapDiffList);
-              boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn);
+              KnNotificationParamDTO xcapWatcherClientsOnSubsDeleteNotificationParamDTO = new KnNotificationParamDTO();
+              xcapWatcherClientsOnSubsDeleteNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_WATCHER_CLIENTS_ON_SUBS_DELETE.value());
+              boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn, xcapWatcherClientsOnSubsDeleteNotificationParamDTO);
               knLogger.debug(methodName, "Notification status - ", isNotified);
               Collection<String> deletedMemberList = corpResp.getDisabledDispatchMemList();
               knLogger.debug(methodName, "deletedMemberList - ", KnGDPRTemplate.mdnList(deletedMemberList));
@@ -233,7 +236,9 @@ public class KnDeleteUserProfileMdnTask extends KnAbstractTask {
                   xcapDiffNotifyDTO.setPresenceHome(provRespDTO.getPresenceServerHome());
                   knLogger.debug(methodName, "Notification DTO generated - ", xcapDiffNotifyDTO);
                   KnXcapDiffNotifier xcapDiffNotifier = KnXcapDiffNotifier.getInstance();
-                  boolean notificationStatus = notifier.sendXcapDiffNotifications(xcapDiffNotifyDTO);
+                  KnNotificationParamDTO xcapDeletedClientOnSubsDeleteNotificationParamDTO = new KnNotificationParamDTO();
+                  xcapDeletedClientOnSubsDeleteNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_DELETED_CLIENT_ON_SUBS_DELETE.value());
+                  boolean notificationStatus = notifier.sendXcapDiffNotifications(xcapDiffNotifyDTO, xcapDeletedClientOnSubsDeleteNotificationParamDTO);
                   if (notificationStatus) {
                       knLogger.debug(methodName, "Successfully sent the notification");
                   }

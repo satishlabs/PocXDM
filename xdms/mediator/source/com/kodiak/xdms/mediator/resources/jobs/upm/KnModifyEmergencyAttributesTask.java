@@ -135,7 +135,8 @@ public class KnModifyEmergencyAttributesTask extends KnAbstractTask {
                 knLogger.debug(methodName, "userProfile :", userProfile);
                 KnCorpResponseDTO libRespDto = corpMediator.setUserProfileEmergencyAttributes(userProfile, emergencyAttrTxn);
                 KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
-                notificationParamDTO.setPriority(KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
+                notificationParamDTO.setPriority(KnConstants.NOTIFICATION_PRIORITY.CRITICAL.value());
+                notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_EMERGENCY_CONFIG.value());
                        /* if (libRespDto.isProfileChanged()) {
                             KnOPProvDTO provRespDTO = provClientIntf.sendConfigDocNotification(xdmRequestDTO.getEmergencyAttributes().getMdn(), emergencyAttrTxn);
                             commonMediator.sendXcapNotification(provRespDTO.getDirChgDTO(), null);

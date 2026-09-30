@@ -2356,6 +2356,22 @@ public class KnCorpGroupInfoController implements ICorpGroupInfoController {
                 }
                 if ((groupIdsForOsmList != null && !groupIdsForOsmList.contains(groupInfoDTO.getGroupId())) || groupInfoDTO.getOSMListId().isEmpty()) {
                     osmListChanged = true;
+                    // Determine ADD (no prior OSM list) vs CHANGE (had a different OSM list)
+                    if (!groupInfoDTO.getOSMListId().isEmpty()) {
+                        int newOsmId = Integer.parseInt(groupInfoDTO.getOSMListId());
+                        boolean hadPreviousOsm = false;
+                        for (Integer existingOsmId : osmListIdAndDefaultMap.keySet()) {
+                            if (existingOsmId == newOsmId) {
+                                continue;
+                            }
+                            Set<Integer> grpsForOtherOsm = groupInfoUtil.getCorpGroupIdByOsmListId(existingOsmId, xdmsHome, persisterTxn);
+                            if (grpsForOtherOsm != null && grpsForOtherOsm.contains(groupInfoDTO.getGroupId())) {
+                                hadPreviousOsm = true;
+                                break;
+                            }
+                        }
+                        respDto.setOsmListAdded(!hadPreviousOsm);
+                    }
                 }
             }
             //Now osmlistId is empty or with value no default osm check.
@@ -3791,6 +3807,13 @@ public class KnCorpGroupInfoController implements ICorpGroupInfoController {
             respDto.setMdnCorpId(grpBasicInfo.getGroupCorpId()); // Provides the CorpId of the Group owner.
             respDto.setGroupCreatedBy(grpBasicInfo.getGroupCreatedBy());
             respDto.setNewGroupDisplayName(groupPersistDTO.getGroupDisplayName());
+            respDto.setAddedGroupMembersMap(groupMemberInsertList);
+            respDto.setDeletedGrpMembers(actualMdnToBeDeletedFromGroupMap);
+            respDto.setModifiedGrpMembers(groupInfoDTO.getModifiedMembers());
+            knLogger.debug(methodName, "addedGroupMembersMap: ", groupMemberInsertList,
+                    ", deletedGrpMembers: ", actualMdnToBeDeletedFromGroupMap,
+                    ", modifiedGrpMembers: ", groupInfoDTO.getModifiedMembers());
+
             populate(respDto);
             if (responseDTO.getFailedDataList() != null && !responseDTO.getFailedDataList().isEmpty()) {
                 respDto.setFailedDataList(responseDTO.getFailedDataList());
@@ -15826,7 +15849,6 @@ public class KnCorpGroupInfoController implements ICorpGroupInfoController {
                 throw new KnBOException(com.kodiak.xdms.server.common.resources.KnErrorCodes.BOEntity.UNAUTHORIZED_ERROR,
                         "Subscriber Profile info not found");
             }
-            Map<Integer, Integer> groupIdCorpIdMap = new HashMap<>();
             List<String> groupIdsfromURI = requestDTO.getGroupURIList();
             List<Integer> groupIdsInt = new ArrayList<>();
             if (groupIdsfromURI != null && !groupIdsfromURI.isEmpty()) {
@@ -15852,7 +15874,6 @@ public class KnCorpGroupInfoController implements ICorpGroupInfoController {
                         }
                         continue;
                     }
-                    groupIdCorpIdMap.put(groupPersistDTO.getGroupId(), groupPersistDTO.getCorpId());
                     knLogger.debug(methodName, "Group details obtained from the DB ", groupPersistDTO);
                     List<String> existingMemList = new ArrayList<>();
                     existingMemList = sublistInfoUtil.selectGroupMemberList(groupId, xdmPttServerId, true, persisterTxn);
@@ -15967,7 +15988,6 @@ public class KnCorpGroupInfoController implements ICorpGroupInfoController {
                 respDTO.setMdnAuthorized(Boolean.FALSE);
                 respDTO.setUnAuthorizedGroupURIList(unAuthorizedGroupURIList.stream().distinct().collect(Collectors.toList()));
             }
-            respDTO.setGrpIdToCorpIdMap(groupIdCorpIdMap);
         } catch (KnCorpBOException e) {
             knLogger.error(methodName, "KnCorpBOException occured while retrieving the ",
                     "authorization for the corp group " + e);

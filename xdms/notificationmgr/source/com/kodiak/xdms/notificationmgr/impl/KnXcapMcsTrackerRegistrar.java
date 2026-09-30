@@ -9,14 +9,12 @@ import java.util.Collection;
 
 import com.kodiak.common.dao.KnPersistenceException;
 import com.kodiak.logger.KnLogger;
-import com.kodiak.xdms.mcsnotifymgr.KnMCSDocChangeNotifier;
-import com.kodiak.xdms.mcsnotifymgr.KnMCSDocChangeNotifier.IMdnTrackerRegistrar;
 
 /**
- * Bridges MCS queue producers to {@link KnXcapDiffNotifier#upsertMdnNotifyTracker}
+ * Bridges MCS queue producers to {@link KnXcapDiffNotifier} for optimized notification mode. This class is used to register watcher MDNs
  * for all MCS notification entry points (UI, mediator, bulk, etc.).
  */
-public class KnXcapMcsTrackerRegistrar implements IMdnTrackerRegistrar {
+public class KnXcapMcsTrackerRegistrar {
 
     private static final KnLogger knLogger = KnLogger.getLogger(KnXcapMcsTrackerRegistrar.class);
     private static final String FLOW_TAG = "[XCAP-DEBULK-FLOW]";
@@ -27,7 +25,6 @@ public class KnXcapMcsTrackerRegistrar implements IMdnTrackerRegistrar {
         return INSTANCE;
     }
 
-    @Override
     public void registerWatcherMdnsIfOptimized(Collection<String> watcherMdns) {
         String methodName = "registerWatcherMdnsIfOptimized";
         if (watcherMdns == null || watcherMdns.isEmpty()) {

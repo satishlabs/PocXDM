@@ -178,37 +178,50 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
                 List<KnXcapDiffDirChgNotifyDTO> initialList = new ArrayList<>(xcapDiffNotifyDTOs);
                 int notificationCount = xcapDiffNotifier.getXcapDiffDirChgNotifyCount(initialList);
                 knLogger.info(methodName, "Notification count - ", notificationCount, " watcherCount - ", watcherCount);
-                if (isSaveNotification(notificationParamDTO, notificationCount, watcherCount)) {
-                    xcapDiffNotifier.saveNotification(null, initialList, notificationParamDTO);
-                    xcapDiffNotifier.sendXcapDiffDirMicroserviceNotificationforEtagNotify(initialList);
-                } else if (isSaveSuppressNotification()) {
-                    knLogger.debug(methodName, "inside notification suppressed ");
-                    LinkedHashSet<String> docSelAll = new LinkedHashSet<String>();
-                    LinkedHashSet<KnMcsxcapMdnDTO> mdns = new LinkedHashSet<>();
-                    for (KnXcapDiffDirChgNotifyDTO itr : initialList) {
-                        if (itr.getDocDiffObj() != null) {
-                            docSelAll.addAll(itr.getDocDiffObj().stream().map(KnXcapDiffDocDTO::getDocumentSelector).collect(Collectors.toSet()));
-                        } else {
-                            knLogger.debug(methodName, "get mdn from directory uri- ");
-                            KnMcsxcapMdnDTO mcsxcapMdnDTO = new KnMcsxcapMdnDTO();
-                            mcsxcapMdnDTO.setMdn(getMDNFromURI(itr.getDirURI()));
-                            mdns.add(mcsxcapMdnDTO);
-                        }
-                    }
-                    if (!mdns.isEmpty()) {
-                        mdns.forEach(e -> docSelAll.add(e.getMdn()));
-                        xcapDiffNotifier.sendMicroserviceNotificationforEtagNotify(docSelAll);
-                    }
-                    for (String itr : docSelAll) {
-                        xcapDiffNotifier.populateSystemProfileMdnsForDocChange(mdns, itr);
-                    }
-                    knLogger.debug(methodName, "List of mdns to send for ssh increment KnXcapDiffNotifyDTO");
-                    sendMdnsToDB(mdns.stream().map(KnMcsxcapMdnDTO::getMdn).collect(Collectors.toCollection(LinkedHashSet::new)), notificationParamDTO, null);
+                KnNotifPriorityConfigDTO priorityConfig = resolvePriorityConfig(notificationParamDTO);
+                if (priorityConfig != null && priorityConfig.getPriorityLevel().equalsIgnoreCase(KnXcapNotifyConstants.PRIORITY_LEVEL_LOW)) {
+                    knLogger.info(methodName, "LOW priority (PRIORITY_LEVEL=0): notification suppressed for opsCode=",
+                            notificationParamDTO.getOpsCode(), " — data will surface via client refresh");
                     KnStatisticsManagerImpl.getInstance().increment(KnOMConstants.NUM_OIDCXCAP_NOTIFY_SUPPRESSED);
                 } else {
-                    knLogger.info(methodName, "No Records are getting saved in DG.XCAP_PENDING_NOTIFYQ");
+                    if (priorityConfig != null) {
+                        // Priority driven by XCAP_NOTIFATION_PRIORITY.PRIORITY_VALUE — no hardcoded value
+                        notificationParamDTO.setPriority(priorityConfig.getPriorityValue());
+                        knLogger.info(methodName, "DB-driven priority: PRIORITY_LEVEL=", priorityConfig.getPriorityLevel(),
+                                " PRIORITY_VALUE=", priorityConfig.getPriorityValue(), " opsCode=", notificationParamDTO.getOpsCode());
+                    }
+                    if (isSaveNotification(notificationParamDTO, notificationCount, watcherCount)) {
+                        xcapDiffNotifier.saveNotification(null, initialList, notificationParamDTO);
+                        xcapDiffNotifier.sendXcapDiffDirMicroserviceNotificationforEtagNotify(initialList);
+                    } else if (isSaveSuppressNotification()) {
+                        knLogger.debug(methodName, "inside notification suppressed ");
+                        LinkedHashSet<String> docSelAll = new LinkedHashSet<String>();
+                        LinkedHashSet<KnMcsxcapMdnDTO> mdns = new LinkedHashSet<>();
+                        for (KnXcapDiffDirChgNotifyDTO itr : initialList) {
+                            if (itr.getDocDiffObj() != null) {
+                                docSelAll.addAll(itr.getDocDiffObj().stream().map(KnXcapDiffDocDTO::getDocumentSelector).collect(Collectors.toSet()));
+                            } else {
+                                knLogger.debug(methodName, "get mdn from directory uri- ");
+                                KnMcsxcapMdnDTO mcsxcapMdnDTO = new KnMcsxcapMdnDTO();
+                                mcsxcapMdnDTO.setMdn(getMDNFromURI(itr.getDirURI()));
+                                mdns.add(mcsxcapMdnDTO);
+                            }
+                        }
+                        if (!mdns.isEmpty()) {
+                            mdns.forEach(e -> docSelAll.add(e.getMdn()));
+                            xcapDiffNotifier.sendMicroserviceNotificationforEtagNotify(docSelAll);
+                        }
+                        for (String itr : docSelAll) {
+                            xcapDiffNotifier.populateSystemProfileMdnsForDocChange(mdns, itr);
+                        }
+                        knLogger.debug(methodName, "List of mdns to send for ssh increment KnXcapDiffNotifyDTO");
+                        sendMdnsToDB(mdns.stream().map(KnMcsxcapMdnDTO::getMdn).collect(Collectors.toCollection(LinkedHashSet::new)), notificationParamDTO, null);
+                        KnStatisticsManagerImpl.getInstance().increment(KnOMConstants.NUM_OIDCXCAP_NOTIFY_SUPPRESSED);
+                    } else {
+                        knLogger.info(methodName, "No Records are getting saved in DG.XCAP_PENDING_NOTIFYQ");
+                    }
+                    isSuccess = true;
                 }
-                isSuccess = true;
             }
             if (ownedTxn) {
                 persisterTxn.save();
@@ -304,35 +317,49 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
                 List<KnXcapDiffNotifyDTO> initialList = new ArrayList<>(xcapDiffNotifyDTOs);
                 int notificationCount = xcapDiffNotifier.countGeneratedNotifications(initialList);
                 knLogger.info(methodName, "Notification count - ", notificationCount, " watcherCount - ", watcherCount);
-                if (isSaveNotification(notificationParamDTO, notificationCount, watcherCount)) {
-                    xcapDiffNotifier.saveNotification(initialList, notificationParamDTO, null);
-                    xcapDiffNotifier.sendXcapDiffMicroserviceNotificationforEtagNotify(initialList);
-                } else if (isSaveSuppressNotification()) {
-                    knLogger.info(methodName, "inside notification suppressed ");
-                    LinkedHashSet<String> docSelAll = new LinkedHashSet<String>();
-                    LinkedHashSet<KnMcsxcapMdnDTO> mdns = new LinkedHashSet<>();
-                    for (KnXcapDiffNotifyDTO itr : initialList) {
-                        if (itr.getDocDiffObj() != null) {
-                            docSelAll.addAll(itr.getDocDiffObj().stream().map(KnXcapDiffDocDTO::getDocumentSelector).collect(Collectors.toSet()));
-                        } else {
-                            knLogger.info(methodName, "get mdn from directory uri- ");
-                            KnMcsxcapMdnDTO mcsxcapMdnDTO = new KnMcsxcapMdnDTO();
-                            mcsxcapMdnDTO.setMdn(getMDNFromURI(itr.getDirURI()));
-                            mdns.add(mcsxcapMdnDTO);
-                        }
-                    }
-                    if (!mdns.isEmpty()) {
-                        mdns.forEach(e -> docSelAll.add(e.getMdn()));
-                        xcapDiffNotifier.sendMicroserviceNotificationforEtagNotify(docSelAll);
-                    }
-                    for (String itr : docSelAll) {
-                        xcapDiffNotifier.populateSystemProfileMdnsForDocChange(mdns, itr);
-                    }
-                    knLogger.info(methodName, "List of mdns to send for ssh increment KnXcapDiffNotifyDTO");
-                    sendMdnsToDB(mdns.stream().map(KnMcsxcapMdnDTO::getMdn).collect(Collectors.toCollection(LinkedHashSet::new)), notificationParamDTO, null);
+                KnNotifPriorityConfigDTO priorityConfig = resolvePriorityConfig(notificationParamDTO);
+                if (priorityConfig != null && priorityConfig.getPriorityLevel().equalsIgnoreCase(KnXcapNotifyConstants.PRIORITY_LEVEL_LOW)) {
+                    knLogger.info(methodName, "LOW priority (PRIORITY_LEVEL=0): notification suppressed for opsCode=",
+                            notificationParamDTO.getOpsCode(), " — data will surface via client  refresh");
                     KnStatisticsManagerImpl.getInstance().increment(KnOMConstants.NUM_OIDCXCAP_NOTIFY_SUPPRESSED);
                 } else {
-                    knLogger.info(methodName, "No Records are getting saved in DG.XCAP_PENDING_NOTIFYQ");
+                    if (priorityConfig != null) {
+                        // Priority driven by XCAP_NOTIFATION_PRIORITY.PRIORITY_VALUE — no hardcoded value
+                        notificationParamDTO.setPriority(priorityConfig.getPriorityValue());
+                        knLogger.info(methodName, "DB-driven priority: PRIORITY_LEVEL=", priorityConfig.getPriorityLevel(),
+                                " PRIORITY_VALUE=", priorityConfig.getPriorityValue(), " opsCode=", notificationParamDTO.getOpsCode());
+                    }
+
+                    if (isSaveNotification(notificationParamDTO, notificationCount, watcherCount)) {
+                        xcapDiffNotifier.saveNotification(initialList, notificationParamDTO, null);
+                        xcapDiffNotifier.sendXcapDiffMicroserviceNotificationforEtagNotify(initialList);
+                    } else if (isSaveSuppressNotification()) {
+                        knLogger.info(methodName, "inside notification suppressed ");
+                        LinkedHashSet<String> docSelAll = new LinkedHashSet<String>();
+                        LinkedHashSet<KnMcsxcapMdnDTO> mdns = new LinkedHashSet<>();
+                        for (KnXcapDiffNotifyDTO itr : initialList) {
+                            if (itr.getDocDiffObj() != null) {
+                                docSelAll.addAll(itr.getDocDiffObj().stream().map(KnXcapDiffDocDTO::getDocumentSelector).collect(Collectors.toSet()));
+                            } else {
+                                knLogger.info(methodName, "get mdn from directory uri- ");
+                                KnMcsxcapMdnDTO mcsxcapMdnDTO = new KnMcsxcapMdnDTO();
+                                mcsxcapMdnDTO.setMdn(getMDNFromURI(itr.getDirURI()));
+                                mdns.add(mcsxcapMdnDTO);
+                            }
+                        }
+                        if (!mdns.isEmpty()) {
+                            mdns.forEach(e -> docSelAll.add(e.getMdn()));
+                            xcapDiffNotifier.sendMicroserviceNotificationforEtagNotify(docSelAll);
+                        }
+                        for (String itr : docSelAll) {
+                            xcapDiffNotifier.populateSystemProfileMdnsForDocChange(mdns, itr);
+                        }
+                        knLogger.info(methodName, "List of mdns to send for ssh increment KnXcapDiffNotifyDTO");
+                        sendMdnsToDB(mdns.stream().map(KnMcsxcapMdnDTO::getMdn).collect(Collectors.toCollection(LinkedHashSet::new)), notificationParamDTO, null);
+                        KnStatisticsManagerImpl.getInstance().increment(KnOMConstants.NUM_OIDCXCAP_NOTIFY_SUPPRESSED);
+                    } else {
+                        knLogger.info(methodName, "No Records are getting saved in DG.XCAP_PENDING_NOTIFYQ");
+                    }
                 }
                 isSuccess = true;
             }
@@ -392,35 +419,48 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
                 List<KnXcapDiffNotifyDTO> initialList = new ArrayList<>(xcapDiffNotifyDTOs);
                 int watcherCount = initialList.size();
                 knLogger.info(methodName, "Notification count - ", notificationCount, " watcherCount - ", watcherCount);
-                if (isSaveNotification(notificationParamDTO, notificationCount, watcherCount)) {
-                    xcapDiffNotifier.saveNotification(initialList, notificationParamDTO, persisterTxn);
-                    xcapDiffNotifier.sendXcapDiffMicroserviceNotificationforEtagNotify(initialList);
-                } else if (isSaveSuppressNotification()) {
-                    knLogger.info(methodName, "inside notification suppressed ");
-                    LinkedHashSet<String> docSelAll = new LinkedHashSet<String>();
-                    LinkedHashSet<KnMcsxcapMdnDTO> mdns = new LinkedHashSet<>();
-                    for (KnXcapDiffNotifyDTO itr : initialList) {
-                        if (itr.getDocDiffObj() != null) {
-                            docSelAll.addAll(itr.getDocDiffObj().stream().map(KnXcapDiffDocDTO::getDocumentSelector).collect(Collectors.toSet()));
-                        } else {
-                            knLogger.info(methodName, "get mdn from directory uri- ");
-                            KnMcsxcapMdnDTO mcsxcapMdnDTO = new KnMcsxcapMdnDTO();
-                            mcsxcapMdnDTO.setMdn(getMDNFromURI(itr.getDirURI()));
-                            mdns.add(mcsxcapMdnDTO);
-                        }
-                    }
-                    if (!mdns.isEmpty()) {
-                        mdns.forEach(e -> docSelAll.add(e.getMdn()));
-                        xcapDiffNotifier.sendMicroserviceNotificationforEtagNotify(docSelAll);
-                    }
-                    for (String itr : docSelAll) {
-                        xcapDiffNotifier.populateSystemProfileMdnsForDocChange(mdns, itr);
-                    }
-                    knLogger.info(methodName, "List of mdns to send for ssh increment KnXcapDiffNotifyDTO");
-                    sendMdnsToDB(mdns.stream().map(KnMcsxcapMdnDTO::getMdn).collect(Collectors.toCollection(LinkedHashSet::new)), notificationParamDTO, null);
+                KnNotifPriorityConfigDTO priorityConfig = resolvePriorityConfig(notificationParamDTO);
+                if (priorityConfig != null && priorityConfig.getPriorityLevel().equalsIgnoreCase(KnXcapNotifyConstants.PRIORITY_LEVEL_LOW)) {
+                    knLogger.info(methodName, "LOW priority (PRIORITY_LEVEL=0): notification suppressed for opsCode=",
+                            notificationParamDTO.getOpsCode(), " — data will surface via client  refresh");
                     KnStatisticsManagerImpl.getInstance().increment(KnOMConstants.NUM_OIDCXCAP_NOTIFY_SUPPRESSED);
                 } else {
-                    knLogger.info(methodName, "No Records are getting saved in DG.XCAP_PENDING_NOTIFYQ");
+                    if (priorityConfig != null) {
+                        // Priority driven by XCAP_NOTIFATION_PRIORITY.PRIORITY_VALUE — no hardcoded value
+                        notificationParamDTO.setPriority(priorityConfig.getPriorityValue());
+                        knLogger.info(methodName, "DB-driven priority: PRIORITY_LEVEL=", priorityConfig.getPriorityLevel(),
+                                " PRIORITY_VALUE=", priorityConfig.getPriorityValue(), " opsCode=", notificationParamDTO.getOpsCode());
+                    }
+                    if (isSaveNotification(notificationParamDTO, notificationCount, watcherCount)) {
+                        xcapDiffNotifier.saveNotification(initialList, notificationParamDTO, persisterTxn);
+                        xcapDiffNotifier.sendXcapDiffMicroserviceNotificationforEtagNotify(initialList);
+                    } else if (isSaveSuppressNotification()) {
+                        knLogger.info(methodName, "inside notification suppressed ");
+                        LinkedHashSet<String> docSelAll = new LinkedHashSet<String>();
+                        LinkedHashSet<KnMcsxcapMdnDTO> mdns = new LinkedHashSet<>();
+                        for (KnXcapDiffNotifyDTO itr : initialList) {
+                            if (itr.getDocDiffObj() != null) {
+                                docSelAll.addAll(itr.getDocDiffObj().stream().map(KnXcapDiffDocDTO::getDocumentSelector).collect(Collectors.toSet()));
+                            } else {
+                                knLogger.info(methodName, "get mdn from directory uri- ");
+                                KnMcsxcapMdnDTO mcsxcapMdnDTO = new KnMcsxcapMdnDTO();
+                                mcsxcapMdnDTO.setMdn(getMDNFromURI(itr.getDirURI()));
+                                mdns.add(mcsxcapMdnDTO);
+                            }
+                        }
+                        if (!mdns.isEmpty()) {
+                            mdns.forEach(e -> docSelAll.add(e.getMdn()));
+                            xcapDiffNotifier.sendMicroserviceNotificationforEtagNotify(docSelAll);
+                        }
+                        for (String itr : docSelAll) {
+                            xcapDiffNotifier.populateSystemProfileMdnsForDocChange(mdns, itr);
+                        }
+                        knLogger.info(methodName, "List of mdns to send for ssh increment KnXcapDiffNotifyDTO");
+                        sendMdnsToDB(mdns.stream().map(KnMcsxcapMdnDTO::getMdn).collect(Collectors.toCollection(LinkedHashSet::new)), notificationParamDTO, null);
+                        KnStatisticsManagerImpl.getInstance().increment(KnOMConstants.NUM_OIDCXCAP_NOTIFY_SUPPRESSED);
+                    } else {
+                        knLogger.info(methodName, "No Records are getting saved in DG.XCAP_PENDING_NOTIFYQ");
+                    }
                 }
                 isSuccess = true;
             }
@@ -430,6 +470,23 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
         }
         return isSuccess;
     }
+
+    /**
+     * Resolves the dynamic suppression priority level for the given notification parameters.
+     * Returns the configured priority string ("CRITICAL", "HIGH", "LOW") when opsCode > 0
+     * and a matching entry exists in XCAP_NOTIFATION_PRIORITY; otherwise returns null
+     * Fetches the priority config DTO from XCAP_NOTIFATION_PRIORITY for the given notification.
+     * Returns null if opsCode is 0 (existing callers) or if no row exists for the opsCode —
+     * in both cases the standard watermark-based BAU logic applies unchanged.
+     */
+    private KnNotifPriorityConfigDTO resolvePriorityConfig(KnNotificationParamDTO notificationParamDTO) {
+        if (notificationParamDTO != null && notificationParamDTO.getOpsCode() > 0) {
+            return KnNotificationPriorityService.getInstance()
+                    .getPriorityConfig(notificationParamDTO.getOpsCode());
+        }
+        return null;
+    }
+
 
     private boolean isSaveNotification(KnNotificationParamDTO notificationParamDTO, int notificationCount, int watcherCount) {
         String methodName = "isSaveNotification";

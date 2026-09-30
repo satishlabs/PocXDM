@@ -88,6 +88,7 @@ import com.kodiak.xdms.server.subsmgmt.dto.clientdat.*;
 import com.kodiak.xdms.server.subsmgmt.dto.clientdat.KnIPSubscriberInfoDTO;
 import com.kodiak.xdms.server.subsmgmt.dto.common.KnPAMSubsProfInfoDTO;
 import com.kodiak.xdms.server.subsmgmt.resources.KnProvConstants;
+import com.kodiak.common.commdto.common.KnNotificationParamDTO;
 
 import java.util.*;
 
@@ -459,7 +460,10 @@ public class KnXDMBulkMediator {
                     //prepare notification and send to notification mgr
                     Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = prepareNotification(respDto);
                     knLogger.debug(methodName, "Sending notifications - ", xcapDiffList);
-                    knLogger.debug(methodName, "Notification status - ", notifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn));
+                    KnNotificationParamDTO xcapWatcherClientsOnSubsDeleteNotificationParamDTO = new KnNotificationParamDTO();
+                    xcapWatcherClientsOnSubsDeleteNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_WATCHER_CLIENTS_ON_SUBS_DELETE.value());
+                    boolean isNotified462 = notifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn, xcapWatcherClientsOnSubsDeleteNotificationParamDTO);
+                    knLogger.debug(methodName, "Notification status - ", isNotified462);
 
                     knLogger.info(methodName, "Call to LI ");
 
@@ -718,7 +722,9 @@ public class KnXDMBulkMediator {
             }
 
             notifier.setMaxNotfnsPerJob(KnProvConstants.DEFAULT_NOTIFY_SIZE);
-            boolean status = notifier.sendXcapDiffNotifications(xcapDiffList);
+            KnNotificationParamDTO xcapUpdatedClientOnActiveFsChangeNotificationParamDTO = new KnNotificationParamDTO();
+            xcapUpdatedClientOnActiveFsChangeNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_UPDATED_CLIENT_ON_ACTIVE_FS_CHANGE.value());
+            boolean status = notifier.sendXcapDiffNotifications(xcapDiffList, xcapUpdatedClientOnActiveFsChangeNotificationParamDTO);
             knLogger.info(methodName, "Notification status - ", status);
 
             //Get the xcap mobile sync flag
@@ -960,8 +966,10 @@ public class KnXDMBulkMediator {
         knLogger.debug(methodName, "Notification DTO generated - ", xcapDiffNotifyDTO);
 
         KnXcapDiffNotifier xcapDiffNotifier = KnXcapDiffNotifier.getInstance();
-        knLogger.exit(methodName, "Successfully sent the notification", notifier.sendXcapDiffNotifications(xcapDiffNotifyDTO));
-
+        KnNotificationParamDTO xcapDeletedClientOnSubsDeleteNotificationParamDTO = new KnNotificationParamDTO();
+        xcapDeletedClientOnSubsDeleteNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_DELETED_CLIENT_ON_SUBS_DELETE.value());
+        boolean notificationStatus984 = notifier.sendXcapDiffNotifications(xcapDiffNotifyDTO, xcapDeletedClientOnSubsDeleteNotificationParamDTO);
+        knLogger.exit(methodName, "Successfully sent the notification", notificationStatus984);
     }
 
     private Collection<KnXcapDiffDirChgNotifyDTO> prepareNotification(KnCorpResponseDTO respDto) {
@@ -1130,7 +1138,10 @@ public class KnXDMBulkMediator {
             //prepare notification and send to notification mgr for corporate date
             Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = prepareNotification(respDto);
             knLogger.debug(methodName, "Sending notifications - ", xcapDiffList);
-            knLogger.debug(methodName, "Notification status - ", notifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn));
+            KnNotificationParamDTO xcapWatcherClientsOnSubsDeleteNotificationParamDTO = new KnNotificationParamDTO();
+            xcapWatcherClientsOnSubsDeleteNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_WATCHER_CLIENTS_ON_SUBS_DELETE.value());
+            boolean isNotified1154 = notifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn, xcapWatcherClientsOnSubsDeleteNotificationParamDTO);
+            knLogger.debug(methodName, "Notification status - ", isNotified1154);
             sendTGSModeChangeNotification(respDto.getTgsModeChgMap());
 
             knLogger.info(methodName, "Call to LI ");
@@ -1497,7 +1508,11 @@ public class KnXDMBulkMediator {
                 }
                 List<KnXcapDiffNotifyDTO> xcapDiffList = prepareXcapDiffNotification(dirChgDTOs);
                 notifier.setMaxNotfnsPerJob(KnProvConstants.DEFAULT_NOTIFY_SIZE);
-                knLogger.debug(methodName, "Notification status - ", notifier.sendXcapDiffNotifications(xcapDiffList));
+                KnNotificationParamDTO xcapUpdatedClientOnActiveFsChangeNotificationParamDTO = new KnNotificationParamDTO();
+                xcapUpdatedClientOnActiveFsChangeNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_UPDATED_CLIENT_ON_ACTIVE_FS_CHANGE.value());
+                boolean isNotified1521 = notifier.sendXcapDiffNotifications(xcapDiffList, xcapUpdatedClientOnActiveFsChangeNotificationParamDTO);
+                knLogger.debug(methodName, "Notification status - ", isNotified1521);
+
 
             }
             responseDTO = getSuccessResponse(responseDTO);
@@ -1749,7 +1764,9 @@ public class KnXDMBulkMediator {
         //prepare notification and send to notification mgr
         Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = prepareNotification(respDto);
         knLogger.debug(methodName, "Sending notifications - ", xcapDiffList);
-        boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn);
+        KnNotificationParamDTO xcapExistingSublistMembersOnAutopairedSublistAddNotificationParamDTO = new KnNotificationParamDTO();
+        xcapExistingSublistMembersOnAutopairedSublistAddNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_EXISTING_SUBLIST_MEMBERS_ON_AUTOPAIRED_SUBLIST_ADD.value());
+        boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn, xcapExistingSublistMembersOnAutopairedSublistAddNotificationParamDTO);
         knLogger.debug(methodName, "Notification status - ", isNotified);
         xdmRespDto.setEnabledDispatchMemList(respDto.getEnabledDispatchMemList());
         knLogger.debug(methodName, "Returning Response - ", xdmRespDto);
@@ -1922,7 +1939,9 @@ public class KnXDMBulkMediator {
         //prepare notification and send to notification mgr
         Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = prepareNotification(respDto);
         knLogger.debug(methodName, "Sending notifications - ", xcapDiffList);
-        boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn);
+        KnNotificationParamDTO xcapAddedMemberOnGroupMemberAddNotificationParamDTO = new KnNotificationParamDTO();
+        xcapAddedMemberOnGroupMemberAddNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_ADDED_MEMBER_ON_GROUP_MEMBER_ADD.value());
+        boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn, xcapAddedMemberOnGroupMemberAddNotificationParamDTO);
         knLogger.debug(methodName, "Notification status - ", isNotified);
         knLogger.debug(methodName, "Returning Response - ", xdmRespDto);
 
@@ -2127,7 +2146,9 @@ public class KnXDMBulkMediator {
             notifier.setMaxNotfnsPerJob(DEFAULT_NOTIFY_SIZE);
             knLogger.debug(methodName, "notifier :" ,notifier);
 
-            boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList);
+            KnNotificationParamDTO xcapUpdatedClientOnActiveFsChangeNotificationParamDTO = new KnNotificationParamDTO();
+            xcapUpdatedClientOnActiveFsChangeNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_UPDATED_CLIENT_ON_ACTIVE_FS_CHANGE.value());
+            boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, xcapUpdatedClientOnActiveFsChangeNotificationParamDTO);
             knLogger.debug(methodName, "Notification status - ", isNotified);
             knLogger.debug(methodName, "notifyDtoList :", notifyDtoList);
             knLogger.info(methodName, "Publishing micro service notify  for User event - ");

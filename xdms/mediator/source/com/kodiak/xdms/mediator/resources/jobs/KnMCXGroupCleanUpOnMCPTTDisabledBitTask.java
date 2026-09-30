@@ -35,6 +35,7 @@ import com.kodiak.xdms.server.corpmgmt.dto.persistdat.KnCorpTGSPersistDTO;
 import com.kodiak.xdms.server.subsmgmt.clientIntf.IProvClientIntf;
 import com.kodiak.xdms.server.subsmgmt.clientIntf.impl.KnProvClientImpl;
 import com.kodiak.xdms.server.subsmgmt.dto.clientdat.KnOPProvDTO;
+import com.kodiak.common.commdto.common.KnNotificationParamDTO;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -131,7 +132,9 @@ public class KnMCXGroupCleanUpOnMCPTTDisabledBitTask implements Runnable {
                             removeGroupMemPropResp.getGroupCreatedBy(), removeGroupMemPropResp.getLmrIntropCapable(),
                             removeGroupMemPropResp.getMcxGrpInd(), removeGroupMemPropResp.getOldLmrInteropFlag());
                     Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = commonMediator.prepareNotification(removeGroupMemPropResp);
-                    boolean removeGroupMemPropisNotified = notifier.sendXcapDiffNotifications(xcapDiffList, mcxCleanUpTaskTxn);
+                    KnNotificationParamDTO xcapExistingMembersOnGroupMemberRemoveNotificationParamDTO = new KnNotificationParamDTO();
+                    xcapExistingMembersOnGroupMemberRemoveNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_EXISTING_MEMBERS_ON_GROUP_MEMBER_REMOVE.value());
+                    boolean removeGroupMemPropisNotified = notifier.sendXcapDiffNotifications(xcapDiffList, mcxCleanUpTaskTxn, xcapExistingMembersOnGroupMemberRemoveNotificationParamDTO);
                     knLogger.debug(methodName, "removeGroupMemPropisNotified :", removeGroupMemPropisNotified);
                     //getAll mcsXcapUri's for sending MCS Group notifications
                     Set<String> allMcsXcapUris = genInfoUtil.getMCSXCAPRootURIs(mcxCleanUpTaskTxn);
@@ -158,7 +161,9 @@ public class KnMCXGroupCleanUpOnMCPTTDisabledBitTask implements Runnable {
                         knLogger.debug(methodName, "removeTGListResp :", removeTGListResp);
                         //notifications
                         Collection<KnXcapDiffDirChgNotifyDTO> removeTGListXcapDiffList = commonMediator.prepareNotification(removeTGListResp);
-                        boolean removeTGListisNotified = notifier.sendXcapDiffNotifications(removeTGListXcapDiffList, mcxCleanUpTaskTxn);
+                        KnNotificationParamDTO xcapExistingMembersOnGroupMemberRemoveTalkGroupNotificationParamDTO = new KnNotificationParamDTO();
+                        xcapExistingMembersOnGroupMemberRemoveTalkGroupNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_EXISTING_MEMBERS_ON_GROUP_MEMBER_REMOVE.value());
+                        boolean removeTGListisNotified = notifier.sendXcapDiffNotifications(removeTGListXcapDiffList, mcxCleanUpTaskTxn, xcapExistingMembersOnGroupMemberRemoveTalkGroupNotificationParamDTO);
                         knLogger.info(methodName, "removeTGListisNotified Notification status - ", removeTGListisNotified);
                     }
 
@@ -186,7 +191,9 @@ public class KnMCXGroupCleanUpOnMCPTTDisabledBitTask implements Runnable {
                         //notifation
                         Collection<KnXcapDiffDirChgNotifyDTO> removeScanListRespxcapDiffList = commonMediator.prepareNotification(removeScanListResp);
                         notifier.setMaxNotfnsPerJob(2);
-                        boolean removeScanListRespisNotified = notifier.sendXcapDiffNotifications(removeScanListRespxcapDiffList, mcxCleanUpTaskTxn);
+                        KnNotificationParamDTO xcapOnScanlistUpdateNotificationParamDTO = new KnNotificationParamDTO();
+                        xcapOnScanlistUpdateNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_ON_SCANLIST_UPDATE.value());
+                        boolean removeScanListRespisNotified = notifier.sendXcapDiffNotifications(removeScanListRespxcapDiffList, mcxCleanUpTaskTxn, xcapOnScanlistUpdateNotificationParamDTO);
                         knLogger.debug(methodName, " removeScanListRespisNotified - ", removeScanListRespisNotified);
                     }
                     //remove if Emergency type group,DG.EMERGENCY_SUBSCR_DESTINFO
@@ -215,7 +222,9 @@ public class KnMCXGroupCleanUpOnMCPTTDisabledBitTask implements Runnable {
                         }
                         KnStatisticsManagerImpl.getInstance().increment(KnOMConstants.NUM_SET_EMERGENCY_ATTRIBUTES_REQ_SUCC);
                         Collection<KnXcapDiffDirChgNotifyDTO> emergencyXcapDiffList = commonMediator.prepareNotification(libRespDto);
-                        boolean isNotified = notifier.sendXcapDiffNotifications(emergencyXcapDiffList, mcxCleanUpTaskTxn);
+                        KnNotificationParamDTO mcsxcapOnProfileModifyUpdateEmergencyConfigNotificationParamDTO = new KnNotificationParamDTO();
+                        mcsxcapOnProfileModifyUpdateEmergencyConfigNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_EMERGENCY_CONFIG.value());
+                        boolean isNotified = notifier.sendXcapDiffNotifications(emergencyXcapDiffList, mcxCleanUpTaskTxn, mcsxcapOnProfileModifyUpdateEmergencyConfigNotificationParamDTO);
                         knLogger.debug(methodName, "emergencyXcapDiffList notification status - ", isNotified);
                     }
 

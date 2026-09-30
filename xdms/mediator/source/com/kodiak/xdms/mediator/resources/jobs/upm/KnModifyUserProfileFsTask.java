@@ -22,6 +22,7 @@ import com.kodiak.xdms.server.subsmgmt.dto.clientdat.KnIPSubsProvInfoDTO;
 import com.kodiak.xdms.server.subsmgmt.dto.clientdat.KnOPUpdateSubsInfoDTO;
 import com.kodiak.xdms.server.subsmgmt.dto.common.KnSubscrEXDMSNotifyDto;
 import com.kodiak.xdms.server.subsmgmt.dto.common.KnUserProfileFSProvDTO;
+import com.kodiak.common.commdto.common.KnNotificationParamDTO;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -120,7 +121,9 @@ public class KnModifyUserProfileFsTask extends KnAbstractTask {
                         sendMCSEvent(provResp);
                     }
                 } else {
-                        commonMediator.sendXcapNotification(provResp.getDirChgDTO(), String.valueOf(pv));
+                    KnNotificationParamDTO xcapUpdatedClientOnActiveFsChangeNotificationParamDTO = new KnNotificationParamDTO();
+                    xcapUpdatedClientOnActiveFsChangeNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_UPDATED_CLIENT_ON_ACTIVE_FS_CHANGE.value());
+                    commonMediator.sendXcapNotification(provResp.getDirChgDTO(), String.valueOf(pv), xcapUpdatedClientOnActiveFsChangeNotificationParamDTO);
 
                 }
             }

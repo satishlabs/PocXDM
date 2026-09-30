@@ -38,6 +38,7 @@ import com.kodiak.xdms.server.pubmgmt.dto.clientdat.KnEmergencyMdnDTO;
 import com.kodiak.xdms.server.pubmgmt.dto.common.*;
 import com.kodiak.xdms.server.pubmgmt.dto.impl.KnPubContactDTO;
 import com.kodiak.xdms.server.pubmgmt.dto.impl.KnPubGroupDTO;
+import com.kodiak.common.commdto.common.KnNotificationParamDTO;
 
 import java.lang.Integer;
 import java.util.*;
@@ -1195,7 +1196,9 @@ public class KnXDMPubDocMediator {
         knLogger.debug( methodName, "Getting the Notifier Instance:");
         KnXcapDiffNotifier xcapDiffNotifier = KnXcapDiffNotifier.getInstance();
         knLogger.debug( methodName, "Sending the Notificaton: Diff DTO : ", xcapDiffNotifyDTO);
-        boolean notificationStatus = notifier.sendXcapDiffNotifications(xcapDiffNotifyDTO);
+        KnNotificationParamDTO xcapUpdatedClientOnActiveFsChangeNotificationParamDTO = new KnNotificationParamDTO();
+        xcapUpdatedClientOnActiveFsChangeNotificationParamDTO.setOpsCode(com.kodiak.xdms.server.common.resources.KnConstants.OPS_CODE.XCAP_UPDATED_CLIENT_ON_ACTIVE_FS_CHANGE.value());
+        boolean notificationStatus = notifier.sendXcapDiffNotifications(xcapDiffNotifyDTO, xcapUpdatedClientOnActiveFsChangeNotificationParamDTO);
         knLogger.debug( methodName, "Notificaton Status :", notificationStatus);
 
         return notificationStatus;
@@ -1269,7 +1272,11 @@ public class KnXDMPubDocMediator {
         Map<Integer, Integer> existingGrpMap = new HashMap<>(dbList.size());
         List<Integer> modifiedList = new ArrayList<>();
         for(KnXDMTalkGroupInfoDTO dto : dbList){
-            existingGrpMap.put(dto.getGroupId(), dto.getPriority());
+            // Only treat groups with a real priority as "existing" — groups with NO_PRIORITY
+            // are treated as absent so that assigning a real priority counts as ADD not MODIFY
+            if (dto.getPriority() != com.kodiak.xdms.server.common.resources.KnConstants.NO_PRIORITY) {
+                existingGrpMap.put(dto.getGroupId(), dto.getPriority());
+            }
         }
         List<Integer> exitList = new ArrayList<Integer>();
         knLogger.debug(methodName, "ScanList exits in DB putting into map ", existingGrpMap);

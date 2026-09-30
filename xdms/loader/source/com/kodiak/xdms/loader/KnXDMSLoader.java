@@ -93,7 +93,6 @@ import static com.kodiak.common.resources.KnConstants.LARGE_GROUP_AUDIT_INTRVAL;
  */
 public class KnXDMSLoader {
     private static final KnLogger knLogger = KnLogger.getLogger(KnXDMSLoader.class);
-    private static final String FLOW_TAG = "[XCAP-DEBULK-FLOW]";
 
     private static final String PROCESS_CONFIG_XML = "processconfig.xml";
     private static final String ACTIVE_RELEASE_DIR = System.getProperty("activeRelDir");

@@ -65,7 +65,7 @@ public class KnBulkGrpMemCountStandardValidationRule extends KnValidatorRule {
                 standardGroupFailed.putAll(standardGroupsCount.entrySet().stream().filter(map -> map.getValue() >
                         groupBulkPersistDTO.getMaxMemPerLargeGroup()).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
             } else {
-                standardGroupFailed.putAll(standardGroupsCount.entrySet().stream().filter(map -> map.getValue() >
+                standardGroupFailed.putAll(standardGroupsCount.entrySet().stream().filter(map -> map.getValue() >=
                         groupBulkPersistDTO.getMaxNumberOfMembers()).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
             }
             if (!standardGroupFailed.isEmpty()) {
@@ -87,7 +87,7 @@ public class KnBulkGrpMemCountStandardValidationRule extends KnValidatorRule {
                     standardGroupFailed.putAll(standardGroupsCount.entrySet().stream().filter(map -> map.getValue() >
                             groupBulkPersistDTO.getMaxMemPerLargeGroup()).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
                 } else {
-                    standardGroupFailed.putAll(standardGroupsCount.entrySet().stream().filter(map -> map.getValue() >
+                    standardGroupFailed.putAll(standardGroupsCount.entrySet().stream().filter(map -> map.getValue() >=
                             groupBulkPersistDTO.getMaxNumberOfMembers()).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
                 }
                 if (!standardGroupFailed.isEmpty()) {
