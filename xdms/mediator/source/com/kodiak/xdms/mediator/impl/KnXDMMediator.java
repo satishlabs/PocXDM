@@ -1668,11 +1668,13 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             KnOPProvDTO opProvDTO = provClientIntf.actionOnTGSSDoc(subsProfileInfoDTO.getMdn(),provRespDTO.getActiveFs2(),subsProfileInfoDTO.getActiveFS2(),persisterTxn);
             KnNotificationParamDTO knNotificationParamDTO = new KnNotificationParamDTO();
             knNotificationParamDTO.setPriority(NOTIFICATION_PRIORITY.CRITICAL.value());
+            // 10007: resumed client self (own dir-chg / TGSS / MCS). Not 10008.
+            // 10005: suspended client self. Not 10006.
             knNotificationParamDTO.setOpsCode(
                     subStatusInfoDTO.getServiceAuthStatus() == KnConstants.SERVICE_AUTH_STATUS.ACTIVATED.value()
-                            ? KnConstants.OPS_CODE.XCAP_RESUMED_CLIENT_ON_SUBS_RESUME.value()
-                            : KnConstants.OPS_CODE.XCAP_SUSPENDED_CLIENT_ON_SUBS_SUSPEND.value());      //// suspend or resume call
-            knLogger.info(methodName, "==> : notification status self  - suspend or resume ");
+                            ? KnConstants.OPS_CODE.XCAP_RESUMED_CLIENT_ON_SUBS_RESUME.value() // 10007
+                            : KnConstants.OPS_CODE.XCAP_SUSPENDED_CLIENT_ON_SUBS_SUSPEND.value()); // 10005
+            knLogger.info(methodName, "==> : Notification status self - 10005/10007");
             if(opProvDTO.getDirChgDTO()!=null){
                 knLogger.debug(methodName, "TGSS doc changed sending notification");
                 commonMediator.sendXcapNotification(opProvDTO.getDirChgDTO(),pv, knNotificationParamDTO );
@@ -1797,24 +1799,14 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                 }
                 knLogger.debug(methodName, "Notification DTO generated - ", xcapDiffList);
                 boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, knNotificationParamDTO);
-                knLogger.debug(methodName, "Notification status - ", isNotified);
-                // New Notification
-                // Watcher clients must also be notified on subscriber suspend (10006) / resume (10008).
-                // The self diff entry is fanned out to the watcher recipients downstream based on the
-                // watcher opsCode, so we resend the SAME diff list with the watcher opsCode - but ONLY
-                // when the subscriber actually has watchers (reverse contacts). For a self-only
-                // subscriber (no watchers) only the self opsCode (10005/10007) is emitted.
-//                if (subscriberHasWatchers(provRespDTO.getMdn(), String.valueOf(provRespDTO.getCorpid()),
-//                        subStatusInfoDTO.getHierarchyType(), persisterTxn)) {
-//                    KnNotificationParamDTO knNotificationParamDTOWatcher = new KnNotificationParamDTO();
-//                    knNotificationParamDTOWatcher.setPriority(NOTIFICATION_PRIORITY.CRITICAL.value());
-//                    knNotificationParamDTOWatcher.setOpsCode(
-//                            subStatusInfoDTO.getServiceAuthStatus() == KnConstants.SERVICE_AUTH_STATUS.ACTIVATED.value()
-//                                    ? KnConstants.OPS_CODE.XCAP_WATCHER_CLIENTS_ON_SUBS_RESUME.value()
-//                                    : KnConstants.OPS_CODE.XCAP_WATCHER_CLIENTS_ON_SUBS_SUSPEND.value());
-//                    boolean isWatcherNotified = notifier.sendXcapDiffNotifications(xcapDiffList, knNotificationParamDTOWatcher);
-//                    knLogger.debug(methodName, "==> : Watcher notification status (10006/10008) - ", isWatcherNotified);
-//                }
+                knLogger.debug(methodName, "Notification status - 10005/10007 - ", isNotified);
+                // 10008: watcher clients on subscriber resume (reverse-contact dests, not self 10007).
+                // 10006: watcher clients on subscriber suspend (reverse-contact dests, not self 10005).
+                int watcherOpsCode = serviceAuthStatus == KnConstants.SERVICE_AUTH_STATUS.ACTIVATED.value()
+                        ? KnConstants.OPS_CODE.XCAP_WATCHER_CLIENTS_ON_SUBS_RESUME.value() // 10008
+                        : KnConstants.OPS_CODE.XCAP_WATCHER_CLIENTS_ON_SUBS_SUSPEND.value(); // 10006
+                knLogger.debug(methodName, "==> : Sending watcher notification for auth change - 10006/10008");
+                sendWatcherXcapOnSubsAuthChange(provRespDTO, subStatusInfoDTO, dirChgDTOs, persisterTxn, watcherOpsCode);
             }
 
             KnStatisticsManagerImpl.getInstance().increment(KnOMConstants.XDM_NUM_SUBSCR_UPDATED);
@@ -10606,6 +10598,68 @@ public class KnXDMMediator implements IXDMMediatorIntf {
 //            rollback(watcherTxn);
 //        }
 //    }
+
+    /**
+     * 10006: watcher clients on subscriber suspend (reverse-contact dests).
+     * 10008: watcher clients on subscriber resume (reverse-contact dests).
+     * Self dir-chg / TGSS / MCS stays 10005 (suspend) or 10007 (resume). Do not stamp those here.
+     * Empty watcher set or reverse-contact lookup failure skips enqueue; self send is unchanged.
+     */
+    private void sendWatcherXcapOnSubsAuthChange(KnOPChgAuthStatusRespDTO provRespDTO,
+                                                 KnXDMSubsStatusInfoDTO subStatusInfoDTO,
+                                                 List<KnOPDirChgDTO> dirChgDTOs,
+                                                 KnPersisterTxn persisterTxn,
+                                                 int watcherOpsCode) {
+        String methodName = "sendWatcherXcapOnSubsAuthChange";
+        try {
+            if (provRespDTO == null || dirChgDTOs == null || dirChgDTOs.isEmpty()) {
+                return;
+            }
+            String selfMdn = provRespDTO.getMdn();
+            KnOPDirChgDTO templateDirChg = dirChgDTOs.get(0);
+            Map<String, KnOPDirChgDTO> watcherChangeLogMap = new HashMap<>();
+            int corpId = provRespDTO.getCorpid();
+            if (corpId > 0) {
+                KnXDMCorpSubscInfoRequestDTO reverseReq = new KnXDMCorpSubscInfoRequestDTO();
+                reverseReq.setSubscriberMdn(selfMdn);
+                reverseReq.setCorpId(String.valueOf(corpId));
+                reverseReq.setHierarchyType(subStatusInfoDTO.getHierarchyType());
+                KnReverseContactResponseDto reverseResp = corpMediator.getSubscrReverseContacts(reverseReq, persisterTxn);
+                if (reverseResp != null && reverseResp.getReverseContacts() != null) {
+                    for (KnXDMMdnInfoDTO watcher : reverseResp.getReverseContacts()) {
+                        if (watcher == null || watcher.getMdn() == null || watcher.getMdn().equals(selfMdn)) {
+                            continue;
+                        }
+                        String watcherMdn = watcher.getMdn();
+                        KnOPDirChgDTO watcherDirChg = new KnOPDirChgDTO();
+                        watcherDirChg.setMdn(watcherMdn);
+                        watcherDirChg.setDirUri(genInfoUtil.generateDirDocUri(watcherMdn));
+                        watcherDirChg.setXcapRootURI(genInfoUtil.getXCAPRootURI(watcherMdn, persisterTxn));
+                        watcherDirChg.setPocHome(templateDirChg.getPocHome());
+                        watcherDirChg.setPresenceHome(templateDirChg.getPresenceHome());
+                        watcherDirChg.setDirPrevEtag(templateDirChg.getDirPrevEtag());
+                        watcherDirChg.setDirNewEtag(templateDirChg.getDirNewEtag());
+                        watcherDirChg.setProtoVersion(templateDirChg.getProtoVersion());
+                        watcherDirChg.setDocChgDTO(templateDirChg.getDocChgDTO());
+                        watcherDirChg.setClientType(templateDirChg.getClientType());
+                        watcherChangeLogMap.put(watcherMdn, watcherDirChg);
+                    }
+                }
+            }
+            KnCorpResponseDTO watcherCorpResp = new KnCorpResponseDTO();
+            watcherCorpResp.setChangeLogMap(watcherChangeLogMap);
+            Collection<KnXcapDiffDirChgNotifyDTO> watcherXcapDiffList = commonMediator.prepareNotification(watcherCorpResp);
+            KnNotificationParamDTO watcherParam = new KnNotificationParamDTO();
+            watcherParam.setOpsCode(watcherOpsCode); // 10006 suspend / 10008 resume
+            watcherParam.setPriority(NOTIFICATION_PRIORITY.CRITICAL.value());
+            knLogger.debug(methodName, "==> : Sending watcher notification for auth change - ", watcherOpsCode,
+                    ", size=", watcherXcapDiffList == null ? 0 : watcherXcapDiffList.size());
+            boolean isWatcherNotified = notifier.sendXcapDiffNotifications(watcherXcapDiffList, persisterTxn, watcherParam);
+            knLogger.debug(methodName, "Notification status - watcher ops ", watcherOpsCode, " - ", isWatcherNotified);
+        } catch (Exception e) {
+            knLogger.error(methodName, "Watcher ops ", watcherOpsCode, " skipped; self 10005/10007 is unchanged - ", e);
+        }
+    }
 
     /**
      * Method to return the subscriber list where the request MDN exist as contact.
