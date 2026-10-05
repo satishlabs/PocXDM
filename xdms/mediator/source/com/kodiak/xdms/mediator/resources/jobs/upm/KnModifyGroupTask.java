@@ -306,7 +306,7 @@ public class KnModifyGroupTask extends KnAbstractTask {
                     upmJobScheduler.addJob(knAsyncJobWatcherDTO);
                 }
                 taskResult.setAddGroupResp(addGroupResp);
-                taskResult.setGroupAdded(true);
+                taskResult.setGroupAdded(true); // 40008: KnUPMJob copies this for MCSXCAP_ON_PROFILE_MODIFY_ADD_GROUP
                 //CAMPEDGROUPINFO
                 if (groupZoneIdMap != null && !groupZoneIdMap.isEmpty() && groupPriorityIdMap != null &&
                         !groupPriorityIdMap.isEmpty() && groupZoneIdMap != null && !groupZoneIdMap.isEmpty()
@@ -632,7 +632,7 @@ public class KnModifyGroupTask extends KnAbstractTask {
                 taskResult.setGroupIds(removeGroupMemPropResp.getGroupIds());
                 taskResult.setUpmCount(removeGroupMemPropResp.getUserProfileCount());
                 taskResult.setRemoveGroupResp(removeGroupMemPropResp);
-                taskResult.setGroupRemoved(true);
+                taskResult.setGroupRemoved(true); // 40009: KnUPMJob copies this for MCSXCAP_ON_PROFILE_MODIFY_REMOVE_GROUP
                 if (Objects.equals(removeGroupMemPropResp.getStatusCode(), "00000") && count < TRANSACTION_COUNT) {
                     Set<String> removedGroupIds = new HashSet<>();
                     KnIPUserProfileDTO ipUserProfilesDTO = new KnIPUserProfileDTO();

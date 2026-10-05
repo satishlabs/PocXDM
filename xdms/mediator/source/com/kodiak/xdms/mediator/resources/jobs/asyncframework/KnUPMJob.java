@@ -706,6 +706,11 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
                 upmCount.add(modifyGroupTaskResult.getUpmCount());
                 userProfileDetails.setGroupIds(modifyGroupTaskResult.getGroupIds());
                 groupPropertyUpdated = modifyGroupTaskResult.isGroupPropertyUpdated();
+                // 40008/40009: copy group flags before modifyUpmContact overwrites taskResult.
+                groupAdded = modifyGroupTaskResult.isGroupAdded();
+                groupRemoved = modifyGroupTaskResult.isGroupRemoved();
+                knLogger.debug(methodName, "groupAdded=", groupAdded, " groupRemoved=", groupRemoved,
+                        " groupPropertyUpdated=", groupPropertyUpdated);
 
                 if (modifyGroupTaskResult.getAddGroupResp() != null && modifyGroupTaskResult.getAddGroupResp().getAddedGroupMembersMap() != null) {
                     getAddedGroupMembersMap = modifyGroupTaskResult.getAddGroupResp().getAddedGroupMembersMap();
@@ -769,45 +774,71 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
                         xcapDirChgDTO.setPocHome(dirChgDTOs.getPocHome());
                         xcapDirChgDTO.setPresenceHome(dirChgDTOs.getPresenceHome());
                         xcapDirChgDTO.setDirNewEtag(dirChgDTOs.getDirNewEtag());
-                        //Sending Directory Notify
+                        // Sending Directory Notify
+                        // 40007: MCSXCAP on profile modify remove contact.
+                        // 40006: MCSXCAP on profile modify add contact.
                         if (contactRemoved && !contactAdded) {
                             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
                             notificationParamDTO.setOpsCode(
-                                    KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_REMOVE_CONTACT.value());
+                                    KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_REMOVE_CONTACT.value()); // 40007
                             notificationParamDTO.setPriority(
                                     KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
                             commonMediator.sendXcapNotification(xcapDirChgDTO, null, notificationParamDTO);
                         } else if (contactAdded) {
                             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
                             notificationParamDTO.setOpsCode(
-                                    KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_ADD_CONTACT.value());
+                                    KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_ADD_CONTACT.value()); // 40006
                             notificationParamDTO.setPriority(
                                     KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
                             commonMediator.sendXcapNotification(xcapDirChgDTO, null, notificationParamDTO);
-                        } else if (groupRemoved && !groupAdded) {
+                        }
+                        // 40008: MCSXCAP on profile modify add group (KnModifyGroupTask.setGroupAdded).
+                        // 40009: MCSXCAP on profile modify remove group (KnModifyGroupTask.setGroupRemoved).
+                        // Not chained after contact: 40006/40007 must not hide 40008/40009.
+                        if (groupRemoved && !groupAdded) {
                             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
                             notificationParamDTO.setOpsCode(
-                                    KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_REMOVE_GROUP.value());
+                                    KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_REMOVE_GROUP.value()); // 40009
                             notificationParamDTO.setPriority(
                                     KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
+                            knLogger.debug(methodName, "==> : Sending UPM directory notification - 40009");
                             commonMediator.sendXcapNotification(xcapDirChgDTO, null, notificationParamDTO);
-                        } else if (groupAdded) {
+                        } else if (groupAdded && !groupRemoved) {
                             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
                             notificationParamDTO.setOpsCode(
-                                    KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_ADD_GROUP.value());
+                                    KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_ADD_GROUP.value()); // 40008
                             notificationParamDTO.setPriority(
                                     KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
+                            knLogger.debug(methodName, "==> : Sending UPM directory notification - 40008");
                             commonMediator.sendXcapNotification(xcapDirChgDTO, null, notificationParamDTO);
-                        } else if (groupPropertyUpdated) {
-                            // 40011: UPM directory etag send when only group member properties changed
-                            KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
-                            notificationParamDTO.setOpsCode(
-                                    KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_GROUP_PROPERTY.value());
-                            notificationParamDTO.setPriority(
-                                    KnConstants.NOTIFICATION_PRIORITY.LOW.value());
-                            commonMediator.sendXcapNotification(xcapDirChgDTO, null, notificationParamDTO);
-                        } else {
-                            commonMediator.sendXcapNotification(xcapDirChgDTO);
+                        } else if (groupAdded && groupRemoved) {
+                            // Same UPM modify added and removed groups: stamp both ops.
+                            KnNotificationParamDTO addGroupParam = new KnNotificationParamDTO();
+                            addGroupParam.setOpsCode(
+                                    KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_ADD_GROUP.value()); // 40008
+                            addGroupParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
+                            knLogger.debug(methodName, "==> : Sending UPM directory notification - 40008");
+                            commonMediator.sendXcapNotification(xcapDirChgDTO, null, addGroupParam);
+                            KnNotificationParamDTO removeGroupParam = new KnNotificationParamDTO();
+                            removeGroupParam.setOpsCode(
+                                    KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_REMOVE_GROUP.value()); // 40009
+                            removeGroupParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
+                            knLogger.debug(methodName, "==> : Sending UPM directory notification - 40009");
+                            commonMediator.sendXcapNotification(xcapDirChgDTO, null, removeGroupParam);
+                        }
+                        // 40011: only when this etag send is group-property-only (no contact/group add/remove).
+                        if (!contactAdded && !contactRemoved && !groupAdded && !groupRemoved) {
+                            if (groupPropertyUpdated) {
+                                // 40011: UPM directory etag send when only group member properties changed
+                                KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
+                                notificationParamDTO.setOpsCode(
+                                        KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_GROUP_PROPERTY.value()); // 40011
+                                notificationParamDTO.setPriority(
+                                        KnConstants.NOTIFICATION_PRIORITY.LOW.value());
+                                commonMediator.sendXcapNotification(xcapDirChgDTO, null, notificationParamDTO);
+                            } else {
+                                commonMediator.sendXcapNotification(xcapDirChgDTO);
+                            }
                         }
                     }
                 }
