@@ -903,7 +903,16 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                     profileNotifyDTO.setPresenceHome(provRespDTO.getDirChgDTO().getPresenceHome());
                     profileNotifyDTO.setAction(KnConstants.MESSAGE_TYPE.SUBSCR_PROFILE_CHANGE.value());
 
-                    commonMediator.sendProfileNotification(profileNotifyDTO, provRespDTO.getDirChgDTO(), pv);
+                    // 10003: self client on subscriber name change (own directory / profile-notify path).
+                    KnNotificationParamDTO selfNameChangeParam = null;
+                    if (provRespDTO.isSubsNameChanged()) {
+                        selfNameChangeParam = new KnNotificationParamDTO();
+                        selfNameChangeParam.setCid(message.getCorrelationId());
+                        selfNameChangeParam.setOpsCode(
+                                KnConstants.OPS_CODE.XCAP_SELF_CLIENT_ON_SUBS_NAME_CHANGE.value());
+                        selfNameChangeParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
+                    }
+                    commonMediator.sendProfileNotification(profileNotifyDTO, provRespDTO.getDirChgDTO(), pv, selfNameChangeParam);
                 } else {
                     commonMediator.sendXcapNotification(provRespDTO.getDirChgDTO(), pv);
 
@@ -1000,14 +1009,17 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
             if (provRespDTO.isSubsNameChanged()) {
-                notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_SELF_CLIENT_ON_SUBS_NAME_CHANGE.value());
-                knLogger.debug(methodName, " ==> : Notification status - 10003" ); // not called during NC
+                // 10004: watcher clients on subscriber name change (updateCorpSubscriber).
+                notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_WATCHER_CLIENTS_ON_SUBS_NAME_CHANGE.value());
+                notificationParamDTO.setPriority(KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
+                knLogger.info(methodName, " ==> : Notification status - 10004, xcapDiffList size=",
+                        xcapDiffList == null ? 0 : xcapDiffList.size());
             } else {
                 notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_UPDATED_CLIENT_ON_ACTIVE_FS_CHANGE.value());
                 knLogger.debug(methodName, " ==> : Notification status - 10011" );
             }
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
-            knLogger.debug(methodName, "Notification status - ", isNotified);
+            knLogger.info(methodName, "Notification status - ", isNotified, " opsCode=", notificationParamDTO.getOpsCode());
 
             // New notification to send the watcher
 //            KnNotificationParamDTO notificationParamDTO10012 = new KnNotificationParamDTO();
@@ -3869,7 +3881,16 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                 profileNotifyDTO.setPresenceHome(provRespDTO.getDirChgDTO().getPresenceHome());
                 profileNotifyDTO.setAction(KnConstants.MESSAGE_TYPE.SUBSCR_PROFILE_CHANGE.value());
 
-                commonMediator.sendProfileNotification(profileNotifyDTO,provRespDTO.getDirChgDTO(), pv);
+                // 10003: self client on subscriber name change (updateSubscriberName).
+                KnNotificationParamDTO selfNameChangeParam = null;
+                if (provRespDTO.isSubsNameChanged()) {
+                    selfNameChangeParam = new KnNotificationParamDTO();
+                    selfNameChangeParam.setCid(message.getCorrelationId());
+                    selfNameChangeParam.setOpsCode(
+                            KnConstants.OPS_CODE.XCAP_SELF_CLIENT_ON_SUBS_NAME_CHANGE.value());
+                    selfNameChangeParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
+                }
+                commonMediator.sendProfileNotification(profileNotifyDTO,provRespDTO.getDirChgDTO(), pv, selfNameChangeParam);
             } else {
                 commonMediator.sendXcapNotification(provRespDTO.getDirChgDTO(),pv);
 
@@ -3896,10 +3917,13 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                 notifier.setMaxNotfnsPerJob(2);
                 KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
                 notificationParamDTO.setCid(message.getCorrelationId());
+
+                // 10004: watcher changelog from corp updateSubscriber (not self 10003).
                 notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_WATCHER_CLIENTS_ON_SUBS_NAME_CHANGE.value()); // 10004
-                knLogger.debug(methodName, " ==> : Notification status - 10003" );
+                knLogger.info(methodName, " ==> : Notification status - 10004, xcapDiffList size=",
+                        xcapDiffList == null ? 0 : xcapDiffList.size());
                 boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
-                knLogger.debug(methodName, "Notification status - ", isNotified);
+                knLogger.info(methodName, "Notification status - ", isNotified);
 
                 if(xcapMobileSync){
                     knLogger.debug(methodName, "Publishing micro service notify for Group event - ");
@@ -12587,24 +12611,26 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
             notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_SELF_CLIENT_ON_SUBS_NAME_CHANGE.value()); // called during NC
-            knLogger.debug(methodName, "==> : Notification status NC for self - ");
+            knLogger.debug(methodName, "==> : Notification status NC for self - 10003");
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
             knLogger.debug(methodName, "Notification status - ", isNotified);
 
-            // Watcher clients must also be notified on subscriber name change (10004).
-            // The self diff entry is fanned out to the watcher recipients downstream based on the
-            // watcher opsCode, so we resend the SAME diff list with the watcher opsCode - but ONLY
-            // when the subscriber actually has watchers (reverse contacts). For a self-only
-            // subscriber (no watchers) only the self opsCode (10003) is emitted.
-//            if (subscriberHasWatchers(reqDto.getSubscriberMdn(), reqDto.getCorpId(),
-//                    reqDto.getHierarchyType(), persisterTxn)) {
-//                KnNotificationParamDTO notificationParamDTOWatcherNC = new KnNotificationParamDTO();
-//                notificationParamDTOWatcherNC.setCid(message.getCorrelationId());
-//                notificationParamDTOWatcherNC.setOpsCode(KnConstants.OPS_CODE.XCAP_WATCHER_CLIENTS_ON_SUBS_NAME_CHANGE.value());
-//                knLogger.debug(methodName, "==> : Notification status NC for watcher - 10004 ");
-//                boolean isWatcherNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTOWatcherNC);
-//                knLogger.debug(methodName, "Watcher notification status - 10004 - ", isWatcherNotified);
-//            }
+            String oldNetworkName = dbsubsProfileInfo.getNetworkName();
+            String newNetworkName = reqDto.getSubscriberName();
+            boolean subsNameChanged = newNetworkName != null && !newNetworkName.equals(oldNetworkName);
+            if (subsNameChanged) {
+                // 10004: watcher clients on subscriber name change (updateCorpSubscriber).
+                KnNotificationParamDTO notificationParamDTOWatcherNC = new KnNotificationParamDTO();
+                notificationParamDTOWatcherNC.setCid(message.getCorrelationId());
+                notificationParamDTOWatcherNC.setOpsCode(
+                        KnConstants.OPS_CODE.XCAP_WATCHER_CLIENTS_ON_SUBS_NAME_CHANGE.value());
+                notificationParamDTOWatcherNC.setPriority(
+                        KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
+                knLogger.info(methodName, "==> : Notification status NC for watcher - 10004, xcapDiffList size=",
+                        xcapDiffList == null ? 0 : xcapDiffList.size());
+                boolean isWatcherNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTOWatcherNC);
+                knLogger.info(methodName, "Watcher notification status - 10004 - ", isWatcherNotified);
+            }
             KnXcapDiffNotifier xcapDiffNotifier = KnXcapDiffNotifier.getInstance();
             if (corpResponseDTO.isProfileChanged()) {
                 List<KnOPDirChgDTO> dirChgDTOs = corpResponseDTO.getDirChgDTOs();

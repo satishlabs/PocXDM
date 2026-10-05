@@ -65,6 +65,10 @@ public class KnTaskResult {
     private KnCorpResponseDTO assignGroupResp;
     private boolean contactAdded;
     private boolean contactRemoved;
+    private boolean groupAdded;
+    private boolean groupRemoved;
+    private boolean groupPropertyUpdated;
+
     public String getTaskId() {
         return taskId;
     }
@@ -303,6 +307,30 @@ public class KnTaskResult {
         this.contactRemoved = contactRemoved;
     }
 
+    public boolean isGroupAdded() {
+        return groupAdded;
+    }
+
+    public void setGroupAdded(boolean groupAdded) {
+        this.groupAdded = groupAdded;
+    }
+
+    public boolean isGroupRemoved() {
+        return groupRemoved;
+    }
+
+    public void setGroupRemoved(boolean groupRemoved) {
+        this.groupRemoved = groupRemoved;
+    }
+
+    public boolean isGroupPropertyUpdated() {
+        return groupPropertyUpdated;
+    }
+
+    public void setGroupPropertyUpdated(boolean groupPropertyUpdated) {
+        this.groupPropertyUpdated = groupPropertyUpdated;
+    }
+
     @Override
     public String toString() {
         return "KnTaskResult{" +
@@ -334,6 +362,9 @@ public class KnTaskResult {
                 ", assignGroupResp=" + assignGroupResp +
                 ", contactAdded=" + contactAdded +
                 ", contactRemoved=" + contactRemoved +
+                ", groupAdded=" + groupAdded +
+                ", groupRemoved=" + groupRemoved +
+                ", groupPropertyUpdated=" + groupPropertyUpdated +
                 '}';
     }
 }

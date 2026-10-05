@@ -687,6 +687,9 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
         Map<Integer, Collection<KnCorpContactDTO>> getAddedGroupMembersMap = new HashMap<>();
         boolean contactAdded = false;
         boolean contactRemoved = false;
+        boolean groupAdded = false;
+        boolean groupRemoved = false;
+        boolean groupPropertyUpdated = false;
         try {
             knLogger.entry(methodName, "Start: profileMdn- ", profileMdn, " failedTxnCount- ", failedTxnCount, " cbsDocUpdateCount-", cbsDocUpdateCount);
             //open transaction
@@ -702,6 +705,8 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
                 taskResult = modifyGroupTaskResult;
                 upmCount.add(modifyGroupTaskResult.getUpmCount());
                 userProfileDetails.setGroupIds(modifyGroupTaskResult.getGroupIds());
+                groupPropertyUpdated = modifyGroupTaskResult.isGroupPropertyUpdated();
+
                 if (modifyGroupTaskResult.getAddGroupResp() != null && modifyGroupTaskResult.getAddGroupResp().getAddedGroupMembersMap() != null) {
                     getAddedGroupMembersMap = modifyGroupTaskResult.getAddGroupResp().getAddedGroupMembersMap();
                 }
@@ -769,11 +774,37 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
                             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
                             notificationParamDTO.setOpsCode(
                                     KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_REMOVE_CONTACT.value());
+                            notificationParamDTO.setPriority(
+                                    KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
                             commonMediator.sendXcapNotification(xcapDirChgDTO, null, notificationParamDTO);
                         } else if (contactAdded) {
                             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
                             notificationParamDTO.setOpsCode(
                                     KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_ADD_CONTACT.value());
+                            notificationParamDTO.setPriority(
+                                    KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
+                            commonMediator.sendXcapNotification(xcapDirChgDTO, null, notificationParamDTO);
+                        } else if (groupRemoved && !groupAdded) {
+                            KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
+                            notificationParamDTO.setOpsCode(
+                                    KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_REMOVE_GROUP.value());
+                            notificationParamDTO.setPriority(
+                                    KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
+                            commonMediator.sendXcapNotification(xcapDirChgDTO, null, notificationParamDTO);
+                        } else if (groupAdded) {
+                            KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
+                            notificationParamDTO.setOpsCode(
+                                    KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_ADD_GROUP.value());
+                            notificationParamDTO.setPriority(
+                                    KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
+                            commonMediator.sendXcapNotification(xcapDirChgDTO, null, notificationParamDTO);
+                        } else if (groupPropertyUpdated) {
+                            // 40011: UPM directory etag send when only group member properties changed
+                            KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
+                            notificationParamDTO.setOpsCode(
+                                    KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_GROUP_PROPERTY.value());
+                            notificationParamDTO.setPriority(
+                                    KnConstants.NOTIFICATION_PRIORITY.LOW.value());
                             commonMediator.sendXcapNotification(xcapDirChgDTO, null, notificationParamDTO);
                         } else {
                             commonMediator.sendXcapNotification(xcapDirChgDTO);

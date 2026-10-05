@@ -5,6 +5,7 @@
  **************************************************************************************************/
 package com.kodiak.xdms.mediator.resources.jobs.upm;
 
+import com.kodiak.common.commdto.common.KnNotificationParamDTO;
 import com.kodiak.common.commdto.common.KnXDMAddlTalkGroupInfoDTO;
 import com.kodiak.common.commdto.common.KnXDMGroupMdnInfoDTO;
 import com.kodiak.common.commdto.request.*;
@@ -19,6 +20,7 @@ import com.kodiak.xdms.mediator.helper.KnXDMCommonMediator;
 import com.kodiak.xdms.mediator.helper.KnXDMCorpMediator;
 import com.kodiak.xdms.mediator.resources.jobs.asyncframework.KnUPMJobScheduler;
 import com.kodiak.xdms.notificationmgr.IXcapDiffNotifierIntf;
+import com.kodiak.xdms.notificationmgr.beans.KnXcapDiffDirChgNotifyDTO;
 import com.kodiak.xdms.notificationmgr.impl.KnXcapDiffNotifierImpl;
 import com.kodiak.xdms.server.common.KnXDMServerException;
 import com.kodiak.xdms.server.common.business.helper.KnGenInfoUtil;
@@ -304,6 +306,7 @@ public class KnModifyGroupTask extends KnAbstractTask {
                     upmJobScheduler.addJob(knAsyncJobWatcherDTO);
                 }
                 taskResult.setAddGroupResp(addGroupResp);
+                taskResult.setGroupAdded(true);
                 //CAMPEDGROUPINFO
                 if (groupZoneIdMap != null && !groupZoneIdMap.isEmpty() && groupPriorityIdMap != null &&
                         !groupPriorityIdMap.isEmpty() && groupZoneIdMap != null && !groupZoneIdMap.isEmpty()
@@ -438,6 +441,17 @@ public class KnModifyGroupTask extends KnAbstractTask {
                     knLogger.debug(methodName, "modifyCorpGroup Operation Failed");
                     throw new KnXDMServerException(modifyGroupMemPropResp.getStatusCode(), modifyGroupMemPropResp.getMessage());
                 }
+                taskResult.setGroupPropertyUpdated(true);
+                // 40011
+                // (MCSXCAP_ON_PROFILE_MODIFY_UPDATE_GROUP_PROPERTY), not only the later UPM etag if-else.
+                KnNotificationParamDTO notificationParamDTO40011 = new KnNotificationParamDTO();
+                notificationParamDTO40011.setOpsCode(
+                        com.kodiak.xdms.server.common.resources.KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_GROUP_PROPERTY.value());
+                notificationParamDTO40011.setPriority(
+                        com.kodiak.xdms.server.common.resources.KnConstants.NOTIFICATION_PRIORITY.LOW.value());
+                Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList40011 = commonMediator.prepareNotification(modifyGroupMemPropResp);
+                boolean isNotified40011 = notifier.sendXcapDiffNotifications(xcapDiffList40011, modifyUpmGroupTxn, notificationParamDTO40011);
+                knLogger.info(methodName, "Group property XCAP 40011 status - ", isNotified40011);
                 for (KnCorpGroupListInfoDTO groupInfo : modifyUpmGroup) {
                     Integer groupId = groupInfo.getGroupID();
                     Integer zoneId = groupInfo.getGroupZone();
@@ -618,6 +632,7 @@ public class KnModifyGroupTask extends KnAbstractTask {
                 taskResult.setGroupIds(removeGroupMemPropResp.getGroupIds());
                 taskResult.setUpmCount(removeGroupMemPropResp.getUserProfileCount());
                 taskResult.setRemoveGroupResp(removeGroupMemPropResp);
+                taskResult.setGroupRemoved(true);
                 if (Objects.equals(removeGroupMemPropResp.getStatusCode(), "00000") && count < TRANSACTION_COUNT) {
                     Set<String> removedGroupIds = new HashSet<>();
                     KnIPUserProfileDTO ipUserProfilesDTO = new KnIPUserProfileDTO();

@@ -522,6 +522,16 @@ public class KnXDMCommonMediator {
         return sendNotification(profileNotifyDTO, dirChgDTO, pv);
     }
 
+    /**
+     * Same as {@link #sendProfileNotification(KnProfileNotifyDTO, KnOPDirChgDTO, String)} but
+     * OPS_CODE (use 10003 for self subscriber name change).
+     * Pass null notificationParamDTO for default ops 0. Do not use this for watcher 10004.
+     */
+    public boolean sendProfileNotification(KnProfileNotifyDTO profileNotifyDTO, KnOPDirChgDTO dirChgDTO, String pv,
+                                           KnNotificationParamDTO notificationParamDTO) {
+        return sendNotification(profileNotifyDTO, dirChgDTO, pv, notificationParamDTO);
+    }
+
     private boolean sendNotification(KnProfileNotifyDTO profileNotifyDTO, KnOPDirChgDTO dirChgDTO, String pv) {
         return sendNotification(profileNotifyDTO, dirChgDTO, pv, null);
     }
