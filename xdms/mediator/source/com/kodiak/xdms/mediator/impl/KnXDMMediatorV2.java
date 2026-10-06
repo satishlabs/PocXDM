@@ -2133,14 +2133,27 @@ public class KnXDMMediatorV2 implements IXDMMediatorIntf {
                 //knLogger.debug(methodName, "Notification DTO generated - ", xcapDiffNotifyDTO);
 
                 KnXcapDiffNotifier xcapDiffNotifier = KnXcapDiffNotifier.getInstance();
-                // 10001: deleted client self de-register (XCAP_DELETED_CLIENT_ON_SUBS_DELETE). Not 10002.
                 KnNotificationParamDTO xcapDeletedClientOnSubsDeleteNotificationParamDTO = new KnNotificationParamDTO();
-                xcapDeletedClientOnSubsDeleteNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_DELETED_CLIENT_ON_SUBS_DELETE.value()); // 10001
+                xcapDeletedClientOnSubsDeleteNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_DELETED_CLIENT_ON_SUBS_DELETE.value());
                 knLogger.debug(methodName, "==> : Sending self notification for delete - 10001");
                 boolean notificationStatus = notifier.sendXcapDiffNotifications(xcapDiffNotifyDTO, xcapDeletedClientOnSubsDeleteNotificationParamDTO);
                 if (notificationStatus) {
-                    knLogger.debug(methodName, "Successfully sent the self notification - 10001");
+                    knLogger.debug(methodName, "Successfully sent the notification");
                 }
+                // Watcher clients must also be notified on subscriber delete (10002).
+                // The self diff entry is fanned out to the watcher recipients downstream based on the
+                // watcher opsCode, so we resend the SAME notify DTO with the watcher opsCode - but ONLY
+                // when the subscriber actually had watchers (captured before the corporate cleanup).
+                // For a self-only subscriber (no watchers) only the self opsCode (10001) is emitted.
+//                if (dirChgDTO != null && delSubscriberHasWatchers) {
+//                    KnNotificationParamDTO notificationParamDTO_v2del2Watcher = new KnNotificationParamDTO();
+//                    notificationParamDTO_v2del2Watcher.setOpsCode(KnConstants.OPS_CODE.XCAP_WATCHER_CLIENTS_ON_SUBS_DELETE.value());
+//                    knLogger.debug(methodName, "==> : Sending watcher notification - 10002");
+//                    boolean watcherNotificationStatus = notifier.sendXcapDiffNotifications(xcapDiffNotifyDTO, notificationParamDTO_v2del2Watcher);
+//                    if (watcherNotificationStatus) {
+//                        knLogger.debug(methodName, "Successfully sent the watcher notification - 10002");
+//                    }
+//                }
             }
 
             knLogger.debug(methodName, "xcapMobileSync:", xcapMobileSync);

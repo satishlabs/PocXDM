@@ -783,6 +783,7 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
                                     KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_REMOVE_CONTACT.value()); // 40007
                             notificationParamDTO.setPriority(
                                     KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
+                            knLogger.debug(methodName, "==> : Sending UPM directory notification - 40007");
                             commonMediator.sendXcapNotification(xcapDirChgDTO, null, notificationParamDTO);
                         } else if (contactAdded) {
                             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
@@ -790,6 +791,7 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
                                     KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_ADD_CONTACT.value()); // 40006
                             notificationParamDTO.setPriority(
                                     KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
+                            knLogger.debug(methodName, "==> : Sending UPM directory notification - 40006");
                             commonMediator.sendXcapNotification(xcapDirChgDTO, null, notificationParamDTO);
                         }
                         // 40008: MCSXCAP on profile modify add group (KnModifyGroupTask.setGroupAdded).
@@ -835,6 +837,7 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
                                         KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_GROUP_PROPERTY.value()); // 40011
                                 notificationParamDTO.setPriority(
                                         KnConstants.NOTIFICATION_PRIORITY.LOW.value());
+                                knLogger.debug(methodName, "==> : Sending UPM directory notification - 40011");
                                 commonMediator.sendXcapNotification(xcapDirChgDTO, null, notificationParamDTO);
                             } else {
                                 commonMediator.sendXcapNotification(xcapDirChgDTO);

@@ -3173,7 +3173,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             // 10001 is reserved for the deleted client's de-register send later in this method.
             KnNotificationParamDTO xcapWatcherClientsOnSubsDeleteNotificationParamDTO = new KnNotificationParamDTO();
             xcapWatcherClientsOnSubsDeleteNotificationParamDTO.setCid(message.getCorrelationId());
-            xcapWatcherClientsOnSubsDeleteNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_WATCHER_CLIENTS_ON_SUBS_DELETE.value()); // 10002
+            xcapWatcherClientsOnSubsDeleteNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_WATCHER_CLIENTS_ON_SUBS_DELETE.value());
             xcapWatcherClientsOnSubsDeleteNotificationParamDTO.setPriority(NOTIFICATION_PRIORITY.CRITICAL.value());
             knLogger.debug(methodName, "==> : Sending watcher notification for delete - 10002");
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn, xcapWatcherClientsOnSubsDeleteNotificationParamDTO);
@@ -10012,14 +10012,11 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                 corpResponseDTO = new KnCorpResponseDTO();
                 corpResponseDTO.setChangeLogMap(changeLogMapResponse);
                 Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = commonMediator.prepareNotification(corpResponseDTO);
-                // 10002: watcher clients on external-subscriber delete (corp changelog dests, not self 10001).
                 KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
                 notificationParamDTO.setCid(message.getCorrelationId());
-                notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_WATCHER_CLIENTS_ON_SUBS_DELETE.value()); // 10002
-                notificationParamDTO.setPriority(NOTIFICATION_PRIORITY.CRITICAL.value());
-                knLogger.debug(methodName, "==> : Sending watcher notification for delete - 10002");
+                notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_DELETED_CLIENT_ON_SUBS_DELETE.value());
                 boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
-                knLogger.debug(methodName, "Notification status - 10002 - ", isNotified);
+                knLogger.debug(methodName, "Notification status - ", isNotified);
                 knLogger.debug(methodName, "Sending log LI request");
                 KnLIEventHandler.logLI(liEventList);
                 knLogger.debug(methodName, "After log LI request sent");
