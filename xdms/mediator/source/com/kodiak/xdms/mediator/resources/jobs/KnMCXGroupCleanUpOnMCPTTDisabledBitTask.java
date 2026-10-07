@@ -193,8 +193,16 @@ public class KnMCXGroupCleanUpOnMCPTTDisabledBitTask implements Runnable {
                         notifier.setMaxNotfnsPerJob(2);
                         KnNotificationParamDTO xcapOnScanlistUpdateNotificationParamDTO = new KnNotificationParamDTO();
                         xcapOnScanlistUpdateNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_ON_SCANLIST_UPDATE.value());
+                        xcapOnScanlistUpdateNotificationParamDTO.setPriority(KnConstants.NOTIFICATION_PRIORITY.CRITICAL.value());
                         boolean removeScanListRespisNotified = notifier.sendXcapDiffNotifications(removeScanListRespxcapDiffList, mcxCleanUpTaskTxn, xcapOnScanlistUpdateNotificationParamDTO);
-                        knLogger.debug(methodName, " removeScanListRespisNotified - ", removeScanListRespisNotified);
+                        knLogger.info(methodName, "Scan list XCAP diff 20009 status - ", removeScanListRespisNotified);
+                        // This block removes the group from the camped scan list, so 20010 goes with 20009.
+                        KnNotificationParamDTO addRemoveParam = new KnNotificationParamDTO();
+                        addRemoveParam.setOpsCode(KnConstants.OPS_CODE.XCAP_ON_SCANLIST_UPDATE_ADD_REMOVE_GROUPS.value()); // 20010
+                        addRemoveParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.CRITICAL.value());
+                        boolean addRemoveNotified = notifier.sendXcapDiffNotifications(removeScanListRespxcapDiffList, mcxCleanUpTaskTxn, addRemoveParam);
+                        knLogger.info(methodName, "Scan list add/remove XCAP diff 20010 status - ", addRemoveNotified,
+                                " opsCode=", addRemoveParam.getOpsCode());
                     }
                     //remove if Emergency type group,DG.EMERGENCY_SUBSCR_DESTINFO
                     if (emgGroupId.contains(String.valueOf(groupId))) {

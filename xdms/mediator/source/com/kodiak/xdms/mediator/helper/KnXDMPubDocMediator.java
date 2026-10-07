@@ -1269,8 +1269,7 @@ public class KnXDMPubDocMediator {
         if (KnConstants.RESPONSE_STATUS.SUCCESS.value() == respDto.getStatus()) {
              responseDTO.setEtag(Long.parseLong(respDto.getEtag()));
             //commonMediator.sendTGSModeChangeNotification(respDto.getTgsModeChgMap());
-            // 20010 and 20011 only. This path previously sent no scan-list ops code.
-            // 20009 and the CAT modifySubscriberScanList path are left as they are.
+            // 20009 and 20010 when a group was added or removed. 20011 when only priority changed.
             sendScanListChangeNotification(respDto, persisterTxn, scanGroupsAddedOrRemoved, scanPriorityChanged);
         }
         knLogger.exit(methodName, responseDTO.getEtag());
@@ -1329,18 +1328,24 @@ public class KnXDMPubDocMediator {
         return existingGrpMap;
     }
 
-    // Queues 20010 and 20011 independently. Does not send 20009.
+    // Add/remove sends both 20009 and 20010. Priority-only sends 20011.
+    // Unchanged groups put back into the added list are not 20010.
     private void sendScanListChangeNotification(KnCorpResponseDTO respDto, KnPersisterTxn persisterTxn,
                                                 boolean scanGroupsAddedOrRemoved, boolean scanPriorityChanged) {
         String methodName = "sendScanListChangeNotification";
-        if (!scanGroupsAddedOrRemoved && !scanPriorityChanged) {
-            knLogger.info(methodName, "20010 and 20011 skipped: scan list has no add, remove, or priority change");
-            return;
-        }
         Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = commonMediator.prepareNotification(respDto);
         int scanDiffCount = xcapDiffList == null ? 0 : xcapDiffList.size();
         knLogger.info(methodName, "scan list diffCount=", scanDiffCount);
         IXcapDiffNotifierIntf scanNotifier = new KnXcapDiffNotifierImpl();
+        if (scanGroupsAddedOrRemoved || !scanPriorityChanged) {
+            KnNotificationParamDTO scanListParam = new KnNotificationParamDTO();
+            scanListParam.setOpsCode(com.kodiak.xdms.server.common.resources.KnConstants.OPS_CODE.XCAP_ON_SCANLIST_UPDATE.value()); // 20009
+            scanListParam.setPriority(com.kodiak.xdms.server.common.resources.KnConstants.NOTIFICATION_PRIORITY.CRITICAL.value());
+            boolean scanListNotified = scanNotifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn, scanListParam);
+            knLogger.info(methodName, "Scan list XCAP diff 20009 status - ", scanListNotified,
+                    " diffCount=", scanDiffCount, " opsCode=", scanListParam.getOpsCode(),
+                    " reason=", scanGroupsAddedOrRemoved ? "groups added or removed" : "scan list updated");
+        }
         if (scanGroupsAddedOrRemoved) {
             KnNotificationParamDTO addRemoveParam = new KnNotificationParamDTO();
             addRemoveParam.setOpsCode(com.kodiak.xdms.server.common.resources.KnConstants.OPS_CODE.XCAP_ON_SCANLIST_UPDATE_ADD_REMOVE_GROUPS.value()); // 20010
@@ -1348,6 +1353,8 @@ public class KnXDMPubDocMediator {
             boolean addRemoveNotified = scanNotifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn, addRemoveParam);
             knLogger.info(methodName, "Scan list add/remove XCAP diff 20010 status - ", addRemoveNotified,
                     " diffCount=", scanDiffCount, " opsCode=", addRemoveParam.getOpsCode());
+        } else {
+            knLogger.info(methodName, "20010 skipped: scan list has no group add or remove");
         }
         if (scanPriorityChanged) {
             KnNotificationParamDTO priorityParam = new KnNotificationParamDTO();

@@ -259,8 +259,16 @@ public class KnAssignGroupTask extends KnAbstractTask {
                         notifier.setMaxNotfnsPerJob(2);
                         KnNotificationParamDTO xcapOnScanlistUpdateNotificationParamDTO = new KnNotificationParamDTO();
                         xcapOnScanlistUpdateNotificationParamDTO.setOpsCode(com.kodiak.xdms.server.common.resources.KnConstants.OPS_CODE.XCAP_ON_SCANLIST_UPDATE.value());
+                        xcapOnScanlistUpdateNotificationParamDTO.setPriority(com.kodiak.xdms.server.common.resources.KnConstants.NOTIFICATION_PRIORITY.CRITICAL.value());
                         boolean scanListRespisNotified = notifier.sendXcapDiffNotifications(scanListRespxcapDiffList, assignGroupTxn, xcapOnScanlistUpdateNotificationParamDTO);
-                        knLogger.debug(methodName, " scanListRespxcapDiffList scanListRespisNotified- ", scanListRespisNotified);
+                        knLogger.info(methodName, "Scan list XCAP diff 20009 status - ", scanListRespisNotified);
+                        // This block adds the group to the camped scan list, so 20010 goes with 20009.
+                        KnNotificationParamDTO addRemoveParam = new KnNotificationParamDTO();
+                        addRemoveParam.setOpsCode(com.kodiak.xdms.server.common.resources.KnConstants.OPS_CODE.XCAP_ON_SCANLIST_UPDATE_ADD_REMOVE_GROUPS.value()); // 20010
+                        addRemoveParam.setPriority(com.kodiak.xdms.server.common.resources.KnConstants.NOTIFICATION_PRIORITY.CRITICAL.value());
+                        boolean addRemoveNotified = notifier.sendXcapDiffNotifications(scanListRespxcapDiffList, assignGroupTxn, addRemoveParam);
+                        knLogger.info(methodName, "Scan list add/remove XCAP diff 20010 status - ", addRemoveNotified,
+                                " opsCode=", addRemoveParam.getOpsCode());
 
                     }
                 }

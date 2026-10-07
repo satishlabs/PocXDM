@@ -9888,14 +9888,24 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                 if (KnConstants.RESPONSE_STATUS.SUCCESS.value() == corpResponseDTO.getStatus()) {
                     commonMediator.sendTGSModeChangeNotification(corpResponseDTO.getTgsModeChgMap());
                 }
-                // 20010 and 20011 are separate notifies. One request can add a group and change
-                // another group's priority. 20009 is only the fallback when neither list is present.
+                // Add/remove sends both 20009 and 20010. Priority-only sends 20011.
+                // A scan-list update with neither list sends 20009 only.
                 // CRITICAL (0) so the row is written to XCAP_PENDING_NOTIFYQ. A LOW row for that
                 // ops code in DG.XCAP_NOTIFICATION_PRIORITY still suppresses it.
                 Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = commonMediator.prepareNotification(corpResponseDTO);
                 int scanDiffCount = xcapDiffList == null ? 0 : xcapDiffList.size();
                 knLogger.info(methodName, "scan list diffCount=", scanDiffCount);
                 notifier.setMaxNotfnsPerJob(2);
+                if (scanGroupsAddedOrRemoved || !scanPriorityChanged) {
+                    KnNotificationParamDTO scanListParam = new KnNotificationParamDTO();
+                    scanListParam.setCid(message.getCorrelationId());
+                    scanListParam.setPriority(NOTIFICATION_PRIORITY.CRITICAL.value());
+                    scanListParam.setOpsCode(KnConstants.OPS_CODE.XCAP_ON_SCANLIST_UPDATE.value()); // 20009
+                    boolean scanListNotified = notifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn, scanListParam);
+                    knLogger.info(methodName, "Scan list XCAP diff 20009 status - ", scanListNotified,
+                            " diffCount=", scanDiffCount, " opsCode=", scanListParam.getOpsCode(),
+                            " reason=", scanGroupsAddedOrRemoved ? "groups added or removed" : "scan list updated");
+                }
                 if (scanGroupsAddedOrRemoved) {
                     KnNotificationParamDTO addRemoveParam = new KnNotificationParamDTO();
                     addRemoveParam.setCid(message.getCorrelationId());
@@ -9904,7 +9914,10 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                     boolean addRemoveNotified = notifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn, addRemoveParam);
                     knLogger.info(methodName, "Scan list add/remove XCAP diff 20010 status - ", addRemoveNotified,
                             " diffCount=", scanDiffCount, " opsCode=", addRemoveParam.getOpsCode(),
-                            " priority=", addRemoveParam.getPriority());
+                            " priority=", addRemoveParam.getPriority(),
+                            " added=", addedScanCount, " removed=", removedScanCount);
+                } else {
+                    knLogger.info(methodName, "20010 skipped: added=", addedScanCount, " removed=", removedScanCount);
                 }
                 if (scanPriorityChanged) {
                     KnNotificationParamDTO priorityParam = new KnNotificationParamDTO();
@@ -9915,15 +9928,6 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                     knLogger.info(methodName, "Scan list priority XCAP diff 20011 status - ", priorityNotified,
                             " diffCount=", scanDiffCount, " opsCode=", priorityParam.getOpsCode(),
                             " priority=", priorityParam.getPriority());
-                }
-                if (!scanGroupsAddedOrRemoved && !scanPriorityChanged) {
-                    KnNotificationParamDTO scanListParam = new KnNotificationParamDTO();
-                    scanListParam.setCid(message.getCorrelationId());
-                    scanListParam.setPriority(NOTIFICATION_PRIORITY.CRITICAL.value());
-                    scanListParam.setOpsCode(KnConstants.OPS_CODE.XCAP_ON_SCANLIST_UPDATE.value()); // 20009
-                    boolean scanListNotified = notifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn, scanListParam);
-                    knLogger.info(methodName, "Scan list XCAP diff 20009 status - ", scanListNotified,
-                            " diffCount=", scanDiffCount, " opsCode=", scanListParam.getOpsCode());
                 }
                 persisterTxn.save();
                 KnStatisticsManagerImpl.getInstance().increment(KnOMConstants.NUM_MODIFY_TGSC_LIST_SUCC_RESP);
