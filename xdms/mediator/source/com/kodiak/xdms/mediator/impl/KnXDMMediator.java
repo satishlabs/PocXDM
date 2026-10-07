@@ -7659,6 +7659,46 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
             knLogger.debug(methodName, "Notification status - ", isNotified);
 
+            // 30013 is its own notify for dispatcher clients when a member is added to an
+            // area-based group. The ops code chosen above (30002, 30007, 30009, 30005, 30003)
+            // is left as it is. A non-ABDG member add does not send 30013.
+            // CRITICAL (0) so the row is written to XCAP_PENDING_NOTIFYQ. A LOW row for 30013
+            // in DG.XCAP_NOTIFICATION_PRIORITY still suppresses it.
+            if (isAbdg && membersAdded) {
+                KnNotificationParamDTO dispatcherAddParam = new KnNotificationParamDTO();
+                dispatcherAddParam.setCid(message.getCorrelationId());
+                dispatcherAddParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.CRITICAL.value());
+                dispatcherAddParam.setOpsCode(
+                        KnConstants.OPS_CODE.XCAP_DISPATCHER_CLIENTS_ON_AREA_BASED_GROUP_MEMBER_ADD.value()); // 30013
+                int dispatcherDiffCount = xcapDiffList == null ? 0 : xcapDiffList.size();
+                boolean dispatcherNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, dispatcherAddParam);
+                knLogger.info(methodName, "Area-based group member add dispatcher XCAP diff 30013 status - ",
+                        dispatcherNotified, " diffCount=", dispatcherDiffCount,
+                        " opsCode=", dispatcherAddParam.getOpsCode(),
+                        " priority=", dispatcherAddParam.getPriority());
+            } else {
+                knLogger.info(methodName, "30013 skipped: isAbdg=", isAbdg, " membersAdded=", membersAdded);
+            }
+
+            // 30006 is its own notify for the added member on a normal group member add.
+            // The ops code chosen above (30007 for a member add, or 30002, 30009, 30005, 30003)
+            // is left as it is. Area-based member add keeps 30013 and does not send 30006.
+            // CRITICAL (0) so the row is written to XCAP_PENDING_NOTIFYQ. A LOW row for 30006
+            // in DG.XCAP_NOTIFICATION_PRIORITY still suppresses it.
+            if (!isAbdg && membersAdded) {
+                KnNotificationParamDTO addedMemberParam = new KnNotificationParamDTO();
+                addedMemberParam.setCid(message.getCorrelationId());
+                addedMemberParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.CRITICAL.value());
+                addedMemberParam.setOpsCode(KnConstants.OPS_CODE.XCAP_ADDED_MEMBER_ON_GROUP_MEMBER_ADD.value()); // 30006
+                int addedDiffCount = xcapDiffList == null ? 0 : xcapDiffList.size();
+                boolean addedNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, addedMemberParam);
+                knLogger.info(methodName, "Group member add XCAP diff 30006 status - ", addedNotified,
+                        " diffCount=", addedDiffCount, " opsCode=", addedMemberParam.getOpsCode(),
+                        " priority=", addedMemberParam.getPriority());
+            } else {
+                knLogger.info(methodName, "30006 skipped: isAbdg=", isAbdg, " membersAdded=", membersAdded);
+            }
+
             // Notification to added member(s) on group member addition
             // ABDG: 30012 (added member on area-based group member add) - also covers ABDG fence-in
             // Corp: 30006 (added member on group member add)
@@ -16458,8 +16498,32 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             //int newEtag = previousEtag + 1;
             dirChgDTO.setDirNewEtag(String.valueOf(currentEtag));
             knLogger.debug(methodName, " Notification dto for clone api", dirChgDTO);
-            // sending the notification
+            // Self client (30025). This send is unchanged.
             commonMediator.sendXcapNotification(dirChgDTO);
+            knLogger.info(methodName, "30025 self client copy-paste notify sent for mdn=",
+                    KnGDPRTemplate.mdn(xdmRequestDTO.getToMdn()));
+            // Watcher clients (30026): existing members of the pasted groups.
+            // Sent only when group copy-paste produced a watcher changelog. Contact, scan-list,
+            // feature, emergency, and permission cloning do not send 30026.
+            // CRITICAL (0) so the row is written to XCAP_PENDING_NOTIFYQ. A LOW row for 30026
+            // in DG.XCAP_NOTIFICATION_PRIORITY still suppresses it.
+            Map<String, KnOPDirChgDTO> copyPasteWatcherChangeLog = corpCloningResponseDTO.getChangeLogMap();
+            if (copyPasteWatcherChangeLog != null && !copyPasteWatcherChangeLog.isEmpty()) {
+                KnCorpResponseDTO watcherResp = new KnCorpResponseDTO();
+                watcherResp.setChangeLogMap(copyPasteWatcherChangeLog);
+                Collection<KnXcapDiffDirChgNotifyDTO> watcherDiffList = commonMediator.prepareNotification(watcherResp);
+                int watcherDiffCount = watcherDiffList == null ? 0 : watcherDiffList.size();
+                KnNotificationParamDTO watcherParam = new KnNotificationParamDTO();
+                watcherParam.setCid(message.getCorrelationId());
+                watcherParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.CRITICAL.value());
+                watcherParam.setOpsCode(KnConstants.OPS_CODE.XCAP_WATCHER_CLIENTS_ON_GROUP_COPY_PASTE.value()); // 30026
+                boolean watcherNotified = notifier.sendXcapDiffNotifications(watcherDiffList, null, watcherParam);
+                knLogger.info(methodName, "Group copy-paste watcher XCAP diff 30026 status - ", watcherNotified,
+                        " diffCount=", watcherDiffCount, " watcherMdns=", copyPasteWatcherChangeLog.size(),
+                        " opsCode=", watcherParam.getOpsCode(), " priority=", watcherParam.getPriority());
+            } else {
+                knLogger.info(methodName, "30026 skipped: no existing group member changes for copy-paste");
+            }
             boolean status = commonMediator.prepareMcxNotifyForProfileMdns(profileNotifyDTO);
             knLogger.debug(methodName, "sending Profile notification Status: ", status);
             //intitiate Bulk Dispatch group job
@@ -16537,6 +16601,13 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             getXDMResponseDTO(respDto, corpResponseDTO);
             if (corpResponseDTO.getGroupIds() != null && !corpResponseDTO.getGroupIds().isEmpty()) {
                 corpCloningResponseDTO.setGroupIds(corpResponseDTO.getGroupIds());
+            }
+            // Watcher changelog only (30026). The target self notify stays on sendXcapNotification.
+            if (corpResponseDTO.getChangeLogMap() != null && !corpResponseDTO.getChangeLogMap().isEmpty()) {
+                corpCloningResponseDTO.setChangeLogMap(corpResponseDTO.getChangeLogMap());
+                knLogger.info(methodName, "30026 watcher changeLog size=", corpResponseDTO.getChangeLogMap().size());
+            } else {
+                knLogger.info(methodName, "30026 watcher changeLog empty");
             }
         }
         //Bit-position# 3:- ScanList

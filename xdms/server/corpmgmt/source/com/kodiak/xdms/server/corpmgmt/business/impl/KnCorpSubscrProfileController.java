@@ -4355,15 +4355,41 @@ public class KnCorpSubscrProfileController implements ICorpSubscrProfileControll
             }
         });
         bulkGroupCloningDTO.getBroadCastGrpList().forEach(groupEtag::remove);
-        //removing the existing group member , As existing member getting directory notify
+        // Existing members are the watcher clients for group copy-paste (30026).
+        // They are still removed from etagMap below so the target (self, 30025) notify is unchanged.
+        // The target MDN is not included in the watcher map.
         List<String> exisitngGroupMembers = new ArrayList<>();
         for (Collection<String> grpMembers : bulkGroupCloningDTO.getGroupDistList().values()) {
             exisitngGroupMembers.addAll(grpMembers);
         }
+        String copyPasteTargetMdn = bulkGroupCloningDTO.getToMdn();
+        Map<String, KnOPDirChgDTO> watcherEtagMap = new HashMap<>();
+        Map<Integer, Collection<String>> watcherMembersByGroup = new HashMap<>();
+        for (Map.Entry<Integer, Collection<String>> groupMembers : bulkGroupCloningDTO.getGroupDistList().entrySet()) {
+            if (groupMembers.getValue() == null || !groupEtag.containsKey(groupMembers.getKey())) {
+                continue;
+            }
+            Collection<String> watcherMdns = new ArrayList<>();
+            for (String memberMdn : groupMembers.getValue()) {
+                if (memberMdn != null && !memberMdn.equals(copyPasteTargetMdn) && etagMap.containsKey(memberMdn)) {
+                    watcherMdns.add(memberMdn);
+                    watcherEtagMap.putIfAbsent(memberMdn, etagMap.get(memberMdn));
+                }
+            }
+            if (!watcherMdns.isEmpty()) {
+                watcherMembersByGroup.put(groupMembers.getKey(), watcherMdns);
+            }
+        }
         etagMap.keySet().removeIf(exisitngGroupMembers::contains);
-
-        //etagMap = commonInfoUtil.formSubscriberNotification(bulkGroupCloningDTO.getToMdn(), groupEtag, DOC_CHANGE_TYPE.REPLACE.value(), etagMap);
-        //respDTO.setChangeLogMap(etagMap);
+        if (!watcherMembersByGroup.isEmpty()) {
+            watcherEtagMap = commonInfoUtil.formSubscriberNotification(watcherMembersByGroup, groupEtag,
+                    DOC_CHANGE_TYPE.REPLACE.value(), watcherEtagMap, bulkGroupCloningDTO.getGroupDetailsMap(), null);
+            respDTO.setChangeLogMap(watcherEtagMap);
+            knLogger.info(methodName, "30026 watcher directories=", watcherEtagMap == null ? 0 : watcherEtagMap.size(),
+                    " groups=", watcherMembersByGroup.size());
+        } else {
+            knLogger.info(methodName, "30026 watcher directories=0: no existing member directory change for group copy-paste");
+        }
         respDTO.setMdnCorpId(bulkGroupCloningDTO.getToMdnSubsProfile().getCorpId());
         respDTO.setGroupIds(groupEtag.keySet()/*.stream().filter(integer -> !mdnExistenceInGroup.containsKey(String.valueOf(integer))).collect(Collectors.toList())*/);
         populate(respDTO);
