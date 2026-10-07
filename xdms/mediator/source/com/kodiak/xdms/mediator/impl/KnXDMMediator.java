@@ -19603,6 +19603,9 @@ public class KnXDMMediator implements IXDMMediatorIntf {
 
 
             String modifyUpmJsonString = KnCorpCommonInfoUtil.ObjToJson(ipUserProfileDTO);
+            knLogger.info(methodName, "Queuing MODIFY_USER_PROFILE job txnId=", userProfileReqDto.getTransactionId(),
+                    " userProfileId=", userProfileReqDto.getUserProfileId(),
+                    " contactListId=", modifyUpmReq.getContactListID());
             KnAsyncJobDTO knAsyncJobDTO = commonMediator.createJobNotifyDTO(userProfileReqDto.getCorpId(), userProfileReqDto.getTransactionId()
                     , userProfileReqDto.getUserProfileId(), UPM_OPERATION_TYPE.MODIFY_USER_PROFILE.Value(), userProfileReqDto.getMdn(),
                     UPM_RESOURCE_TYPE.MDN.Value(), modifyUpmJsonString, KnConstants.UPM_JOB_STATUS.NEW.Value(), null);

@@ -96,7 +96,7 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
     }
 
     public boolean executeJob() {
-        String methodName = "run()";
+        String methodName = "executeJob()";
         knLogger.info(methodName, "Entry - txnId", txnId, "opType", asyncJobDTO.getOpType());
 
         try {
@@ -183,6 +183,8 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
                     if (profileMdnResp != null && !profileMdnResp.getMdnList().isEmpty()) {
                         KnTaskResult modifyGroupTaskResult = new KnTaskResult();
                         userProfileDetails.setUpmCount(upmCount);
+                        knLogger.info(methodName, "calling modifyUpmEachProfile for mdnCount=", profileMdnResp.getMdnList().size(),
+                                " txnId=", txnId);
                         for (String profileMdn : profileMdnResp.getMdnList()) {
                             modifyGroupTaskResult = modifyUpmEachProfile(userProfileDetails, dbSublistId, cbsDocUpdateCount, failedTxnCount, modifyGroupTaskResult, profileMdn);
                             profileMdns.add(userProfileDetails.getMdn());
@@ -213,7 +215,7 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
                             generalCacheUtil.insertTempStaleRecords(uuid.toString(), KnConstants.UPM_JOB_STATUS.RETRY.Value(), profileMdns, userProfileId, corpId, payload, RETRY_MODIFY_USER_PROFILE.Value());
                         }
                     } else {
-                        knLogger.info(methodName, "updating UPM CB doc ");
+                        knLogger.info(methodName, "skip modifyUpmEachProfile: no profile MDN assigned to this UPM. updating UPM CB doc only. txnId=", txnId);
                         //Case where only upm template is modified and not assinged to any subscriber.
                         KnPersisterTxn modifyUpmCBTxn = null;
                         try {
@@ -691,7 +693,7 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
         boolean groupRemoved = false;
         boolean groupPropertyUpdated = false;
         try {
-            knLogger.entry(methodName, "Start: profileMdn- ", profileMdn, " failedTxnCount- ", failedTxnCount, " cbsDocUpdateCount-", cbsDocUpdateCount);
+            knLogger.info(methodName, "Start: profileMdn- ", profileMdn, " failedTxnCount- ", failedTxnCount, " cbsDocUpdateCount-", cbsDocUpdateCount);
             //open transaction
             modifyUpmTxn = KnPersisterTxn.getPersisterTxn();
             modifyUpmTxn.open();
@@ -706,10 +708,10 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
                 upmCount.add(modifyGroupTaskResult.getUpmCount());
                 userProfileDetails.setGroupIds(modifyGroupTaskResult.getGroupIds());
                 groupPropertyUpdated = modifyGroupTaskResult.isGroupPropertyUpdated();
-                // 40008/40009: copy group flags before modifyUpmContact overwrites taskResult.
+                // 40008/40009/40011: copy before modifyUpmContact overwrites taskResult.
                 groupAdded = modifyGroupTaskResult.isGroupAdded();
                 groupRemoved = modifyGroupTaskResult.isGroupRemoved();
-                knLogger.debug(methodName, "groupAdded=", groupAdded, " groupRemoved=", groupRemoved,
+                knLogger.info(methodName, "groupAdded=", groupAdded, " groupRemoved=", groupRemoved,
                         " groupPropertyUpdated=", groupPropertyUpdated);
 
                 if (modifyGroupTaskResult.getAddGroupResp() != null && modifyGroupTaskResult.getAddGroupResp().getAddedGroupMembersMap() != null) {
@@ -726,13 +728,16 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
             }
 
             //modifyUpmContact
-            knLogger.debug(methodName, " modify upm contact transaction status =", modifyUpmTxn.getTransactionStatus(), " taskResult- ", taskResult);
+            knLogger.info(methodName, " modify upm contact transaction status =", modifyUpmTxn.getTransactionStatus(), " taskResult- ", taskResult);
             if (taskResult != null && taskResult.getTaskStatus() == KnConstants.STATUS_SUCCESS) {
                 taskResult = modifyUpmContact(profileMdn, modifyUpmTxn, dbSublistId);
                 userProfileDetails.setContactEtagToBeUpdated(taskResult.isContactEtagToBeUpdated());
                 contactAdded = taskResult.isContactAdded();
                 contactRemoved = taskResult.isContactRemoved();
-                knLogger.debug(methodName, " taskResult- ", taskResult, "isContactEtagToBeUpdated-", taskResult.isContactEtagToBeUpdated());
+                knLogger.info(methodName, "contactAdded=", contactAdded, " contactRemoved=", contactRemoved,
+                        " isContactEtagToBeUpdated=", taskResult.isContactEtagToBeUpdated());
+            } else {
+                knLogger.info(methodName, "skip modifyUpmContact: prior task failed or null. taskResult=", taskResult);
             }
 
             //modifyUpmPermission
@@ -777,33 +782,48 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
                         // Sending Directory Notify
                         // 40007: MCSXCAP on profile modify remove contact.
                         // 40006: MCSXCAP on profile modify add contact.
+                        // Same pattern as 40008/40009: do not hide remove when both flags are true (list switch).
                         if (contactRemoved && !contactAdded) {
                             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
                             notificationParamDTO.setOpsCode(
                                     KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_REMOVE_CONTACT.value()); // 40007
                             notificationParamDTO.setPriority(
                                     KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
-                            knLogger.debug(methodName, "==> : Sending UPM directory notification - 40007");
+                            knLogger.info(methodName, "==> : Sending UPM directory notification - 40007");
                             commonMediator.sendXcapNotification(xcapDirChgDTO, null, notificationParamDTO);
-                        } else if (contactAdded) {
+                        } else if (contactAdded && !contactRemoved) {
                             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
                             notificationParamDTO.setOpsCode(
                                     KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_ADD_CONTACT.value()); // 40006
                             notificationParamDTO.setPriority(
                                     KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
-                            knLogger.debug(methodName, "==> : Sending UPM directory notification - 40006");
+                            knLogger.info(methodName, "==> : Sending UPM directory notification - 40006");
                             commonMediator.sendXcapNotification(xcapDirChgDTO, null, notificationParamDTO);
+                        } else if (contactAdded && contactRemoved) {
+                            KnNotificationParamDTO addContactParam = new KnNotificationParamDTO();
+                            addContactParam.setOpsCode(
+                                    KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_ADD_CONTACT.value()); // 40006
+                            addContactParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
+                            knLogger.info(methodName, "==> : Sending UPM directory notification - 40006");
+                            commonMediator.sendXcapNotification(xcapDirChgDTO, null, addContactParam);
+                            KnNotificationParamDTO removeContactParam = new KnNotificationParamDTO();
+                            removeContactParam.setOpsCode(
+                                    KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_REMOVE_CONTACT.value()); // 40007
+                            removeContactParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
+                            knLogger.info(methodName, "==> : Sending UPM directory notification - 40007");
+                            commonMediator.sendXcapNotification(xcapDirChgDTO, null, removeContactParam);
                         }
                         // 40008: MCSXCAP on profile modify add group (KnModifyGroupTask.setGroupAdded).
                         // 40009: MCSXCAP on profile modify remove group (KnModifyGroupTask.setGroupRemoved).
-                        // Not chained after contact: 40006/40007 must not hide 40008/40009.
+                        // 40011: MCSXCAP on profile modify update group property (setGroupPropertyUpdated).
+                        // Independent of contact and of each other so one UPM modify can stamp 40008+40009+40011.
                         if (groupRemoved && !groupAdded) {
                             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
                             notificationParamDTO.setOpsCode(
                                     KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_REMOVE_GROUP.value()); // 40009
                             notificationParamDTO.setPriority(
                                     KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
-                            knLogger.debug(methodName, "==> : Sending UPM directory notification - 40009");
+                            knLogger.info(methodName, "==> : Sending UPM directory notification - 40009");
                             commonMediator.sendXcapNotification(xcapDirChgDTO, null, notificationParamDTO);
                         } else if (groupAdded && !groupRemoved) {
                             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
@@ -811,37 +831,33 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
                                     KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_ADD_GROUP.value()); // 40008
                             notificationParamDTO.setPriority(
                                     KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
-                            knLogger.debug(methodName, "==> : Sending UPM directory notification - 40008");
+                            knLogger.info(methodName, "==> : Sending UPM directory notification - 40008");
                             commonMediator.sendXcapNotification(xcapDirChgDTO, null, notificationParamDTO);
                         } else if (groupAdded && groupRemoved) {
-                            // Same UPM modify added and removed groups: stamp both ops.
                             KnNotificationParamDTO addGroupParam = new KnNotificationParamDTO();
                             addGroupParam.setOpsCode(
                                     KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_ADD_GROUP.value()); // 40008
                             addGroupParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
-                            knLogger.debug(methodName, "==> : Sending UPM directory notification - 40008");
+                            knLogger.info(methodName, "==> : Sending UPM directory notification - 40008");
                             commonMediator.sendXcapNotification(xcapDirChgDTO, null, addGroupParam);
                             KnNotificationParamDTO removeGroupParam = new KnNotificationParamDTO();
                             removeGroupParam.setOpsCode(
                                     KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_REMOVE_GROUP.value()); // 40009
                             removeGroupParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
-                            knLogger.debug(methodName, "==> : Sending UPM directory notification - 40009");
+                            knLogger.info(methodName, "==> : Sending UPM directory notification - 40009");
                             commonMediator.sendXcapNotification(xcapDirChgDTO, null, removeGroupParam);
                         }
-                        // 40011: only when this etag send is group-property-only (no contact/group add/remove).
-                        if (!contactAdded && !contactRemoved && !groupAdded && !groupRemoved) {
-                            if (groupPropertyUpdated) {
-                                // 40011: UPM directory etag send when only group member properties changed
-                                KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
-                                notificationParamDTO.setOpsCode(
-                                        KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_GROUP_PROPERTY.value()); // 40011
-                                notificationParamDTO.setPriority(
-                                        KnConstants.NOTIFICATION_PRIORITY.LOW.value());
-                                knLogger.debug(methodName, "==> : Sending UPM directory notification - 40011");
-                                commonMediator.sendXcapNotification(xcapDirChgDTO, null, notificationParamDTO);
-                            } else {
-                                commonMediator.sendXcapNotification(xcapDirChgDTO);
-                            }
+                        if (groupPropertyUpdated) {
+                            KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
+                            notificationParamDTO.setOpsCode(
+                                    KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_GROUP_PROPERTY.value()); // 40011
+                            notificationParamDTO.setPriority(
+                                    KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
+                            knLogger.info(methodName, "==> : Sending UPM directory notification - 40011");
+                            commonMediator.sendXcapNotification(xcapDirChgDTO, null, notificationParamDTO);
+                        }
+                        if (!contactAdded && !contactRemoved && !groupAdded && !groupRemoved && !groupPropertyUpdated) {
+                            commonMediator.sendXcapNotification(xcapDirChgDTO);
                         }
                     }
                 }
@@ -1179,7 +1195,7 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
     private KnTaskResult modifyUpmContact(String profileMdn, KnPersisterTxn modifyUpmTxn, Integer dbSublistId) throws KnDAOException {
         final String methodName = "modifyUpmContact()";
         long taskId = System.nanoTime();
-        knLogger.debug(methodName, "triggering modify Upm Contact", taskId);
+        knLogger.info(methodName, "triggering modify Upm Contact", taskId);
         updateAsyncJobTask(taskId, KnConstants.UPM_OPERATION_TYPE.MODIFY_USER_PROFILE.Value(), KnConstants.UPM_TASK_TYPE.MODIFYUPMSUBLIST.Value());
         KnModifyContactTask modifyUpm = new KnModifyContactTask(
                 String.valueOf(asyncJobDTO.getCorpId())
@@ -1194,7 +1210,7 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
         KnTaskStatusUpdatePostProcssor postProcssor = new KnTaskStatusUpdatePostProcssor(String.valueOf(taskId), KnConstants.UPM_JOB_STATUS.COMPLETE.Value());
         modifyUpm.addPostprocessor(postProcssor);
         KnTaskResult taskResult = modifyUpm.execute();
-        knLogger.debug(methodName, "Completed modify Upm Contact", taskId);
+        knLogger.info(methodName, "Completed modify Upm Contact", taskId);
         return taskResult;
     }
 

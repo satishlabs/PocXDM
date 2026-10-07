@@ -441,7 +441,7 @@ public class KnModifyGroupTask extends KnAbstractTask {
                     knLogger.debug(methodName, "modifyCorpGroup Operation Failed");
                     throw new KnXDMServerException(modifyGroupMemPropResp.getStatusCode(), modifyGroupMemPropResp.getMessage());
                 }
-                taskResult.setGroupPropertyUpdated(true);
+                taskResult.setGroupPropertyUpdated(true); // 40011: KnUPMJob copies this for MCSXCAP_ON_PROFILE_MODIFY_UPDATE_GROUP_PROPERTY
                 // 40011
                 // (MCSXCAP_ON_PROFILE_MODIFY_UPDATE_GROUP_PROPERTY), not only the later UPM etag if-else.
                 KnNotificationParamDTO notificationParamDTO40011 = new KnNotificationParamDTO();

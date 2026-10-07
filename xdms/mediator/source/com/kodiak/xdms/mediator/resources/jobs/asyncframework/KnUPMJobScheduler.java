@@ -30,10 +30,12 @@ public class KnUPMJobScheduler {
     public boolean addJob(KnAsyncJobDTO asyncJobDTO) {
         String methodName = "addJob(KnAsyncJobDTO)";
         boolean result = false;
-        knLogger.info(methodName,"Entry:-");
+        knLogger.info(methodName, "Entry txnId=", asyncJobDTO.getTxnId(), " opType=", asyncJobDTO.getOpType(),
+                " corpId=", asyncJobDTO.getCorpId(), " userProfileId=", asyncJobDTO.getUserProfileId());
         try {
             generalCacheUtil.createAsyncJob(asyncJobDTO);
-            knLogger.info(methodName,"Job Created Successfully:-");
+            knLogger.info(methodName, "Job Created Successfully txnId=", asyncJobDTO.getTxnId(),
+                    " opType=", asyncJobDTO.getOpType());
             result = true;
         } catch (KnDAOException e) {
            knLogger.error(methodName,"exception while creating job - ",e.getMessage());

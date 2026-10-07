@@ -80,7 +80,7 @@ public class KnModifyContactTask extends KnAbstractTask {
             //get the value from req
             Integer reqSubListId = modifyUpmReq.getContactListID();
 
-            knLogger.debug(methodName,"reqSubListId:",reqSubListId,"dbSublistId:",dbSublistId);
+            knLogger.info(methodName,"reqSubListId:",reqSubListId," dbSublistId:",dbSublistId);
             if(reqSubListId!=null&&!reqSubListId.equals(-1)){
                 addedSublistId=reqSubListId;
                 if(!reqSubListId.equals(dbSublistId)) {
@@ -106,7 +106,7 @@ public class KnModifyContactTask extends KnAbstractTask {
 
 
             knLogger.debug(methodName, "addedMdnList  :", KnGDPRTemplate.mdnList(addedMdnList),"removedMdnList :",KnGDPRTemplate.mdnList(removedMdnList));
-            knLogger.debug(methodName, "addedSublistIds  :", addedSublistIds,"removedSublistIds :",removedSublistIds);
+            knLogger.info(methodName, "addedSublistIds  :", addedSublistIds," removedSublistIds :",removedSublistIds);
             knLogger.info(methodName, "profileMdn ", KnGDPRTemplate.mdn(profileMdn));
 
             if (profileMdn != null && (!addedSublistIds.isEmpty() || !removedSublistIds.isEmpty())) {
@@ -122,8 +122,13 @@ public class KnModifyContactTask extends KnAbstractTask {
 
                 knLogger.debug(methodName, "corpRespDto",corpRespDto);
                 taskResult.setContactEtagToBeUpdated(true);
-                taskResult.setContactAdded(!addedSublistIds.isEmpty());
-                taskResult.setContactRemoved(!removedSublistIds.isEmpty());
+                taskResult.setContactAdded(!addedSublistIds.isEmpty()); // 40006: KnUPMJob copies this
+                taskResult.setContactRemoved(!removedSublistIds.isEmpty()); // 40007: KnUPMJob copies this
+                knLogger.info(methodName, "contactAdded=", !addedSublistIds.isEmpty(),
+                        " contactRemoved=", !removedSublistIds.isEmpty());
+            } else {
+                knLogger.info(methodName, "skip setUserProfileContact: no contact-list add/remove. reqSubListId=",
+                        reqSubListId, " dbSublistId=", dbSublistId, " profileMdn=", KnGDPRTemplate.mdn(profileMdn));
             }
             knLogger.info(methodName, "Done modify contact for profilemdnList :");
             taskResult.setTaskStatus(STATUS_SUCCESS);
