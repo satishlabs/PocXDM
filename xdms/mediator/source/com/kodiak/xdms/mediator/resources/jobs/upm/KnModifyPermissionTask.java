@@ -86,11 +86,28 @@ public class KnModifyPermissionTask extends KnAbstractTask {
 
             knLogger.debug(methodName,"modifyUpmReq permission:  ",ipUserProfilePermDTO);
 
+            Set<KnCorpUserProfileMCPTTConfig> addedPerms = modifyUpmReq.getAddedMcpttPermissionsConfig();
+            Set<KnCorpUserProfileMCPTTConfig> modifiedPerms = modifyUpmReq.getModifiedPermissionsConfig();
+            Set<KnCorpUserProfileMCPTTConfig> removedPerms = modifyUpmReq.getRemovedMcpttPermissionsConfig();
+            if (addedPerms == null) {
+                addedPerms = Collections.emptySet();
+            }
+            if (modifiedPerms == null) {
+                modifiedPerms = Collections.emptySet();
+            }
+            if (removedPerms == null) {
+                removedPerms = Collections.emptySet();
+            }
             Set<KnCorpUserProfileMCPTTConfig> modifyMcpttPermConfigs=new HashSet<>();
-            modifyMcpttPermConfigs.addAll(modifyUpmReq.getAddedMcpttPermissionsConfig());
-            modifyMcpttPermConfigs.addAll(modifyUpmReq.getModifiedPermissionsConfig());
-            modifyMcpttPermConfigs.addAll(modifyUpmReq.getRemovedMcpttPermissionsConfig());
+            modifyMcpttPermConfigs.addAll(addedPerms);
+            modifyMcpttPermConfigs.addAll(modifiedPerms);
+            modifyMcpttPermConfigs.addAll(removedPerms);
 
+            // 40014 is sent later from KnUPMJob, only when this flag is true.
+            // A profile-name or feature-set change does not fill these three sets, so 40014 stays off.
+            knLogger.info(methodName, "40014 permission delta added=", addedPerms.size(),
+                    " modified=", modifiedPerms.size(), " removed=", removedPerms.size(),
+                    " profileMdn=", KnGDPRTemplate.mdn(profileMdn));
             knLogger.debug(methodName,"modifyMcpttPermConfigs:",modifyMcpttPermConfigs);
             //adding profile mdns
             Set<KnCorpUserProfileMCPTTConfig> mcpttPermsProfileMdns=new HashSet<>();
@@ -143,11 +160,22 @@ public class KnModifyPermissionTask extends KnAbstractTask {
                 ipAuthUserPermissionInfoDTO.setUpmCall(true);
                 knLogger.debug(methodName, "setTargetPermissionsAssignUpmCall");
                 KnCorpResponseDTO targetPermResponse = corpClientIntf.setBulkTargetPermissions(ipAuthUserPermissionInfoDTO, targetPermissionTxn);
+                knLogger.info(methodName, "40014 setBulkTargetPermissions status=",
+                        targetPermResponse == null ? "null" : targetPermResponse.getStatus());
                 knLogger.debug(methodName, "Done with Set Target Permission targetPermResponse", targetPermResponse);
-                taskResult.setPermissionEtagToBeUpdated(true);
+                // status 0 is success. A failed permission write must not raise the 40014 flag.
+                if (targetPermResponse != null && targetPermResponse.getStatus() == STATUS_SUCCESS) {
+                    taskResult.setPermissionEtagToBeUpdated(true);
+                    knLogger.info(methodName, "40014 flag set. Directory and XCAP diff are sent from KnUPMJob after updateEtag");
+                } else {
+                    knLogger.info(methodName, "40014 flag not set: setBulkTargetPermissions did not succeed");
+                }
+            } else {
+                knLogger.info(methodName, "40014 flag not set: no added, modified, or removed MCPTT permission, or profileMdn is null");
             }
             taskResult.setTaskStatus(STATUS_SUCCESS);
-            knLogger.info(methodName,"Done modifying permission");
+            knLogger.info(methodName,"Done modifying permission. permissionEtagToBeUpdated=",
+                    taskResult.isPermissionEtagToBeUpdated());
         } catch (KnXDMServerException e) {
             knLogger.error(methodName, "Failed Modify Permission upm ", profileMdn);
             knLogger.error(methodName, "Failed Failed Modify Permission upm ", e);

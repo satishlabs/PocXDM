@@ -134,9 +134,10 @@ public class KnModifyEmergencyAttributesTask extends KnAbstractTask {
                 userProfile.setCorpId(corpId);
                 knLogger.debug(methodName, "userProfile :", userProfile);
                 KnCorpResponseDTO libRespDto = corpMediator.setUserProfileEmergencyAttributes(userProfile, emergencyAttrTxn);
-                KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
-                notificationParamDTO.setPriority(KnConstants.NOTIFICATION_PRIORITY.CRITICAL.value());
-                notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_EMERGENCY_CONFIG.value());
+                // 40012 and 40013 are queued in KnUPMJob after updateEtag, once changeLogMap exists.
+                // Sending here would run before the diff is built and would not land in XCAP_PENDING_NOTIFYQ.
+                knLogger.info(methodName, "Emergency attributes updated for profileMdn=", KnGDPRTemplate.mdn(profileMdn),
+                        ". 40012 and 40013 are sent from KnUPMJob after updateEtag");
                        /* if (libRespDto.isProfileChanged()) {
                             KnOPProvDTO provRespDTO = provClientIntf.sendConfigDocNotification(xdmRequestDTO.getEmergencyAttributes().getMdn(), emergencyAttrTxn);
                             commonMediator.sendXcapNotification(provRespDTO.getDirChgDTO(), null);

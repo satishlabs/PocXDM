@@ -5612,15 +5612,36 @@ public class KnCorpGenericInfoController implements ICorpGenericInfoController {
             ICorpXdmDAO corpXdmDao = new KnCorpXdmDAO(xdmsHomePttId);
             IXDMServerDAO xdmServerDA0 = KnFactorySelector.getDAOFactory(KnFactorySelector.DB).createXDMServerDAO(xdmsHomePttId);
             //ETAG update for xdm directory DG.XDM_DIRECTORY ===> applicable for all the tasks
-            corpSubsProvInfoUtil.updateDirectoryEtag(mdnList, xdmsHomePttId, etagMap, persisterTxn);
+            Map<String, KnOPDirChgDTO> directoryEtagMap = corpSubsProvInfoUtil.updateDirectoryEtag(mdnList, xdmsHomePttId, etagMap, persisterTxn);
             List<String> authMdnsProfileMdns = new ArrayList<>();
             authMdnsProfileMdns.add(profileMdn);
-            //DG.XDM_CORPRESOURCELISTINDEXDOC and DG.AUTHORIZATION_DOC ===> only applicable for contact or permission
+            //DG.XDM_CORPRESOURCELISTINDEXDOC and DG.AUTHORIZATION_DOC ===> contact or permission
+            // Contact-only keeps the previous update (return value discarded).
+            // Permission (40014) keeps the authorization document on permissionChangeLogMap.
+            // That map is not assigned to changeLogMap, so 40008/40009/40011 keep the group payload.
+            Map<String, KnOPDirChgDTO> permissionChangeLog = null;
             if (userProfileDetails.isContactEtagToBeUpdated() || userProfileDetails.isPermissionEtagToBeUpdated()) {
-                contactInfoUtil.updateSubcribersResourceListIndexDoc(mdnList, xdmsHomePttId, null, persisterTxn);
-                //select, update/insert into DG.AUTHORIZATION_DOC
-                corpSubsProvInfoUtil.updateEtagAuthTable(xdmsHomePttId, authMdnsProfileMdns, null,
-                        corpId, persisterTxn);
+                if (userProfileDetails.isPermissionEtagToBeUpdated()) {
+                    knLogger.info(methodName, "40014 building permission changelog. contactEtagAlso=",
+                            userProfileDetails.isContactEtagToBeUpdated());
+                    if (directoryEtagMap == null) {
+                        directoryEtagMap = new HashMap<>();
+                    }
+                    permissionChangeLog = corpSubsProvInfoUtil.updateAuthorizationImpactedTablesForProfileMdnsForUpm(
+                            xdmsHomePttId, authMdnsProfileMdns, null, corpId, persisterTxn, directoryEtagMap);
+                    permissionChangeLog = contactInfoUtil.updateSubcribersResourceListIndexDoc(
+                            mdnList, xdmsHomePttId, permissionChangeLog, persisterTxn);
+                    knLogger.info(methodName, "40014 permission changelog size=",
+                            permissionChangeLog == null ? 0 : permissionChangeLog.size());
+                } else {
+                    knLogger.info(methodName, "40014 not applicable: contact etag only, authorization changelog not kept");
+                    contactInfoUtil.updateSubcribersResourceListIndexDoc(mdnList, xdmsHomePttId, null, persisterTxn);
+                    //select, update/insert into DG.AUTHORIZATION_DOC
+                    corpSubsProvInfoUtil.updateEtagAuthTable(xdmsHomePttId, authMdnsProfileMdns, null,
+                            corpId, persisterTxn);
+                }
+            } else {
+                knLogger.info(methodName, "40014 not applicable: permission etag flag is false");
             }
             //select, update/insert into DG.EMERGENCY_DOC.===>  applicable only for emergency permission
             if (userProfileDetails.isEmergencyEtagToBeUpdated()) {
@@ -5666,6 +5687,7 @@ public class KnCorpGenericInfoController implements ICorpGenericInfoController {
             dirChgDTOs.add(dirChgDTO);
             userProfileDetails.setDirChgDTOs(dirChgDTOs);
             userProfileDetails.setChangeLogMap(etagMap);
+            userProfileDetails.setPermissionChangeLogMap(permissionChangeLog);
             knLogger.info(methodName, "Exit: ", " Notification dto for modifyUPM ", dirChgDTOs);
         } catch (Exception e) {
             knLogger.error(methodName, "Exception occured while updating the modifyUPM etag - ",

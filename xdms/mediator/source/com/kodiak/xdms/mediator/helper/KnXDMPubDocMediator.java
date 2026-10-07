@@ -16,6 +16,7 @@ import com.kodiak.frameworks.messaging.common.dto.KnMqServiceConfig;
 import com.kodiak.logger.KnLogger;
 import com.kodiak.xdms.mediator.KnMediatorConstants;
 import com.kodiak.xdms.notificationmgr.IXcapDiffNotifierIntf;
+import com.kodiak.xdms.notificationmgr.beans.KnXcapDiffDirChgNotifyDTO;
 import com.kodiak.xdms.notificationmgr.beans.KnXcapDiffDocDTO;
 import com.kodiak.xdms.notificationmgr.beans.KnXcapDiffNotifyDTO;
 import com.kodiak.xdms.notificationmgr.impl.KnXcapDiffNotifier;
@@ -1248,6 +1249,15 @@ public class KnXDMPubDocMediator {
         ipTalkGroupDTO.setOperationType(scanListInfoDTO.getOperationType());
         ipTalkGroupDTO.setHierarchyType(scanListInfoDTO.getHierarchyType());
         ipTalkGroupDTO.setMcPttId(scanListInfoDTO.getMcPttId());
+        // Classify from the request versus the DB list, not from ipTalkGroupDTO.getAddedCampGrpList().
+        // getFilteredScanList puts unchanged groups back into the added list because the
+        // library deletes and reinserts the scan list. Those unchanged groups are not 20010.
+        boolean scanGroupsAddedOrRemoved = hasScanGroupAddOrRemove(scanListInfoDTO.getScanList(), corpGetResp.getCampGrpList());
+        boolean scanPriorityChanged = hasScanPriorityChange(scanListInfoDTO.getScanList(), corpGetResp.getCampGrpList());
+        knLogger.info(methodName, "20010 scanGroupsAddedOrRemoved=", scanGroupsAddedOrRemoved,
+                " 20011 scanPriorityChanged=", scanPriorityChanged,
+                " mdn=", KnGDPRTemplate.mdn(scanListInfoDTO.getMdn()));
+
         knLogger.info(methodName, "Calling corp library for modify Subscriber Scan List");
         KnCorpResponseDTO respDto = corpClientIntf.modifySubscriberScanListXcapClients(ipTalkGroupDTO, persisterTxn);
         knLogger.info(methodName, "Returned from corporate library");
@@ -1259,9 +1269,94 @@ public class KnXDMPubDocMediator {
         if (KnConstants.RESPONSE_STATUS.SUCCESS.value() == respDto.getStatus()) {
              responseDTO.setEtag(Long.parseLong(respDto.getEtag()));
             //commonMediator.sendTGSModeChangeNotification(respDto.getTgsModeChgMap());
+            // 20010 and 20011 only. This path previously sent no scan-list ops code.
+            // 20009 and the CAT modifySubscriberScanList path are left as they are.
+            sendScanListChangeNotification(respDto, persisterTxn, scanGroupsAddedOrRemoved, scanPriorityChanged);
         }
         knLogger.exit(methodName, responseDTO.getEtag());
         return responseDTO;
+    }
+
+    // True when a group id is in the request and not already camped, or camped and missing from the request.
+    // Groups with NO_PRIORITY are not camped, same rule as getFilteredScanList.
+    private boolean hasScanGroupAddOrRemove(List<KnXDMTalkGroupInfoDTO> reqList, List<KnXDMTalkGroupInfoDTO> dbList) {
+        Map<Integer, Integer> existingGrpMap = campedGroupPriorityMap(dbList);
+        Set<Integer> requestedIds = new HashSet<>();
+        if (reqList != null) {
+            for (KnXDMTalkGroupInfoDTO dto : reqList) {
+                requestedIds.add(dto.getGroupId());
+            }
+        }
+        for (Integer requestedId : requestedIds) {
+            if (!existingGrpMap.containsKey(requestedId)) {
+                return true;
+            }
+        }
+        for (Integer existingId : existingGrpMap.keySet()) {
+            if (!requestedIds.contains(existingId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // True when a group is already camped and the request priority is different.
+    private boolean hasScanPriorityChange(List<KnXDMTalkGroupInfoDTO> reqList, List<KnXDMTalkGroupInfoDTO> dbList) {
+        Map<Integer, Integer> existingGrpMap = campedGroupPriorityMap(dbList);
+        if (reqList == null) {
+            return false;
+        }
+        for (KnXDMTalkGroupInfoDTO dto : reqList) {
+            Integer dbPriority = existingGrpMap.get(dto.getGroupId());
+            if (dbPriority != null && dto.getPriority() != null && dbPriority.intValue() != dto.getPriority()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private Map<Integer, Integer> campedGroupPriorityMap(List<KnXDMTalkGroupInfoDTO> dbList) {
+        Map<Integer, Integer> existingGrpMap = new HashMap<>();
+        if (dbList == null) {
+            return existingGrpMap;
+        }
+        for (KnXDMTalkGroupInfoDTO dto : dbList) {
+            if (dto.getPriority() != null
+                    && dto.getPriority() != com.kodiak.xdms.server.common.resources.KnConstants.NO_PRIORITY) {
+                existingGrpMap.put(dto.getGroupId(), dto.getPriority());
+            }
+        }
+        return existingGrpMap;
+    }
+
+    // Queues 20010 and 20011 independently. Does not send 20009.
+    private void sendScanListChangeNotification(KnCorpResponseDTO respDto, KnPersisterTxn persisterTxn,
+                                                boolean scanGroupsAddedOrRemoved, boolean scanPriorityChanged) {
+        String methodName = "sendScanListChangeNotification";
+        if (!scanGroupsAddedOrRemoved && !scanPriorityChanged) {
+            knLogger.info(methodName, "20010 and 20011 skipped: scan list has no add, remove, or priority change");
+            return;
+        }
+        Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = commonMediator.prepareNotification(respDto);
+        int scanDiffCount = xcapDiffList == null ? 0 : xcapDiffList.size();
+        knLogger.info(methodName, "scan list diffCount=", scanDiffCount);
+        IXcapDiffNotifierIntf scanNotifier = new KnXcapDiffNotifierImpl();
+        if (scanGroupsAddedOrRemoved) {
+            KnNotificationParamDTO addRemoveParam = new KnNotificationParamDTO();
+            addRemoveParam.setOpsCode(com.kodiak.xdms.server.common.resources.KnConstants.OPS_CODE.XCAP_ON_SCANLIST_UPDATE_ADD_REMOVE_GROUPS.value()); // 20010
+            addRemoveParam.setPriority(com.kodiak.xdms.server.common.resources.KnConstants.NOTIFICATION_PRIORITY.CRITICAL.value());
+            boolean addRemoveNotified = scanNotifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn, addRemoveParam);
+            knLogger.info(methodName, "Scan list add/remove XCAP diff 20010 status - ", addRemoveNotified,
+                    " diffCount=", scanDiffCount, " opsCode=", addRemoveParam.getOpsCode());
+        }
+        if (scanPriorityChanged) {
+            KnNotificationParamDTO priorityParam = new KnNotificationParamDTO();
+            priorityParam.setOpsCode(com.kodiak.xdms.server.common.resources.KnConstants.OPS_CODE.XCAP_ON_SCANLIST_UPDATE_CHANGE_PRIORITY.value()); // 20011
+            priorityParam.setPriority(com.kodiak.xdms.server.common.resources.KnConstants.NOTIFICATION_PRIORITY.CRITICAL.value());
+            boolean priorityNotified = scanNotifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn, priorityParam);
+            knLogger.info(methodName, "Scan list priority XCAP diff 20011 status - ", priorityNotified,
+                    " diffCount=", scanDiffCount, " opsCode=", priorityParam.getOpsCode());
+        }
     }
 
     private KnIPTalkGroupDTO getFilteredScanList(List<KnXDMTalkGroupInfoDTO> reqList, List<KnXDMTalkGroupInfoDTO> dbList){

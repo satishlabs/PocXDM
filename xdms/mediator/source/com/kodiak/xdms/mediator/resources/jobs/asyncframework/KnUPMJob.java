@@ -745,7 +745,9 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
             if (taskResult != null && taskResult.getTaskStatus() == KnConstants.STATUS_SUCCESS) {
                 taskResult = modifyUpmPermission(profileMdn, modifyUpmTxn);
                 userProfileDetails.setPermissionEtagToBeUpdated(taskResult.isPermissionEtagToBeUpdated());
-                knLogger.debug(methodName, " taskResult- ", taskResult, "isPermissionEtagToBeUpdated-", taskResult.isPermissionEtagToBeUpdated());
+                // Independent of 40006-40013. Those flags are set by their own tasks.
+                knLogger.info(methodName, "40014 isPermissionEtagToBeUpdated=", taskResult.isPermissionEtagToBeUpdated(),
+                        " profileMdn=", KnGDPRTemplate.mdn(profileMdn));
             }
 
             //modifyEmergencyAttributesTask
@@ -856,14 +858,33 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
                             knLogger.info(methodName, "==> : Sending UPM directory notification - 40011");
                             commonMediator.sendXcapNotification(xcapDirChgDTO, null, notificationParamDTO);
                         }
-                        // 40014 only. Does not replace 40006-40011 directory notifies above.
+                        // 40014 directory notify. Does not replace 40006-40013 above.
+                        // HIGH so it is written to XCAP_PENDING_NOTIFYQ. A LOW row for 40014 in
+                        // DG.XCAP_NOTIFICATION_PRIORITY suppresses it and the poller stays at 0 rows.
                         if (userProfileDetails.isPermissionEtagToBeUpdated()) {
                             KnNotificationParamDTO permissionParam = new KnNotificationParamDTO();
                             permissionParam.setOpsCode(
                                     KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_PERMISSIONS.value()); // 40014
                             permissionParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
                             boolean dir40014 = commonMediator.sendXcapNotification(xcapDirChgDTO, null, permissionParam);
-                            knLogger.info(methodName, "==> : Sending UPM directory notification - 40014 status - ", dir40014);
+                            knLogger.info(methodName, "==> : Sending UPM directory notification - 40014 status - ", dir40014,
+                                    " opsCode=", permissionParam.getOpsCode(), " priority=", permissionParam.getPriority());
+                        }
+                        // 40012 and 40013 are separate notifies for the same emergency-config change.
+                        // HIGH so both are written to XCAP_PENDING_NOTIFYQ. LOW is dropped and the poller stays at 0 rows.
+                        if (userProfileDetails.isEmergencyEtagToBeUpdated()) {
+                            KnNotificationParamDTO emergencyDirParam = new KnNotificationParamDTO();
+                            emergencyDirParam.setOpsCode(
+                                    KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_EMERGENCY_CONFIG.value()); // 40012
+                            emergencyDirParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
+                            boolean dir40012 = commonMediator.sendXcapNotification(xcapDirChgDTO, null, emergencyDirParam);
+                            KnNotificationParamDTO oidcEmergencyDirParam = new KnNotificationParamDTO();
+                            oidcEmergencyDirParam.setOpsCode(
+                                    KnConstants.OPS_CODE.OIDCXCAP_ON_UPDATE_EMERGENCY_CONFIG.value()); // 40013
+                            oidcEmergencyDirParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
+                            boolean dir40013 = commonMediator.sendXcapNotification(xcapDirChgDTO, null, oidcEmergencyDirParam);
+                            knLogger.info(methodName, "==> : Sending UPM directory notification - 40012 status - ", dir40012,
+                                    " 40013 status - ", dir40013);
                         }
                         if (!contactAdded && !contactRemoved && !groupAdded && !groupRemoved && !groupPropertyUpdated) {
                             commonMediator.sendXcapNotification(xcapDirChgDTO);
@@ -884,9 +905,15 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
                     knLogger.info(methodName, "Group property XCAP diff 40011 status - ", groupPropNotified,
                             " diffCount=", groupPropDiffList == null ? 0 : groupPropDiffList.size());
                 }
-                // 40014 XCAP diff. Independent of 40011; both can be sent for the same profile modify.
+                // 40014 XCAP diff. permissionChangeLogMap holds the authorization document.
+                // changeLogMap stays the group payload, so 40011 is not mixed with 40014.
                 if (userProfileDetails.isPermissionEtagToBeUpdated()) {
-                    Collection<KnXcapDiffDirChgNotifyDTO> permissionDiffList = commonMediator.prepareNotification(etagResp);
+                    int permissionChangeLogSize = etagResp.getPermissionChangeLogMap() == null
+                            ? 0 : etagResp.getPermissionChangeLogMap().size();
+                    knLogger.info(methodName, "40014 preparing XCAP diff. permissionChangeLogSize=", permissionChangeLogSize);
+                    KnCorpResponseDTO permissionNotifySource = new KnCorpResponseDTO();
+                    permissionNotifySource.setChangeLogMap(etagResp.getPermissionChangeLogMap());
+                    Collection<KnXcapDiffDirChgNotifyDTO> permissionDiffList = commonMediator.prepareNotification(permissionNotifySource);
                     KnNotificationParamDTO permissionDiffParam = new KnNotificationParamDTO();
                     permissionDiffParam.setOpsCode(
                             KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_PERMISSIONS.value()); // 40014
@@ -895,7 +922,32 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
                     boolean permissionNotified = permissionNotifier.sendXcapDiffNotifications(
                             permissionDiffList, modifyUpmTxn, permissionDiffParam);
                     knLogger.info(methodName, "Permission XCAP diff 40014 status - ", permissionNotified,
-                            " diffCount=", permissionDiffList == null ? 0 : permissionDiffList.size());
+                            " diffCount=", permissionDiffList == null ? 0 : permissionDiffList.size(),
+                            " changeLogSize=", permissionChangeLogSize,
+                            " opsCode=", permissionDiffParam.getOpsCode());
+                } else {
+                    knLogger.info(methodName, "40014 skipped: no added, modified, or removed MCPTT permission in this profile modify");
+                }
+                // 40012 MCSXCAP and 40013 OIDCXCAP. changeLogMap is filled by updateEtag above.
+                // Both must be queued here; the earlier commented block never inserted 40013.
+                if (userProfileDetails.isEmergencyEtagToBeUpdated()) {
+                    Collection<KnXcapDiffDirChgNotifyDTO> emergencyDiffList = commonMediator.prepareNotification(etagResp);
+                    KnXcapDiffNotifierImpl emergencyNotifier = new KnXcapDiffNotifierImpl();
+                    KnNotificationParamDTO emergencyDiffParam = new KnNotificationParamDTO();
+                    emergencyDiffParam.setOpsCode(
+                            KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_EMERGENCY_CONFIG.value()); // 40012
+                    emergencyDiffParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
+                    boolean emergencyNotified = emergencyNotifier.sendXcapDiffNotifications(
+                            emergencyDiffList, modifyUpmTxn, emergencyDiffParam);
+                    KnNotificationParamDTO oidcEmergencyDiffParam = new KnNotificationParamDTO();
+                    oidcEmergencyDiffParam.setOpsCode(
+                            KnConstants.OPS_CODE.OIDCXCAP_ON_UPDATE_EMERGENCY_CONFIG.value()); // 40013
+                    oidcEmergencyDiffParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
+                    boolean oidcEmergencyNotified = emergencyNotifier.sendXcapDiffNotifications(
+                            emergencyDiffList, modifyUpmTxn, oidcEmergencyDiffParam);
+                    knLogger.info(methodName, "Emergency XCAP diff 40012 status - ", emergencyNotified,
+                            " OIDC emergency XCAP diff 40013 status - ", oidcEmergencyNotified,
+                            " diffCount=", emergencyDiffList == null ? 0 : emergencyDiffList.size());
                 }
                 //Sending MCS Events
                 if (null != modifyGroupTaskResult.getAddGroupResp()) {

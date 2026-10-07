@@ -60,6 +60,8 @@ public class KnCorpResponseDTO implements ICorpResponseDTO {
     private String message;
     private Collection<KnCorpFailedData> failedDataList;
     private Map<String, KnOPDirChgDTO> changeLogMap;
+    // UPM permission modify (ops 40014) only. Not used by group or contact notifies.
+    private Map<String, KnOPDirChgDTO> permissionChangeLogMap;
     private String etag;
     private Collection<String> disabledDispatchMemList;
     private Map<Integer, List<String>> disabledDispatchMemListMap;
@@ -435,6 +437,14 @@ public class KnCorpResponseDTO implements ICorpResponseDTO {
 
     public void setChangeLogMap(Map<String, KnOPDirChgDTO> changeLogMap) {
         this.changeLogMap = changeLogMap;
+    }
+
+    public Map<String, KnOPDirChgDTO> getPermissionChangeLogMap() {
+        return permissionChangeLogMap;
+    }
+
+    public void setPermissionChangeLogMap(Map<String, KnOPDirChgDTO> permissionChangeLogMap) {
+        this.permissionChangeLogMap = permissionChangeLogMap;
     }
 
     public String getEtag() {
@@ -1161,6 +1171,7 @@ public class KnCorpResponseDTO implements ICorpResponseDTO {
                 ", message='" + message + '\'' +
                 ", failedDataList=" + failedDataList +
                 ", changeLogMap=" + changeLogMap +
+                ", permissionChangeLogMap=" + permissionChangeLogMap +
                 ", etag='" + etag + '\'' +
                 ", disabledDispatchMemList=" + disabledDispatchMemList +
                 ", disabledDispatchMemListMap=" + disabledDispatchMemListMap +
