@@ -13733,12 +13733,14 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             knLogger.debug(methodName, "Saving Transaction");
             persisterTxn.save();
             KnStatisticsManagerImpl.getInstance().increment(KnOMConstants.NUM_SET_MCPTT_PERMISSION_REQ_SUCC);
+            // 40014: MCSXCAP_ON_PROFILE_MODIFY_UPDATE_PERMISSIONS. Value comes from the enum, not a hardcoded code.
             Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = commonMediator.prepareNotification(libRespDto);
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
             notificationParamDTO.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_PERMISSIONS.value());
             boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
-            knLogger.info(methodName, "Notification status - ", isNotified);
+            knLogger.info(methodName, "Permission XCAP diff 40014 status - ", isNotified,
+                    " diffCount=", xcapDiffList == null ? 0 : xcapDiffList.size());
             //forming notification on success
             knLogger.info(methodName, "--->Before: xcapDiffList- ", xcapDiffList);
             knLogger.info(methodName, "Notification status starts - ");
@@ -13964,6 +13966,7 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                 throw new KnXDMServerException(respDto.getResponseCode(),
                         respDto.getResponseMessage());
             }
+            // 40012 MCSXCAP and 40013 OIDCXCAP are separate notifies for the same emergency-config change.
             KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
             notificationParamDTO.setCid(message.getCorrelationId());
             notificationParamDTO.setPriority(NOTIFICATION_PRIORITY.CRITICAL.value());
@@ -13974,9 +13977,18 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                 commonMediator.validateSubAuthStatus(Collections.singletonList(xdmRequestDTO.getEmergencyAttributes().getMdn()), persisterTxn);
             }
 
+            KnNotificationParamDTO oidcEmergencyParam = new KnNotificationParamDTO();
+            oidcEmergencyParam.setCid(message.getCorrelationId());
+            oidcEmergencyParam.setPriority(NOTIFICATION_PRIORITY.CRITICAL.value());
+            oidcEmergencyParam.setOpsCode(KnConstants.OPS_CODE.OIDCXCAP_ON_UPDATE_EMERGENCY_CONFIG.value());
+            knLogger.info(methodName, "isProfileChanged=", libRespDto.isProfileChanged(),
+                    " sending 40012 and 40013 only when the profile changed");
             if(libRespDto.isProfileChanged()){
                 KnOPProvDTO provRespDTO = provClientIntf.sendConfigDocNotification( xdmRequestDTO.getEmergencyAttributes().getMdn(), persisterTxn);
-                commonMediator.sendXcapNotification(provRespDTO.getDirChgDTO(),null, notificationParamDTO);
+                boolean dir40012 = commonMediator.sendXcapNotification(provRespDTO.getDirChgDTO(),null, notificationParamDTO);
+                boolean dir40013 = commonMediator.sendXcapNotification(provRespDTO.getDirChgDTO(), null, oidcEmergencyParam);
+                knLogger.info(methodName, "Emergency directory notify 40012 status - ", dir40012,
+                        " OIDC directory notify 40013 status - ", dir40013);
             }
             // Step:
             // save the transaction
@@ -13984,10 +13996,15 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             persisterTxn.save();
             KnStatisticsManagerImpl.getInstance().increment(KnOMConstants.NUM_SET_EMERGENCY_ATTRIBUTES_REQ_SUCC);
             Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = commonMediator.prepareNotification(libRespDto);
-            knLogger.debug(methodName, "isProfileChanged - ", libRespDto.isProfileChanged());
+            knLogger.debug(methodName, "isProfileChanged - ", libRespDto.isProfileChanged(),
+                    " emergency diffCount=", xcapDiffList == null ? 0 : xcapDiffList.size());
             boolean isNotified=false;
-            if(libRespDto.isProfileChanged())
+            if(libRespDto.isProfileChanged()) {
                isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, notificationParamDTO);
+               boolean oidcNotified = notifier.sendXcapDiffNotifications(xcapDiffList, null, oidcEmergencyParam);
+               knLogger.info(methodName, "Emergency XCAP diff 40012 status - ", isNotified,
+                       " OIDC emergency XCAP diff 40013 status - ", oidcNotified);
+            }
             knLogger.info(methodName, "Notification status - ", isNotified);
             knLogger.info(methodName, "Returning setAuthUserPermissions response - ", respDto);
         } catch (KnXDMServerException e) {

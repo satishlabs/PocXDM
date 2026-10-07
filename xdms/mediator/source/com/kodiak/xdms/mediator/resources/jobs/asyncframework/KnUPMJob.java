@@ -856,10 +856,46 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
                             knLogger.info(methodName, "==> : Sending UPM directory notification - 40011");
                             commonMediator.sendXcapNotification(xcapDirChgDTO, null, notificationParamDTO);
                         }
+                        // 40014 only. Does not replace 40006-40011 directory notifies above.
+                        if (userProfileDetails.isPermissionEtagToBeUpdated()) {
+                            KnNotificationParamDTO permissionParam = new KnNotificationParamDTO();
+                            permissionParam.setOpsCode(
+                                    KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_PERMISSIONS.value()); // 40014
+                            permissionParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
+                            boolean dir40014 = commonMediator.sendXcapNotification(xcapDirChgDTO, null, permissionParam);
+                            knLogger.info(methodName, "==> : Sending UPM directory notification - 40014 status - ", dir40014);
+                        }
                         if (!contactAdded && !contactRemoved && !groupAdded && !groupRemoved && !groupPropertyUpdated) {
                             commonMediator.sendXcapNotification(xcapDirChgDTO);
                         }
                     }
+                }
+                // Directory notify above has no group-doc diff. changeLogMap is filled by updateEtag
+                // and is the payload that carries the modified group-member properties for 40011.
+                if (groupPropertyUpdated) {
+                    Collection<KnXcapDiffDirChgNotifyDTO> groupPropDiffList = commonMediator.prepareNotification(etagResp);
+                    KnNotificationParamDTO groupPropParam = new KnNotificationParamDTO();
+                    groupPropParam.setOpsCode(
+                            KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_GROUP_PROPERTY.value()); // 40011
+                    groupPropParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
+                    KnXcapDiffNotifierImpl groupPropNotifier = new KnXcapDiffNotifierImpl();
+                    boolean groupPropNotified = groupPropNotifier.sendXcapDiffNotifications(
+                            groupPropDiffList, modifyUpmTxn, groupPropParam);
+                    knLogger.info(methodName, "Group property XCAP diff 40011 status - ", groupPropNotified,
+                            " diffCount=", groupPropDiffList == null ? 0 : groupPropDiffList.size());
+                }
+                // 40014 XCAP diff. Independent of 40011; both can be sent for the same profile modify.
+                if (userProfileDetails.isPermissionEtagToBeUpdated()) {
+                    Collection<KnXcapDiffDirChgNotifyDTO> permissionDiffList = commonMediator.prepareNotification(etagResp);
+                    KnNotificationParamDTO permissionDiffParam = new KnNotificationParamDTO();
+                    permissionDiffParam.setOpsCode(
+                            KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_PERMISSIONS.value()); // 40014
+                    permissionDiffParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
+                    KnXcapDiffNotifierImpl permissionNotifier = new KnXcapDiffNotifierImpl();
+                    boolean permissionNotified = permissionNotifier.sendXcapDiffNotifications(
+                            permissionDiffList, modifyUpmTxn, permissionDiffParam);
+                    knLogger.info(methodName, "Permission XCAP diff 40014 status - ", permissionNotified,
+                            " diffCount=", permissionDiffList == null ? 0 : permissionDiffList.size());
                 }
                 //Sending MCS Events
                 if (null != modifyGroupTaskResult.getAddGroupResp()) {

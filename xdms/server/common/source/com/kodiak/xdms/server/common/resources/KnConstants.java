@@ -1001,7 +1001,7 @@ public class KnConstants {
         XCAP_ON_OSM_LIST_UPDATE(30029),
         XCAP_GROUP_MEMBERS_ON_GROUP_MODIFY_REMOVE_OSM(30030),
 
-        // ---- MCS-XCAP / User-Profile operations (40001–40014) ----
+        // ---- MCS-XCAP / User-Profile operations (40001–40015) ----
         MCSXCAP_SELF_ON_PROFILE_ASSIGN(40001),
         MCSXCAP_WATCHER_CLIENTS_ON_PROFILE_ASSIGN(40002),
         MCSXCAP_SELF_ON_PROFILE_UNASSIGN(40003),
@@ -1014,10 +1014,10 @@ public class KnConstants {
         MCSXCAP_ON_PROFILE_MODIFY_UPDATE_PROPERTY(40010),
         MCSXCAP_ON_PROFILE_MODIFY_UPDATE_GROUP_PROPERTY(40011),
         MCSXCAP_ON_PROFILE_MODIFY_UPDATE_EMERGENCY_CONFIG(40012),
-        // OpsCode 40013 is shared by two spec rows (rows 66 & 67); both constants map to same integer
+        // 40013 is OIDC emergency only. Permissions and profile delete use their own codes.
         OIDCXCAP_ON_UPDATE_EMERGENCY_CONFIG(40013),
-        MCSXCAP_ON_PROFILE_MODIFY_UPDATE_PERMISSIONS(40013),
-        MCSXCAP_ON_PROFILE_DELETE(40014);
+        MCSXCAP_ON_PROFILE_MODIFY_UPDATE_PERMISSIONS(40014),
+        MCSXCAP_ON_PROFILE_DELETE(40015);
         Integer opsCode;
 
         OPS_CODE(Integer opsCode) {

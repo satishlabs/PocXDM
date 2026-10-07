@@ -5,7 +5,6 @@
  **************************************************************************************************/
 package com.kodiak.xdms.mediator.resources.jobs.upm;
 
-import com.kodiak.common.commdto.common.KnNotificationParamDTO;
 import com.kodiak.common.commdto.common.KnXDMAddlTalkGroupInfoDTO;
 import com.kodiak.common.commdto.common.KnXDMGroupMdnInfoDTO;
 import com.kodiak.common.commdto.request.*;
@@ -19,9 +18,6 @@ import com.kodiak.logger.KnLogger;
 import com.kodiak.xdms.mediator.helper.KnXDMCommonMediator;
 import com.kodiak.xdms.mediator.helper.KnXDMCorpMediator;
 import com.kodiak.xdms.mediator.resources.jobs.asyncframework.KnUPMJobScheduler;
-import com.kodiak.xdms.notificationmgr.IXcapDiffNotifierIntf;
-import com.kodiak.xdms.notificationmgr.beans.KnXcapDiffDirChgNotifyDTO;
-import com.kodiak.xdms.notificationmgr.impl.KnXcapDiffNotifierImpl;
 import com.kodiak.xdms.server.common.KnXDMServerException;
 import com.kodiak.xdms.server.common.business.helper.KnGenInfoUtil;
 import com.kodiak.xdms.server.common.dto.common.KnCorpProfileDTO;
@@ -57,7 +53,6 @@ public class KnModifyGroupTask extends KnAbstractTask {
 
     private ICorpClientIntf corpClientIntf;
     private KnXDMCommonMediator commonMediator;
-    private IXcapDiffNotifierIntf notifier;
     private KnXDMCorpMediator corpMediator;
     private KnGenInfoUtil genInfoUtil;
     private KnCorpGroupInfoUtil groupInfoUtil;
@@ -72,7 +67,6 @@ public class KnModifyGroupTask extends KnAbstractTask {
             , KnPersisterTxn modifyUpmTranxn, String profileMdn, KnCorpResponseDTO userProfileDetails) {
         corpClientIntf = new KnCorpClientImpl();
         commonMediator = KnXDMCommonMediator.getInstance();
-        notifier = new KnXcapDiffNotifierImpl();
         corpMediator = KnXDMCorpMediator.getInstance();
         genInfoUtil = KnGenInfoUtil.getInstance();
         commonInfoUtil = new KnCorpCommonInfoUtil();
@@ -441,17 +435,12 @@ public class KnModifyGroupTask extends KnAbstractTask {
                     knLogger.debug(methodName, "modifyCorpGroup Operation Failed");
                     throw new KnXDMServerException(modifyGroupMemPropResp.getStatusCode(), modifyGroupMemPropResp.getMessage());
                 }
-                taskResult.setGroupPropertyUpdated(true); // 40011: KnUPMJob copies this for MCSXCAP_ON_PROFILE_MODIFY_UPDATE_GROUP_PROPERTY
-                // 40011
-                // (MCSXCAP_ON_PROFILE_MODIFY_UPDATE_GROUP_PROPERTY), not only the later UPM etag if-else.
-                KnNotificationParamDTO notificationParamDTO40011 = new KnNotificationParamDTO();
-                notificationParamDTO40011.setOpsCode(
-                        com.kodiak.xdms.server.common.resources.KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_GROUP_PROPERTY.value());
-                notificationParamDTO40011.setPriority(
-                        com.kodiak.xdms.server.common.resources.KnConstants.NOTIFICATION_PRIORITY.LOW.value());
-                Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList40011 = commonMediator.prepareNotification(modifyGroupMemPropResp);
-                boolean isNotified40011 = notifier.sendXcapDiffNotifications(xcapDiffList40011, modifyUpmGroupTxn, notificationParamDTO40011);
-                knLogger.info(methodName, "Group property XCAP 40011 status - ", isNotified40011);
+                // Flag only. 40011 is sent in KnUPMJob after updateEtag, once changeLogMap exists.
+                // modifiedGrpMembers is set for every group type so the etag diff includes the property change.
+                taskResult.setGroupPropertyUpdated(true);
+                modifyGroupMemPropResp.setModifiedGrpMembers(modifiedGrpMembers);
+                knLogger.info(methodName, "group property updated, 40011 will be sent after etag update. modifiedMemberCount=",
+                        modifiedGrpMembers == null ? 0 : modifiedGrpMembers.size());
                 for (KnCorpGroupListInfoDTO groupInfo : modifyUpmGroup) {
                     Integer groupId = groupInfo.getGroupID();
                     Integer zoneId = groupInfo.getGroupZone();
@@ -461,7 +450,6 @@ public class KnModifyGroupTask extends KnAbstractTask {
                     taskResult.setUpmCount(modifyGroupMemPropResp.getUserProfileCount());
                     //to enable 27bit for all the profile mdns .
                     if (modifyGroupMemPropResp.getMcxGrpInd() == MCX_GROUP_TYPE) {
-                        modifyGroupMemPropResp.setModifiedGrpMembers(modifiedGrpMembers);
                         if (locWatcher == ENABLED) {
                             grpLocWatcherMap.put(groupId, Boolean.TRUE);
                             locWatcherGroupIdList.add(groupId.toString());
