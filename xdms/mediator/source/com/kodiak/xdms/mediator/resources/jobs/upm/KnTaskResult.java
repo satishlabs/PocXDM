@@ -28,6 +28,8 @@ public class KnTaskResult {
 
     private boolean contactEtagToBeUpdated;
     private boolean permissionEtagToBeUpdated;
+    // setBulkTargetPermissions result for ops 40014. Holds the MCPTT target delta only.
+    private KnCorpResponseDTO permissionNotifySource;
     private boolean emergencyEtagToBeUpdated;
     private boolean isGroupEtagToBeUpdated;
     private int upmCount;
@@ -144,6 +146,14 @@ public class KnTaskResult {
 
     public void setPermissionEtagToBeUpdated(boolean permissionEtagToBeUpdated) {
         this.permissionEtagToBeUpdated = permissionEtagToBeUpdated;
+    }
+
+    public KnCorpResponseDTO getPermissionNotifySource() {
+        return permissionNotifySource;
+    }
+
+    public void setPermissionNotifySource(KnCorpResponseDTO permissionNotifySource) {
+        this.permissionNotifySource = permissionNotifySource;
     }
 
     public boolean isEmergencyEtagToBeUpdated() {

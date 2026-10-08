@@ -35,6 +35,7 @@ import com.kodiak.xdms.mediator.resources.jobs.KnDispGrpMemChecker;
 import com.kodiak.xdms.mediator.resources.jobs.upm.*;
 import com.kodiak.xdms.server.common.business.helper.KnGenInfoUtil;
 import com.kodiak.xdms.server.common.dto.clientdat.KnOPDirChgDTO;
+import com.kodiak.xdms.server.common.dto.clientdat.KnOPDocChgDTO;
 import com.kodiak.xdms.server.common.dto.common.KnAssignEXDMSNotifyDto;
 import com.kodiak.xdms.server.common.dto.common.KnMDNDetailsDTO;
 import com.kodiak.xdms.server.common.resources.KnConstants;
@@ -55,6 +56,7 @@ import com.kodiak.xdms.server.subsmgmt.clientIntf.impl.KnProvClientImpl;
 import com.kodiak.xdms.server.subsmgmt.dto.clientdat.KnIPSubscriberInfoDTO;
 import com.kodiak.xdms.server.subsmgmt.dto.clientdat.KnOPSubsProfileInfoDTO;
 
+import static com.kodiak.common.resources.KnConstants.APP_UID_AUTH_LIST;
 import static com.kodiak.common.resources.KnConstants.DEFAULT_EMERGENCY_TIMER;
 import static com.kodiak.common.resources.KnConstants.MICROSERVICES_EVENT_TYPE.ASSIGN_USER_PROFILE;
 import static com.kodiak.common.resources.KnConstants.MICROSERVICES_NOTIFY_EVENT_TYPE.USER_NOTIFY_EVENTS;
@@ -692,6 +694,7 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
         boolean groupAdded = false;
         boolean groupRemoved = false;
         boolean groupPropertyUpdated = false;
+        KnCorpResponseDTO permissionNotifySource = null;
         try {
             knLogger.info(methodName, "Start: profileMdn- ", profileMdn, " failedTxnCount- ", failedTxnCount, " cbsDocUpdateCount-", cbsDocUpdateCount);
             //open transaction
@@ -745,6 +748,7 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
             if (taskResult != null && taskResult.getTaskStatus() == KnConstants.STATUS_SUCCESS) {
                 taskResult = modifyUpmPermission(profileMdn, modifyUpmTxn);
                 userProfileDetails.setPermissionEtagToBeUpdated(taskResult.isPermissionEtagToBeUpdated());
+                permissionNotifySource = taskResult.getPermissionNotifySource();
                 // Independent of 40006-40013. Those flags are set by their own tasks.
                 knLogger.info(methodName, "40014 isPermissionEtagToBeUpdated=", taskResult.isPermissionEtagToBeUpdated(),
                         " profileMdn=", KnGDPRTemplate.mdn(profileMdn));
@@ -921,9 +925,10 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
                     if (permissionChangeLogSize == 0) {
                         knLogger.info(methodName, "40014 XCAP diff skipped: permission changelog is empty. directory 40014 is the queued row");
                     } else {
-                        KnCorpResponseDTO permissionNotifySource = new KnCorpResponseDTO();
-                        permissionNotifySource.setChangeLogMap(etagResp.getPermissionChangeLogMap());
-                        Collection<KnXcapDiffDirChgNotifyDTO> permissionDiffList = commonMediator.prepareNotification(permissionNotifySource);
+                        applyPermissionTargetDiff(etagResp.getPermissionChangeLogMap(), permissionNotifySource, profileMdn);
+                        KnCorpResponseDTO permissionNotifySourceDto = new KnCorpResponseDTO();
+                        permissionNotifySourceDto.setChangeLogMap(etagResp.getPermissionChangeLogMap());
+                        Collection<KnXcapDiffDirChgNotifyDTO> permissionDiffList = commonMediator.prepareNotification(permissionNotifySourceDto);
                         KnNotificationParamDTO permissionDiffParam = new KnNotificationParamDTO();
                         permissionDiffParam.setOpsCode(
                                 KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_PERMISSIONS.value()); // 40014
@@ -1321,6 +1326,60 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
         KnTaskResult taskResult = modifyUpm.execute();
         knLogger.info(methodName, "Completed modify Upm Contact", taskId);
         return taskResult;
+    }
+
+    /**
+     * Copies added, modified, and removed MCPTT targets onto the authorization document
+     * already stored in permissionChangeLogMap. Group and contact changelogs are not touched.
+     * A failure here leaves the authorization etag notify in place.
+     */
+    private void applyPermissionTargetDiff(Map<String, KnOPDirChgDTO> permissionChangeLog,
+                                           KnCorpResponseDTO permissionNotifySource,
+                                           String profileMdn) {
+        final String methodName = "applyPermissionTargetDiff()";
+        if (permissionChangeLog == null || permissionChangeLog.isEmpty() || permissionNotifySource == null) {
+            knLogger.info(methodName, "40014 target diff not attached: changelog or permission delta is missing");
+            return;
+        }
+        if (permissionNotifySource.getPermissionSubsEntitiesMap() == null) {
+            knLogger.info(methodName, "40014 target diff not attached: subscriber entities missing");
+            return;
+        }
+        boolean sawAuthDoc = false;
+        boolean firstAuthorizationDoc = true;
+        for (KnOPDirChgDTO directory : permissionChangeLog.values()) {
+            if (directory == null || directory.getDocChgDTO() == null) {
+                knLogger.info(methodName, "40014 target diff not attached: authorization document list is missing");
+                return;
+            }
+            for (KnOPDocChgDTO doc : directory.getDocChgDTO()) {
+                if (doc.getDocUri() != null && doc.getDocUri().contains(APP_UID_AUTH_LIST)) {
+                    sawAuthDoc = true;
+                    if (doc.getDocumentChgType() != KnConstants.DOC_CHANGE_TYPE.ADD.value()) {
+                        firstAuthorizationDoc = false;
+                    }
+                }
+            }
+        }
+        if (!sawAuthDoc) {
+            knLogger.info(methodName, "40014 target diff not attached: authorization document is not in the changelog");
+            return;
+        }
+        try {
+            KnCorpCommonInfoUtil.formXcapAuthDiffNotification(
+                    permissionChangeLog,
+                    permissionNotifySource.getAddedMcpttTargetMap(),
+                    permissionNotifySource.getModifiedMcpttTargetMap(),
+                    permissionNotifySource.getRemovedMcpttTargetMap(),
+                    permissionNotifySource.getPermissionResourceListUpdate(),
+                    permissionNotifySource.getPermissionSubsEntitiesMap(),
+                    profileMdn,
+                    firstAuthorizationDoc);
+            knLogger.info(methodName, "40014 authorization diff includes added, modified, and removed MCPTT targets. firstDoc=",
+                    firstAuthorizationDoc);
+        } catch (Exception e) {
+            knLogger.error(methodName, "40014 target diff attach failed. Authorization etag notify is still sent", e);
+        }
     }
 
     private KnTaskResult modifyUpmPermission(String profileMdn, KnPersisterTxn modifyUpmTxn) throws KnDAOException {

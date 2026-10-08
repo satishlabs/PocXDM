@@ -6064,6 +6064,19 @@ public class KnCorpSubscrProfileController implements ICorpSubscrProfileControll
                 authMdnsProfileMdns.forEach(profileMdn -> targetMdnForDeleteMap.put(profileMdn, targetMdnForDeleteForProfileMdns));
             }
             knLogger.debug(methodName, "--->privacyEnabledMdns - ", KnGDPRTemplate.mdnList(privacyEnabledMdns));
+            // UPM profile modify reads these later and stamps them on the 40014 authorization diff.
+            // Other callers of setBulkTargetPermissions do not read the fields.
+            if (isUpmCall) {
+                respDTO.setAddedMcpttTargetMap(insertTargetMdnListMap);
+                respDTO.setModifiedMcpttTargetMap(updateToMcpttInfoMap);
+                respDTO.setRemovedMcpttTargetMap(targetMdnForDeleteMap);
+                respDTO.setPermissionResourceListUpdate(targetForResourceListUpdate);
+                respDTO.setPermissionSubsEntitiesMap(corpSubsEntitiesDTOMap);
+                knLogger.info(methodName, "40014 UPM target delta stored. added=",
+                        countMcpttTargets(insertTargetMdnListMap),
+                        " modified=", countMcpttTargets(updateToMcpttInfoMap),
+                        " removed=", countRemovedTargets(targetMdnForDeleteMap));
+            }
 
             populate(respDTO);
 
@@ -6079,6 +6092,32 @@ public class KnCorpSubscrProfileController implements ICorpSubscrProfileControll
                     new KnException(com.kodiak.xdms.server.corpmgmt.resources.KnErrorCodes.BOEntity.INTERNAL_ERROR, e.getMessage(), e));
         }
         return respDTO;
+    }
+
+    private static int countMcpttTargets(Map<String, Collection<KnMcpttPermissionDTO>> targetMap) {
+        int count = 0;
+        if (targetMap == null) {
+            return 0;
+        }
+        for (Collection<KnMcpttPermissionDTO> targets : targetMap.values()) {
+            if (targets != null) {
+                count += targets.size();
+            }
+        }
+        return count;
+    }
+
+    private static int countRemovedTargets(Map<String, Collection<String>> targetMap) {
+        int count = 0;
+        if (targetMap == null) {
+            return 0;
+        }
+        for (Collection<String> targets : targetMap.values()) {
+            if (targets != null) {
+                count += targets.size();
+            }
+        }
+        return count;
     }
 
     /**

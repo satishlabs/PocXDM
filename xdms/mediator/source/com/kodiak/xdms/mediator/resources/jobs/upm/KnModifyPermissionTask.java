@@ -32,6 +32,7 @@ import com.kodiak.xdms.server.corpmgmt.dto.clientdat.KnIPAuthUserPermissionInfoD
 import com.kodiak.xdms.server.corpmgmt.dto.clientdat.KnIPUserProfileDTO;
 import com.kodiak.xdms.server.corpmgmt.dto.common.KnCorpModifyUserProfileDTO;
 import com.kodiak.xdms.server.corpmgmt.dto.common.KnCorpUserProfileMCPTTConfig;
+import com.kodiak.xdms.server.corpmgmt.dto.common.KnMcpttPermissionDTO;
 import com.kodiak.xdms.server.corpmgmt.dto.common.KnTargetMdnPermBitInfo;
 import com.kodiak.xdms.server.corpmgmt.dto.impl.KnCorpResponseDTO;
 
@@ -164,9 +165,13 @@ public class KnModifyPermissionTask extends KnAbstractTask {
                         targetPermResponse == null ? "null" : targetPermResponse.getStatus());
                 knLogger.debug(methodName, "Done with Set Target Permission targetPermResponse", targetPermResponse);
                 // status 0 is success. A failed permission write must not raise the 40014 flag.
-                if (targetPermResponse != null && targetPermResponse.getStatus() == STATUS_SUCCESS) {
+                if (targetPermResponse != null && targetPermResponse.getStatus() == STATUS_SUCCESS
+                        && hasPermissionDelta(targetPermResponse)) {
                     taskResult.setPermissionEtagToBeUpdated(true);
+                    taskResult.setPermissionNotifySource(targetPermResponse);
                     knLogger.info(methodName, "40014 flag set. Directory and XCAP diff are sent from KnUPMJob after updateEtag");
+                } else if (targetPermResponse != null && targetPermResponse.getStatus() == STATUS_SUCCESS) {
+                    knLogger.info(methodName, "40014 flag not set: MCPTT permission bits did not change");
                 } else {
                     knLogger.info(methodName, "40014 flag not set: setBulkTargetPermissions did not succeed");
                 }
@@ -188,6 +193,36 @@ public class KnModifyPermissionTask extends KnAbstractTask {
             taskResult.setTaskStatus(STATUS_FAILURE);
         }
         return taskResult;
+    }
+
+    private boolean hasPermissionDelta(KnCorpResponseDTO targetPermResponse) {
+        return hasMcpttTargets(targetPermResponse.getAddedMcpttTargetMap())
+                || hasMcpttTargets(targetPermResponse.getModifiedMcpttTargetMap())
+                || hasRemovedTargets(targetPermResponse.getRemovedMcpttTargetMap());
+    }
+
+    private boolean hasMcpttTargets(Map<String, Collection<KnMcpttPermissionDTO>> targetMap) {
+        if (targetMap == null) {
+            return false;
+        }
+        for (Collection<KnMcpttPermissionDTO> targets : targetMap.values()) {
+            if (targets != null && !targets.isEmpty()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasRemovedTargets(Map<String, Collection<String>> targetMap) {
+        if (targetMap == null) {
+            return false;
+        }
+        for (Collection<String> targets : targetMap.values()) {
+            if (targets != null && !targets.isEmpty()) {
+                return true;
+            }
+        }
+        return false;
     }
 
 }
