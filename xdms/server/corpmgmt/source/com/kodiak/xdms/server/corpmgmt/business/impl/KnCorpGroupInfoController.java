@@ -3714,6 +3714,33 @@ public class KnCorpGroupInfoController implements ICorpGroupInfoController {
                 Set<String> existingMembers = grpMemberMap.keySet();
                 LinkedList<String> finalDeletedMembers = actualMdnToBeDeletedFromGroupMap.get(grpId);
                 String grpOwner = grpBasicInfo.getGrpOwner();
+                // 30016 dispatcher clients. Copied before the remove below so the list used by
+                // 30015 is unchanged. The removed member stays on 30015 and is not copied here.
+                if (finalDeletedMembers != null && !finalDeletedMembers.isEmpty()) {
+                    Map<String, KnOPDirChgDTO> dispatcherRemoveChangeLog = new HashMap<>();
+                    for (Map.Entry<String, KnOPDirChgDTO> dirEntry : etagMap.entrySet()) {
+                        KnOPDirChgDTO dirChg = dirEntry.getValue();
+                        if (dirChg == null || dirChg.getClientType() == null) {
+                            continue;
+                        }
+                        int dirClientType = dirChg.getClientType();
+                        if (dirClientType != DISPATCH_CLIENT.value()
+                                && dirClientType != THIRDPARTYDISPATCHERCLIENT.value()) {
+                            continue;
+                        }
+                        if (finalDeletedMembers.contains(dirEntry.getKey())) {
+                            continue;
+                        }
+                        dispatcherRemoveChangeLog.put(dirEntry.getKey(), dirChg);
+                    }
+                    if (!dispatcherRemoveChangeLog.isEmpty()) {
+                        respDto.setDispatcherRemoveChangeLogMap(dispatcherRemoveChangeLog);
+                        knLogger.info(methodName, "30016 dispatcher directories=", dispatcherRemoveChangeLog.size(),
+                                " removedMembers=", finalDeletedMembers.size());
+                    } else {
+                        knLogger.info(methodName, "30016 dispatcher directories=0: no dispatcher client left on the area-based group");
+                    }
+                }
                 if (isNullOrEmpty(groupName) || (!isNullOrEmpty(groupName) && groupName.equals(groupPersistDTO.getGroupDisplayName()))) {
                     for (String mdn : existingMembers) {
                         if (!mdn.equals(grpOwner) && (finalDeletedMembers != null && !finalDeletedMembers.contains(mdn))) {

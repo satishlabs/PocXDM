@@ -62,6 +62,9 @@ public class KnCorpResponseDTO implements ICorpResponseDTO {
     private Map<String, KnOPDirChgDTO> changeLogMap;
     // UPM permission modify (ops 40014) only. Not used by group or contact notifies.
     private Map<String, KnOPDirChgDTO> permissionChangeLogMap;
+    // ABDG member remove (ops 30016) only. Dispatcher clients copied before they are
+    // stripped from changeLogMap. 30015 keeps using changeLogMap.
+    private Map<String, KnOPDirChgDTO> dispatcherRemoveChangeLogMap;
     private String etag;
     private Collection<String> disabledDispatchMemList;
     private Map<Integer, List<String>> disabledDispatchMemListMap;
@@ -445,6 +448,14 @@ public class KnCorpResponseDTO implements ICorpResponseDTO {
 
     public void setPermissionChangeLogMap(Map<String, KnOPDirChgDTO> permissionChangeLogMap) {
         this.permissionChangeLogMap = permissionChangeLogMap;
+    }
+
+    public Map<String, KnOPDirChgDTO> getDispatcherRemoveChangeLogMap() {
+        return dispatcherRemoveChangeLogMap;
+    }
+
+    public void setDispatcherRemoveChangeLogMap(Map<String, KnOPDirChgDTO> dispatcherRemoveChangeLogMap) {
+        this.dispatcherRemoveChangeLogMap = dispatcherRemoveChangeLogMap;
     }
 
     public String getEtag() {

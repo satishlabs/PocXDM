@@ -7699,6 +7699,35 @@ public class KnXDMMediator implements IXDMMediatorIntf {
                 knLogger.info(methodName, "30006 skipped: isAbdg=", isAbdg, " membersAdded=", membersAdded);
             }
 
+            // 30016 is its own notify for dispatcher clients when a member is removed from an
+            // area-based group. 30015 and the ops code chosen above (30009, 30002, 30007, 30005, 30003)
+            // are left as they are. A non-ABDG member remove does not send 30016.
+            // The removed member is not in this list. CRITICAL (0) so the row is written to
+            // XCAP_PENDING_NOTIFYQ. A LOW row for 30016 in DG.XCAP_NOTIFICATION_PRIORITY still suppresses it.
+            Map<String, KnOPDirChgDTO> dispatcherRemoveChangeLog = respDto.getDispatcherRemoveChangeLogMap();
+            if (isAbdg && membersRemoved && dispatcherRemoveChangeLog != null && !dispatcherRemoveChangeLog.isEmpty()) {
+                KnCorpResponseDTO dispatcherRemoveResp = new KnCorpResponseDTO();
+                dispatcherRemoveResp.setChangeLogMap(dispatcherRemoveChangeLog);
+                Collection<KnXcapDiffDirChgNotifyDTO> dispatcherRemoveDiffList =
+                        commonMediator.prepareNotification(dispatcherRemoveResp);
+                int dispatcherRemoveDiffCount = dispatcherRemoveDiffList == null ? 0 : dispatcherRemoveDiffList.size();
+                KnNotificationParamDTO dispatcherRemoveParam = new KnNotificationParamDTO();
+                dispatcherRemoveParam.setCid(message.getCorrelationId());
+                dispatcherRemoveParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.CRITICAL.value());
+                dispatcherRemoveParam.setOpsCode(
+                        KnConstants.OPS_CODE.XCAP_DISPATCHER_CLIENTS_ON_AREA_BASED_GROUP_MEMBER_REMOVE.value()); // 30016
+                boolean dispatcherRemoveNotified = notifier.sendXcapDiffNotifications(
+                        dispatcherRemoveDiffList, null, dispatcherRemoveParam);
+                knLogger.info(methodName, "Area-based group member remove dispatcher XCAP diff 30016 status - ",
+                        dispatcherRemoveNotified, " diffCount=", dispatcherRemoveDiffCount,
+                        " dispatcherMdns=", dispatcherRemoveChangeLog.size(),
+                        " opsCode=", dispatcherRemoveParam.getOpsCode(),
+                        " priority=", dispatcherRemoveParam.getPriority());
+            } else {
+                knLogger.info(methodName, "30016 skipped: isAbdg=", isAbdg, " membersRemoved=", membersRemoved,
+                        " dispatcherChangeLog=", dispatcherRemoveChangeLog == null ? 0 : dispatcherRemoveChangeLog.size());
+            }
+
             // Notification to added member(s) on group member addition
             // ABDG: 30012 (added member on area-based group member add) - also covers ABDG fence-in
             // Corp: 30006 (added member on group member add)
@@ -16502,10 +16531,27 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             //int newEtag = previousEtag + 1;
             dirChgDTO.setDirNewEtag(String.valueOf(currentEtag));
             knLogger.debug(methodName, " Notification dto for clone api", dirChgDTO);
-            // Self client (30025). This send is unchanged.
-            commonMediator.sendXcapNotification(dirChgDTO);
-            knLogger.info(methodName, "30025 self client copy-paste notify sent for mdn=",
-                    KnGDPRTemplate.mdn(xdmRequestDTO.getToMdn()));
+            // Self client is the copy-paste target only. Watchers stay on 30026 below.
+            // 30025 is set only when groups were copied. Contact, scan-list, feature,
+            // emergency, and permission cloning keep the original directory notify.
+            // CRITICAL (0) so the row is written to XCAP_PENDING_NOTIFYQ. A LOW row for 30025
+            // in DG.XCAP_NOTIFICATION_PRIORITY still suppresses it.
+            boolean groupCopyPaste = corpCloningResponseDTO.getGroupIds() != null
+                    && !corpCloningResponseDTO.getGroupIds().isEmpty();
+            if (groupCopyPaste) {
+                KnNotificationParamDTO selfParam = new KnNotificationParamDTO();
+                selfParam.setCid(message.getCorrelationId());
+                selfParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.CRITICAL.value());
+                selfParam.setOpsCode(KnConstants.OPS_CODE.XCAP_SELF_CLIENT_ON_GROUP_COPY_PASTE.value()); // 30025
+                boolean selfNotified = commonMediator.sendXcapNotification(dirChgDTO, null, selfParam);
+                knLogger.info(methodName, "30025 self client copy-paste status - ", selfNotified,
+                        " mdn=", KnGDPRTemplate.mdn(xdmRequestDTO.getToMdn()),
+                        " opsCode=", selfParam.getOpsCode(), " priority=", selfParam.getPriority());
+            } else {
+                commonMediator.sendXcapNotification(dirChgDTO);
+                knLogger.info(methodName, "30025 skipped: no group copy-paste. self directory notify sent for mdn=",
+                        KnGDPRTemplate.mdn(xdmRequestDTO.getToMdn()));
+            }
             // Watcher clients (30026): existing members of the pasted groups.
             // Sent only when group copy-paste produced a watcher changelog. Contact, scan-list,
             // feature, emergency, and permission cloning do not send 30026.
