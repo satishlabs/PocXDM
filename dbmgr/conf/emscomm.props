@@ -1,0 +1,23 @@
+#
+# Copyright Motorola Solutions, Inc. and/or Kodiak Networks, Inc.
+# All Rights Reserved
+# Motorola Solutions Confidential Restricted
+#
+#Ems Communication server Address - Enter valid address.
+COMMSERVERIPADDRESS=127.0.0.1
+
+#EMS Communication Server Port Number
+COMMSERVERPORT=1099
+
+# The number of processors that will parallely process
+# the alarms. Default value is 10 max value is 15
+ALARM_PROCESSOR_COUNT=10
+
+#EMS Communication Server Object Name
+COMMSERVEROBJECTNAME=KnSignalingCardManager
+
+#Ems Communication PEER server Address - Enter valid address.
+COMMSERVERPEERIPADDRESS=127.0.0.1
+
+#Ems Communication Geo-redundant server Address - Enter valid address.
+COMMSERVERPEERIPADDRESS1=127.0.0.1

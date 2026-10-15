@@ -1,0 +1,29 @@
+#
+# Copyright Motorola Solutions, Inc. and/or Kodiak Networks, Inc.
+# All Rights Reserved
+# Motorola Solutions Confidential Restricted
+#
+#EMS Database Server Address
+EMSDBADDRESS=127.0.0.1
+
+#EMS Database Server Port - default 15002
+EMSDBPORT=15102
+RTXDBPORT=15102
+
+#EMS Database Server User ID. - default kodiak.
+EMSDBUID=kodiak
+
+#EMS Database Server User password. - default kodiak.
+EMSDBPWD=kodiak
+
+#EMS Database Server DSN name. - default emsdsn.
+EMSDBDSN=emsdsn
+
+# Connection type whether its a remote or a local db connection object
+CONNECTIONTYPE=remote
+
+#EMS Database Server DSN userid. - default .
+EMSDBDSNUID=
+
+#EMS Database Server DSN password. - default .
+EMSDBDSNPWD=

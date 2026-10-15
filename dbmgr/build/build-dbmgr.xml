@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright Motorola Solutions, Inc. and/or Kodiak Networks, Inc.
+All Rights Reserved
+Motorola Solutions Confidential Restricted
+-->
+
+<project name="Common-build" default="build-all" basedir=".">
+    <property file="build-dbmgr.properties"/>
+    <!-- Cleaning entire build directory -->
+    <target name="clean" description="Remove all generated files.">
+        <delete dir="${build.dir}"/>
+    </target>
+    <target name="build-all" depends="clean, prepare, create-jar"/>
+
+    <target name="create-jar.nodep" depends="compile"/>
+
+    <target name="create-jar" depends="compile"/>
+
+    <target name="compile" depends="build-dependent" description="Building Database Manager...">
+        <delete dir="${temp.classes}"/>
+        <mkdir dir="${temp.classes}"/>
+        <javac debug="on" srcdir="${dbmanager-src.dir}" destdir="${temp.classes}">
+            <classpath refid="proto.path"/>
+        </javac>
+
+        <jar jarfile="${build-lib.dir}/${dbmgr-jar.name}">
+            <fileset dir="${temp.classes}"/>
+        </jar>
+        <delete dir="${temp.classes}"/>
+    </target>
+
+    <path id="proto.path">
+        <pathelement location="${build-lib.dir}/${logger-jar.name}"/>
+        <pathelement location="${dbmanager-lib.dir}/${c3p0-jar.name}"/>
+        <pathelement location="${dbmanager-lib.dir}/${jta-jar.name}"/>
+        <pathelement location="${build-lib.dir}/${generatealarmutil-jar.name}"/>
+    	<pathelement location="${logger-lib.dir}/log4j-api.jar"/>
+    	<pathelement location="${logger-lib.dir}/log4j-core.jar"/>
+        <pathelement path="${pocxdm.dir}/lib/annotations.jar"/>
+        <pathelement path="${pocxdm.dir}/lib/cache-api.jar"/>
+        <pathelement path="${pocxdm.dir}/lib/gridgain-core.jar"/>
+        <pathelement path="${pocxdm.dir}/lib/h2.jar"/>
+        <pathelement path="${pocxdm.dir}/lib/ignite-core.jar"/>
+        <pathelement path="${pocxdm.dir}/lib/ignite-indexing.jar"/>
+        <pathelement path="${build-lib.dir}/${kodiakvault.jar.name}"/>
+    </path>
+
+    <target name="prepare" depends="set-filter" unless="prepared">
+        <property name="prepared" value="true"/>
+        <echo>Preparing build directories.</echo>
+        <mkdir dir="${build.dir}"/>
+        <mkdir dir="${build-lib.dir}"/>
+    </target>
+
+    <target name="set-filter" description="Setting the filter file">
+        <filter filtersfile="build-dbmgr.properties"/>
+    </target>
+
+    <!-- Build the dependant libraries-->
+    <target name="build-dependent" depends="fetch-dependant-build-scripts" description="Compiling POCXDM dependant lib">
+
+        <echo>Compile Logger Library</echo>
+        <ant antfile="build-logger.xml" target="create-jar.nodep"/>
+
+        <echo>Compile Logger Library</echo>
+        <ant antfile="build-utilities.xml" target="create-generatealarmutil-jar.nodep"/>
+
+    </target>
+
+    <!-- Fetching the dependant build scripts-->
+    <target name="fetch-dependant-build-scripts">
+        <echo>Fetching all dependent common build scripts</echo>
+        <copy todir="." overwrite="true" filtering="true">
+            <fileset dir="${pocxdm-logger-build.dir}" includes="*.*"/>
+        </copy>
+        <copy todir="." overwrite="true" filtering="true">
+            <fileset dir="${pocxdm-utilities-build.dir}" includes="*.*"/>
+        </copy>
+    </target>
+
+</project>

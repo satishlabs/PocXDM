@@ -1,0 +1,49 @@
+#
+# Copyright Motorola Solutions, Inc. and/or Kodiak Networks, Inc.
+# All Rights Reserved
+# Motorola Solutions Confidential Restricted
+#
+# Local Database Server Address
+IPADDRESS=192.168.1.210
+
+# Local Database Port
+PORT=53389
+
+#All PTT Server Database Server Port - default 53389
+PTTDBPORT=53389
+
+#Local Database Server User ID. - default kodiak.
+#DBUSERID=kodiakdb
+
+#Local Database Server User password. - default kodiak.
+#DBPASSWORD=kodiak
+
+#Local Database Server DSN name. - default emsdsn.
+DBDSN=EMSDSN
+
+# Connection type whether its a remote or a local db connection object
+CONNECTIONTYPE=Local
+
+#Audit Interval for Active DB Poll Thread (in milliseconds)
+ACTIVE_IP_AUDIT_INTERVAL=3600000
+
+#TCP Port
+TCP_PORT=53389
+
+#SQL_QUERY_TIMEOUT Connection attribute specifies the time limit in 
+#seconds within which the database should execute SQL statements.
+# A value of 0 indicates no timeout.
+SQL_QUERY_TIMEOUT=0
+
+#The TTC_Timeout attribute sets a maximum time limit, in seconds, 
+#for a network operation that is completed by using the TimesTen 
+#Client and Server. The TTC_Timeout attribute also determines the 
+#maximum number of seconds a TimesTen  Client application waits 
+#for the result from the corresponding TimesTen Server process before 
+#timing out. 
+#A value of 0 indicates that client/server operations should not timeout.
+
+TTC_TIMEOUT=20
+
+# Value must be in second, Will be used for auditing busy and idle connection
+BUSY_IDLE_AUDIT_INTERVAL=120
