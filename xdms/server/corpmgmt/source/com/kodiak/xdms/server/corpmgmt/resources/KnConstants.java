@@ -273,6 +273,11 @@ public class KnConstants {
     public static final String DELETE_HIERARCHY_LIST = "DELETE_HIERARCHY_LIST";
 
 
+    //GroupType constant varibale
+    public static final int GROUP_TYPE_STANDARD = 0;
+    public static final int GROUP_TYPE_DISPATCH = 1;
+    public static final int GROUP_TYPE_BROADCAST = 2;
+
     public static enum SUBSCR_CLIENT_TYPE {
         HANDSET(1),
         DESKTOP(2),

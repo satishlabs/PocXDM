@@ -1305,7 +1305,7 @@ public class KnCorpSubscrProfileController implements ICorpSubscrProfileControll
                         List<String> profileMdnsForBasemdn= corpSubsProvInfoUtil
                                   .getProfileMdnByBaseMdns(new ArrayList<>(contactMDNs), xdmsHomePttId, persisterTxn);
                         contactMDNs.addAll(profileMdnsForBasemdn);
-                        contactInfoUtil.updateSubcribersResourceListIndexDoc(contactMDNs, xdmsHomePttId, null, persisterTxn);
+                        etagMap = contactInfoUtil.updateSubcribersResourceListIndexDoc(contactMDNs, xdmsHomePttId, etagMap, persisterTxn);
                     }
                     KnIPCorpContactDTO contactDTO = new KnIPCorpContactDTO();
                     contactDTO.setMdn(mdn);
@@ -1948,6 +1948,14 @@ public class KnCorpSubscrProfileController implements ICorpSubscrProfileControll
             if (subscProfile.getCorpId() <= 0) {
                 knLogger.error(methodName, "Invalid Corporate Subscriber passed. MDN - ", authorizedMdn);
                 throw new KnCorpBOException(com.kodiak.xdms.server.corpmgmt.resources.KnErrorCodes.BOEntity.INVALID_SUBSCRIPTION_TYPE, "Invalid Corp Subscriber");
+            }
+            // UCSPROVCONFIG-11083 - Amper Gateway clients are restricted to be AU.
+            boolean isAuthMdnAmGwClient = KnGeneralUtil.getFeatureBitValue(subscProfile.getSubscriberFS2(), 137);
+            if (isAuthMdnAmGwClient) {
+                knLogger.error(methodName, "Amper Gateway client not allowed as AU. MDN - ",
+                        KnGDPRTemplate.mdn(authorizedMdn));
+                throw new KnCorpBOException(com.kodiak.xdms.server.corpmgmt.resources.KnErrorCodes.Validator.AMPER_GW_NOT_ALLOWED_AS_AU_FOR_TARGET_PERMISSIONS,
+                        "Amper Gateway client not allowed as AU");
             }
             boolean isUpmCall = ipAuthUserPermissionInfoDTO.isUpmCall();
             boolean isAllAuTask=ipAuthUserPermissionInfoDTO.isAllAuTask();
@@ -2819,6 +2827,7 @@ public class KnCorpSubscrProfileController implements ICorpSubscrProfileControll
             Collection<KnSubsDestEmergencyAttributes> insertToEmergAttributes = new ArrayList<>();
             Map<String, Integer> newPriority = new HashMap<>();
             Map<Integer, Integer> groupCorpIdMap = new HashMap<>();
+            Set<String> contactAsDest = new HashSet<>();
             if(ipEmergencyInfoDTO.getEmergDestType() == DESTINATION_TYPE.CAT_CONFIGURED_DESTINATION.value()
                     && ipEmergencyInfoDTO.getEmergInitPermission() != DISABLED){
                 KnCorpSubscriberDTO corpsubsriber=contactInfoUtil.selectPocSubscriberInfo(mdn, xdmsHome, persisterTxn);
@@ -2941,6 +2950,7 @@ public class KnCorpSubscrProfileController implements ICorpSubscrProfileControll
                         destEmergencyAttributes.setEmergDestPriority(++priority);
                         destEmergencyAttributes.setEmergDestTypeMgmt(DESTINATION_TYPE_MGMT.CONTACT.value());
                         destEmergencyAttributes.setEmergDest(dest);
+                        contactAsDest.add(dest);
                         insertToEmergAttributes.add(destEmergencyAttributes);
                         newPriority.put(dest, destEmergencyAttributes.getEmergDestPriority());
                     }
@@ -2951,7 +2961,22 @@ public class KnCorpSubscrProfileController implements ICorpSubscrProfileControll
             emergencyMcpttFeaturePersistDTO.setMdn(mdn);
             emergencyMcpttFeaturePersistDTO.setSubsFS2(subscProfile.getSubscriberFS2());
             emergencyMcpttFeaturePersistDTO.setEmergFeature(corpProfile.getEmergFeature() == ENABLED);
+            //UCSPROVCONFIG-11084
+            if (!contactAsDest.isEmpty()) {
+                // Check if the requesting MDN is an Amper Gateway Client
+                boolean isRequestMdnAmGwClient = KnGeneralUtil.getFeatureBitValue(subscProfile.getSubscriberFS2(), 137);
+                emergencyMcpttFeaturePersistDTO.setRequestMdnIsAmGw(isRequestMdnAmGwClient);
 
+                // Check if any destination MDN is an Amper Gateway Client
+                Map<String, String> destMdnMap = contactInfoUtil.getSubscriberFs2(contactAsDest, xdmsHome, persisterTxn);
+                for (Map.Entry<String, String> entry : destMdnMap.entrySet()) {
+                    if (KnGeneralUtil.getFeatureBitValue(entry.getValue(), 137)) {
+                        emergencyMcpttFeaturePersistDTO.setDestMdnIsAmGw(true);
+                        knLogger.info(methodName, "Destination MDN is Amper Gateway Client: ", KnGDPRTemplate.mdn(entry.getKey()));
+                        break; // Exit loop since we found an Amper Gateway client
+                    }
+                }
+            }
 
             List<KnUserprofileSharedlistDTO> upmSharedList = userProfileUtil.getUserProfileSharedListByUpmId(subscProfile.getUserProfileId(), xdmsHome, persisterTxn);
             boolean isUPMSharingEnabled = false;
@@ -4355,41 +4380,15 @@ public class KnCorpSubscrProfileController implements ICorpSubscrProfileControll
             }
         });
         bulkGroupCloningDTO.getBroadCastGrpList().forEach(groupEtag::remove);
-        // Existing members are the watcher clients for group copy-paste (30026).
-        // They are still removed from etagMap below so the target (self, 30025) notify is unchanged.
-        // The target MDN is not included in the watcher map.
+        //removing the existing group member , As existing member getting directory notify
         List<String> exisitngGroupMembers = new ArrayList<>();
         for (Collection<String> grpMembers : bulkGroupCloningDTO.getGroupDistList().values()) {
             exisitngGroupMembers.addAll(grpMembers);
         }
-        String copyPasteTargetMdn = bulkGroupCloningDTO.getToMdn();
-        Map<String, KnOPDirChgDTO> watcherEtagMap = new HashMap<>();
-        Map<Integer, Collection<String>> watcherMembersByGroup = new HashMap<>();
-        for (Map.Entry<Integer, Collection<String>> groupMembers : bulkGroupCloningDTO.getGroupDistList().entrySet()) {
-            if (groupMembers.getValue() == null || !groupEtag.containsKey(groupMembers.getKey())) {
-                continue;
-            }
-            Collection<String> watcherMdns = new ArrayList<>();
-            for (String memberMdn : groupMembers.getValue()) {
-                if (memberMdn != null && !memberMdn.equals(copyPasteTargetMdn) && etagMap.containsKey(memberMdn)) {
-                    watcherMdns.add(memberMdn);
-                    watcherEtagMap.putIfAbsent(memberMdn, etagMap.get(memberMdn));
-                }
-            }
-            if (!watcherMdns.isEmpty()) {
-                watcherMembersByGroup.put(groupMembers.getKey(), watcherMdns);
-            }
-        }
         etagMap.keySet().removeIf(exisitngGroupMembers::contains);
-        if (!watcherMembersByGroup.isEmpty()) {
-            watcherEtagMap = commonInfoUtil.formSubscriberNotification(watcherMembersByGroup, groupEtag,
-                    DOC_CHANGE_TYPE.REPLACE.value(), watcherEtagMap, bulkGroupCloningDTO.getGroupDetailsMap(), null);
-            respDTO.setChangeLogMap(watcherEtagMap);
-            knLogger.info(methodName, "30026 watcher directories=", watcherEtagMap == null ? 0 : watcherEtagMap.size(),
-                    " groups=", watcherMembersByGroup.size());
-        } else {
-            knLogger.info(methodName, "30026 watcher directories=0: no existing member directory change for group copy-paste");
-        }
+
+        //etagMap = commonInfoUtil.formSubscriberNotification(bulkGroupCloningDTO.getToMdn(), groupEtag, DOC_CHANGE_TYPE.REPLACE.value(), etagMap);
+        //respDTO.setChangeLogMap(etagMap);
         respDTO.setMdnCorpId(bulkGroupCloningDTO.getToMdnSubsProfile().getCorpId());
         respDTO.setGroupIds(groupEtag.keySet()/*.stream().filter(integer -> !mdnExistenceInGroup.containsKey(String.valueOf(integer))).collect(Collectors.toList())*/);
         populate(respDTO);
@@ -6064,19 +6063,6 @@ public class KnCorpSubscrProfileController implements ICorpSubscrProfileControll
                 authMdnsProfileMdns.forEach(profileMdn -> targetMdnForDeleteMap.put(profileMdn, targetMdnForDeleteForProfileMdns));
             }
             knLogger.debug(methodName, "--->privacyEnabledMdns - ", KnGDPRTemplate.mdnList(privacyEnabledMdns));
-            // UPM profile modify reads these later and stamps them on the 40014 authorization diff.
-            // Other callers of setBulkTargetPermissions do not read the fields.
-            if (isUpmCall) {
-                respDTO.setAddedMcpttTargetMap(insertTargetMdnListMap);
-                respDTO.setModifiedMcpttTargetMap(updateToMcpttInfoMap);
-                respDTO.setRemovedMcpttTargetMap(targetMdnForDeleteMap);
-                respDTO.setPermissionResourceListUpdate(targetForResourceListUpdate);
-                respDTO.setPermissionSubsEntitiesMap(corpSubsEntitiesDTOMap);
-                knLogger.info(methodName, "40014 UPM target delta stored. added=",
-                        countMcpttTargets(insertTargetMdnListMap),
-                        " modified=", countMcpttTargets(updateToMcpttInfoMap),
-                        " removed=", countRemovedTargets(targetMdnForDeleteMap));
-            }
 
             populate(respDTO);
 
@@ -6092,32 +6078,6 @@ public class KnCorpSubscrProfileController implements ICorpSubscrProfileControll
                     new KnException(com.kodiak.xdms.server.corpmgmt.resources.KnErrorCodes.BOEntity.INTERNAL_ERROR, e.getMessage(), e));
         }
         return respDTO;
-    }
-
-    private static int countMcpttTargets(Map<String, Collection<KnMcpttPermissionDTO>> targetMap) {
-        int count = 0;
-        if (targetMap == null) {
-            return 0;
-        }
-        for (Collection<KnMcpttPermissionDTO> targets : targetMap.values()) {
-            if (targets != null) {
-                count += targets.size();
-            }
-        }
-        return count;
-    }
-
-    private static int countRemovedTargets(Map<String, Collection<String>> targetMap) {
-        int count = 0;
-        if (targetMap == null) {
-            return 0;
-        }
-        for (Collection<String> targets : targetMap.values()) {
-            if (targets != null) {
-                count += targets.size();
-            }
-        }
-        return count;
     }
 
     /**

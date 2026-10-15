@@ -3937,6 +3937,9 @@ public class KnProvXDMServerDAO implements IProvXDMServerDAO {
         } catch (Exception e) {
             knLogger.error(methodName, "Unexpected exception - ", e);
             throw KnDbUtil.processException(e, "failed to retrieve RoamingType,ClusterId map", xdmPttServerId, KnProvDAOSourceTypes.ROAMINGMCCMNCINFO, query);
+        } finally {
+            KnDbUtil.closeResultSet(rs);
+            KnDbUtil.closeStatement(pStmt);
         }
         return roamingTypeClusterIdMap;
     }
@@ -4058,6 +4061,9 @@ public class KnProvXDMServerDAO implements IProvXDMServerDAO {
         } catch (Exception e) {
             knLogger.error(methodName, "Unexpected exception - ", e);
             throw KnDbUtil.processException(e, "failed to retrieve profileId", xdmPttServerId, KnProvDAOSourceTypes.GENERICNNIPROFILE, query);
+        } finally {
+            KnDbUtil.closeResultSet(rs);
+            KnDbUtil.closeStatement(pStmt);
         }
         knLogger.debug(methodName, "EXIT : profileId-", profileId);
         return profileId;
@@ -5739,6 +5745,12 @@ public class KnProvXDMServerDAO implements IProvXDMServerDAO {
     public void updateEmergencyDocEtag(String mdn, KnPersisterTxn persisterTxn) throws KnDAOException {
         KnEmergencyDocDAO emergencyDocDAO = KnProvTablesRegistry.getProvXDMTablesRegistry().createEmergencyDocDAO(xdmPttServerId);
         emergencyDocDAO.updateEmergencyDocEtag(mdn, persisterTxn);
+    }
+
+    @Override
+    public boolean hasContactEmergencyDestination(String mdn, KnPersisterTxn persisterTxn) throws KnDAOException {
+        KnEmergencyDocDAO emergencyDocDAO = KnProvTablesRegistry.getProvXDMTablesRegistry().createEmergencyDocDAO(xdmPttServerId);
+        return emergencyDocDAO.hasContactEmergencyDestination(mdn, persisterTxn);
     }
 
 }

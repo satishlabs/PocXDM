@@ -7029,10 +7029,10 @@ public class KnCorpXdmDAO implements ICorpXdmDAO {
     }
 
     @Override
-    public  Collection<KnCorpGroupMemberDTO>  groupProfileInfoByGroupId(Integer groupId ,KnPersisterTxn persisterTxn) throws KnDBPersistenceException, KnDBConnectionException, KnDAOException {
+    public  Collection<KnCorpGroupMemberDTO>  groupProfileInfoByGroupId(Integer groupId, String userProfileId, KnPersisterTxn persisterTxn) throws KnDBPersistenceException, KnDBConnectionException, KnDAOException {
         String methodName = "groupProfileInfoByGroupId(Integer,KnPersisterTxn)";
         KnXDMProfilGroupInfoDAO profilGroupInfoDao = KnCorpDBTablesRegistry.getDBXdmTableRegistry().createXDMProfilGroupInfoDAO(pttServerId);
-        return profilGroupInfoDao.groupProfileInfoByGroupId(groupId, persisterTxn);
+        return profilGroupInfoDao.groupProfileInfoByGroupId(groupId, userProfileId, persisterTxn);
     }
 
 
@@ -9961,4 +9961,13 @@ public class KnCorpXdmDAO implements ICorpXdmDAO {
         knLogger.debug(methodName, "POC Home updated successfully");
     }
 
+    public Map<String, String> getSubscriberFs2(Collection<String> mdns, KnPersisterTxn persisterTxn) throws KnDAOException {
+        final String methodName = "getSubscriberFs2(Collection<String>,KnPersisterTxn) ";
+        knLogger.debug(methodName, "ENTRY: ");
+        KnXDMSubscriberInfoDAO subscriberTable = KnCorpDBTablesRegistry.getDBXdmTableRegistry().
+                createXDMSubscriberInfoDAO(pttServerId);
+        Map<String, String> subscriberFs2 = subscriberTable.getSubscriberFs2(mdns, persisterTxn);
+        knLogger.debug(methodName, "EXIT Point.");
+        return subscriberFs2;
+    }
 }

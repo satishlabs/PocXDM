@@ -474,6 +474,7 @@ public class KnXDMCorpInfoDAO implements ITableDAO {
             throw KnDbUtil.processException(e, "Failed while  retrieving the updating corpfs " + e,
                     pttServerId, KnDAOSourceTypes.XDM_CORP_INFO, query);
         } finally {
+            KnDbUtil.closeResultSet(rs);
             KnDbUtil.closeStatement(pstmt);
         }
     }

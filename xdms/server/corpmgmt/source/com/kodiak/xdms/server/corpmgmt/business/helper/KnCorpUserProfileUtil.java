@@ -185,14 +185,14 @@ public class KnCorpUserProfileUtil {
         return result;
     }
 
-    public Collection<KnCorpGroupMemberDTO> groupProfileInfoByGroupId(Integer groupId, String xdmsHome, KnPersisterTxn persisterTxn) throws KnCorpBOException {
+    public Collection<KnCorpGroupMemberDTO> groupProfileInfoByGroupId(Integer groupId, String userProfileId, String xdmsHome, KnPersisterTxn persisterTxn) throws KnCorpBOException {
         final String methodName = "groupProfileInfoByGroupId()";
         knLogger.debug(methodName, "ENTRY :");
         Collection<KnCorpGroupMemberDTO> result = null;
         try {
             ICorpXdmDAO xdmDAO = new KnCorpXdmDAO(xdmsHome);
 
-            result= xdmDAO.groupProfileInfoByGroupId(groupId, persisterTxn);
+            result= xdmDAO.groupProfileInfoByGroupId(groupId, userProfileId, persisterTxn);
         } catch (KnDAOException e) {
             throw new KnCorpBOException(e.getErrorCode(), e.getErrorMessage(), e);
 

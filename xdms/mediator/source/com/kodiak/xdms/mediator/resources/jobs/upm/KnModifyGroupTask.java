@@ -18,6 +18,8 @@ import com.kodiak.logger.KnLogger;
 import com.kodiak.xdms.mediator.helper.KnXDMCommonMediator;
 import com.kodiak.xdms.mediator.helper.KnXDMCorpMediator;
 import com.kodiak.xdms.mediator.resources.jobs.asyncframework.KnUPMJobScheduler;
+import com.kodiak.xdms.notificationmgr.IXcapDiffNotifierIntf;
+import com.kodiak.xdms.notificationmgr.impl.KnXcapDiffNotifierImpl;
 import com.kodiak.xdms.server.common.KnXDMServerException;
 import com.kodiak.xdms.server.common.business.helper.KnGenInfoUtil;
 import com.kodiak.xdms.server.common.dto.common.KnCorpProfileDTO;
@@ -53,6 +55,7 @@ public class KnModifyGroupTask extends KnAbstractTask {
 
     private ICorpClientIntf corpClientIntf;
     private KnXDMCommonMediator commonMediator;
+    private IXcapDiffNotifierIntf notifier;
     private KnXDMCorpMediator corpMediator;
     private KnGenInfoUtil genInfoUtil;
     private KnCorpGroupInfoUtil groupInfoUtil;
@@ -67,6 +70,7 @@ public class KnModifyGroupTask extends KnAbstractTask {
             , KnPersisterTxn modifyUpmTranxn, String profileMdn, KnCorpResponseDTO userProfileDetails) {
         corpClientIntf = new KnCorpClientImpl();
         commonMediator = KnXDMCommonMediator.getInstance();
+        notifier = new KnXcapDiffNotifierImpl();
         corpMediator = KnXDMCorpMediator.getInstance();
         genInfoUtil = KnGenInfoUtil.getInstance();
         commonInfoUtil = new KnCorpCommonInfoUtil();
@@ -300,7 +304,6 @@ public class KnModifyGroupTask extends KnAbstractTask {
                     upmJobScheduler.addJob(knAsyncJobWatcherDTO);
                 }
                 taskResult.setAddGroupResp(addGroupResp);
-                taskResult.setGroupAdded(true); // 40008: KnUPMJob copies this for MCSXCAP_ON_PROFILE_MODIFY_ADD_GROUP
                 //CAMPEDGROUPINFO
                 if (groupZoneIdMap != null && !groupZoneIdMap.isEmpty() && groupPriorityIdMap != null &&
                         !groupPriorityIdMap.isEmpty() && groupZoneIdMap != null && !groupZoneIdMap.isEmpty()
@@ -435,12 +438,6 @@ public class KnModifyGroupTask extends KnAbstractTask {
                     knLogger.debug(methodName, "modifyCorpGroup Operation Failed");
                     throw new KnXDMServerException(modifyGroupMemPropResp.getStatusCode(), modifyGroupMemPropResp.getMessage());
                 }
-                // Flag only. 40011 is sent in KnUPMJob after updateEtag, once changeLogMap exists.
-                // modifiedGrpMembers is set for every group type so the etag diff includes the property change.
-                taskResult.setGroupPropertyUpdated(true);
-                modifyGroupMemPropResp.setModifiedGrpMembers(modifiedGrpMembers);
-                knLogger.info(methodName, "group property updated, 40011 will be sent after etag update. modifiedMemberCount=",
-                        modifiedGrpMembers == null ? 0 : modifiedGrpMembers.size());
                 for (KnCorpGroupListInfoDTO groupInfo : modifyUpmGroup) {
                     Integer groupId = groupInfo.getGroupID();
                     Integer zoneId = groupInfo.getGroupZone();
@@ -450,6 +447,7 @@ public class KnModifyGroupTask extends KnAbstractTask {
                     taskResult.setUpmCount(modifyGroupMemPropResp.getUserProfileCount());
                     //to enable 27bit for all the profile mdns .
                     if (modifyGroupMemPropResp.getMcxGrpInd() == MCX_GROUP_TYPE) {
+                        modifyGroupMemPropResp.setModifiedGrpMembers(modifiedGrpMembers);
                         if (locWatcher == ENABLED) {
                             grpLocWatcherMap.put(groupId, Boolean.TRUE);
                             locWatcherGroupIdList.add(groupId.toString());
@@ -620,7 +618,6 @@ public class KnModifyGroupTask extends KnAbstractTask {
                 taskResult.setGroupIds(removeGroupMemPropResp.getGroupIds());
                 taskResult.setUpmCount(removeGroupMemPropResp.getUserProfileCount());
                 taskResult.setRemoveGroupResp(removeGroupMemPropResp);
-                taskResult.setGroupRemoved(true); // 40009: KnUPMJob copies this for MCSXCAP_ON_PROFILE_MODIFY_REMOVE_GROUP
                 if (Objects.equals(removeGroupMemPropResp.getStatusCode(), "00000") && count < TRANSACTION_COUNT) {
                     Set<String> removedGroupIds = new HashSet<>();
                     KnIPUserProfileDTO ipUserProfilesDTO = new KnIPUserProfileDTO();

@@ -60,18 +60,6 @@ public class KnCorpResponseDTO implements ICorpResponseDTO {
     private String message;
     private Collection<KnCorpFailedData> failedDataList;
     private Map<String, KnOPDirChgDTO> changeLogMap;
-    // UPM permission modify (ops 40014) only. Not used by group or contact notifies.
-    private Map<String, KnOPDirChgDTO> permissionChangeLogMap;
-    // Filled by setBulkTargetPermissions for a UPM call. KnUPMJob copies these onto
-    // the authorization document before the 40014 XCAP diff is queued.
-    private Map<String, Collection<KnMcpttPermissionDTO>> addedMcpttTargetMap;
-    private Map<String, Collection<KnMcpttPermissionDTO>> modifiedMcpttTargetMap;
-    private Map<String, Collection<String>> removedMcpttTargetMap;
-    private Map<String, Integer> permissionResourceListUpdate;
-    private Map<String, KnCorpSubsEntitiesDTO> permissionSubsEntitiesMap;
-    // ABDG member remove (ops 30016) only. Dispatcher clients copied before they are
-    // stripped from changeLogMap. 30015 keeps using changeLogMap.
-    private Map<String, KnOPDirChgDTO> dispatcherRemoveChangeLogMap;
     private String etag;
     private Collection<String> disabledDispatchMemList;
     private Map<Integer, List<String>> disabledDispatchMemListMap;
@@ -183,7 +171,6 @@ public class KnCorpResponseDTO implements ICorpResponseDTO {
     private Long lastUpdateprofileTime;
     private Integer videoPermission;
     private String osmListId;
-    private boolean osmListAdded;
 
     private Map<Integer, Collection<KnCorpContactDTO>> addedGroupMembersMap;
     private Collection<KnCorpGroupMemberDTO> modifiedGrpMembers;
@@ -199,6 +186,8 @@ public class KnCorpResponseDTO implements ICorpResponseDTO {
 
     private Integer grpProfileId;
     private boolean removeExtContact;
+
+    private Map<Integer, Integer> grpIdToCorpIdMap;
 
     public boolean getRemoveExtContact() {
         return removeExtContact;
@@ -447,62 +436,6 @@ public class KnCorpResponseDTO implements ICorpResponseDTO {
 
     public void setChangeLogMap(Map<String, KnOPDirChgDTO> changeLogMap) {
         this.changeLogMap = changeLogMap;
-    }
-
-    public Map<String, KnOPDirChgDTO> getPermissionChangeLogMap() {
-        return permissionChangeLogMap;
-    }
-
-    public void setPermissionChangeLogMap(Map<String, KnOPDirChgDTO> permissionChangeLogMap) {
-        this.permissionChangeLogMap = permissionChangeLogMap;
-    }
-
-    public Map<String, Collection<KnMcpttPermissionDTO>> getAddedMcpttTargetMap() {
-        return addedMcpttTargetMap;
-    }
-
-    public void setAddedMcpttTargetMap(Map<String, Collection<KnMcpttPermissionDTO>> addedMcpttTargetMap) {
-        this.addedMcpttTargetMap = addedMcpttTargetMap;
-    }
-
-    public Map<String, Collection<KnMcpttPermissionDTO>> getModifiedMcpttTargetMap() {
-        return modifiedMcpttTargetMap;
-    }
-
-    public void setModifiedMcpttTargetMap(Map<String, Collection<KnMcpttPermissionDTO>> modifiedMcpttTargetMap) {
-        this.modifiedMcpttTargetMap = modifiedMcpttTargetMap;
-    }
-
-    public Map<String, Collection<String>> getRemovedMcpttTargetMap() {
-        return removedMcpttTargetMap;
-    }
-
-    public void setRemovedMcpttTargetMap(Map<String, Collection<String>> removedMcpttTargetMap) {
-        this.removedMcpttTargetMap = removedMcpttTargetMap;
-    }
-
-    public Map<String, Integer> getPermissionResourceListUpdate() {
-        return permissionResourceListUpdate;
-    }
-
-    public void setPermissionResourceListUpdate(Map<String, Integer> permissionResourceListUpdate) {
-        this.permissionResourceListUpdate = permissionResourceListUpdate;
-    }
-
-    public Map<String, KnCorpSubsEntitiesDTO> getPermissionSubsEntitiesMap() {
-        return permissionSubsEntitiesMap;
-    }
-
-    public void setPermissionSubsEntitiesMap(Map<String, KnCorpSubsEntitiesDTO> permissionSubsEntitiesMap) {
-        this.permissionSubsEntitiesMap = permissionSubsEntitiesMap;
-    }
-
-    public Map<String, KnOPDirChgDTO> getDispatcherRemoveChangeLogMap() {
-        return dispatcherRemoveChangeLogMap;
-    }
-
-    public void setDispatcherRemoveChangeLogMap(Map<String, KnOPDirChgDTO> dispatcherRemoveChangeLogMap) {
-        this.dispatcherRemoveChangeLogMap = dispatcherRemoveChangeLogMap;
     }
 
     public String getEtag() {
@@ -1213,12 +1146,12 @@ public class KnCorpResponseDTO implements ICorpResponseDTO {
         this.osmListId = osmListId;
     }
 
-    public boolean isOsmListAdded() {
-        return osmListAdded;
+    public Map<Integer, Integer> getGrpIdToCorpIdMap() {
+        return grpIdToCorpIdMap;
     }
 
-    public void setOsmListAdded(boolean osmListAdded) {
-        this.osmListAdded = osmListAdded;
+    public void setGrpIdToCorpIdMap(Map<Integer, Integer> grpIdToCorpIdMap) {
+        this.grpIdToCorpIdMap = grpIdToCorpIdMap;
     }
 
     @Override
@@ -1229,7 +1162,6 @@ public class KnCorpResponseDTO implements ICorpResponseDTO {
                 ", message='" + message + '\'' +
                 ", failedDataList=" + failedDataList +
                 ", changeLogMap=" + changeLogMap +
-                ", permissionChangeLogMap=" + permissionChangeLogMap +
                 ", etag='" + etag + '\'' +
                 ", disabledDispatchMemList=" + disabledDispatchMemList +
                 ", disabledDispatchMemListMap=" + disabledDispatchMemListMap +
@@ -1348,6 +1280,7 @@ public class KnCorpResponseDTO implements ICorpResponseDTO {
                 ", additionalInfo=" + additionalInfo +
                 ", osmListId=" + osmListId +
                 ", removeExtContact=" + removeExtContact +
+                ", grpIdToCorpIdMap=" + grpIdToCorpIdMap +
                 '}';
     }
 

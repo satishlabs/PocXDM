@@ -49,7 +49,6 @@ import com.kodiak.xdms.server.common.KnXDMServerException;
 import com.kodiak.xdms.server.corpmgmt.dto.impl.KnCorpGroupDTO;
 import com.kodiak.xdms.server.corpmgmt.dto.impl.KnCorpResponseDTO;
 import com.kodiak.xdms.server.corpmgmt.resources.KnErrorCodes;
-import com.kodiak.common.commdto.common.KnNotificationParamDTO;
 
 import java.util.*;
 
@@ -133,9 +132,7 @@ public class KnBulkGroupContactAssignJob extends KnAbstractJob {
             Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = commonMediator.prepareNotification(respDTO);
             knLogger.debug(methodName, "Sending notifications - ", xcapDiffList);
             notifier.setMaxNotfnsPerJob(2);
-            KnNotificationParamDTO xcapAddedMemberOnGroupMemberAddNotificationParamDTO = new KnNotificationParamDTO();
-            xcapAddedMemberOnGroupMemberAddNotificationParamDTO.setOpsCode(com.kodiak.xdms.server.common.resources.KnConstants.OPS_CODE.XCAP_ADDED_MEMBER_ON_GROUP_MEMBER_ADD.value());
-            boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn, xcapAddedMemberOnGroupMemberAddNotificationParamDTO);
+            boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, persisterTxn);
             knLogger.debug(methodName, "Notification status - ", isNotified);
             // Calling eTag update for reverse look up. :
             if (!mdns.isEmpty() && !mdnListMap.isEmpty()) {

@@ -411,7 +411,7 @@ KnXDMSubscriberInfoDAO implements ITableDAO {
                     pttServerId, KnDAOSourceTypes.POCSUBSCRINFO, query);
         } finally {
             KnDbUtil.closeResultSet(rs);
-            KnDbUtil.closeStatement(pStatement);
+            KnDbUtil.closePreparedStatement(pStatement);
             if (ownedTxn) {
                 KnDbUtil.closeConnection(conn);
             }
@@ -1154,7 +1154,7 @@ KnXDMSubscriberInfoDAO implements ITableDAO {
             throw KnDbUtil.processException(e, "Failed to select Subscriber Profile - " + e.getMessage(), pttServerId, KnDAOSourceTypes.POCSUBSCRINFO, query);
         } finally {
             KnDbUtil.closeResultSet(rs);
-            KnDbUtil.closeStatement(pStmt);
+            KnDbUtil.closePreparedStatement(pStmt);
             knLogger.info(methodName, "EXIT : select Subscriber Profile");
         }
     }
@@ -1182,6 +1182,7 @@ KnXDMSubscriberInfoDAO implements ITableDAO {
             throw KnDbUtil.processException(e, "Failed to select Subscriber Profile - " + e.getMessage(), pttServerId, KnDAOSourceTypes.POCSUBSCRINFO, buffer.toString());
         } finally {
             KnDbUtil.closeResultSet(rs);
+            KnDbUtil.closeStatement(statement);
         }
     }
 
@@ -1258,6 +1259,7 @@ KnXDMSubscriberInfoDAO implements ITableDAO {
 
         } finally {
             KnDbUtil.closeResultSet(rs);
+            KnDbUtil.closeStatement(statement);
             knLogger.debug(methodName, "EXIT : profileMdnBaseMdnMap ->", profileMdnBaseMdnMap);
         }
         knLogger.exit(methodName, profileMdnBaseMdnMap);
@@ -1270,7 +1272,7 @@ KnXDMSubscriberInfoDAO implements ITableDAO {
         knLogger.debug(methodName, "Entry : baseMdnList ", KnGDPRTemplate.mdnList(baseMdnList));
         Connection conn;
         Statement statement = null;
-        PreparedStatement pstmt;
+        PreparedStatement pstmt = null;
         ResultSet rs = null;
         List<String> realMdns = new ArrayList<>();
         StringBuilder query=new StringBuilder();
@@ -1299,6 +1301,7 @@ KnXDMSubscriberInfoDAO implements ITableDAO {
 
         } finally {
             KnDbUtil.closeResultSet(rs);
+            KnDbUtil.closePreparedStatement(pstmt);
             knLogger.debug(methodName, "EXIT : profileOfBaseMdnMap :", profileOfBaseMdnMap);
         }
         return profileOfBaseMdnMap;
@@ -1332,6 +1335,7 @@ KnXDMSubscriberInfoDAO implements ITableDAO {
 
         } finally {
             KnDbUtil.closeResultSet(rs);
+            KnDbUtil.closeStatement(statement);
             knLogger.debug(methodName, "EXIT : getMcsIdNullMdnList->", KnGDPRTemplate.mdnList(mdns));
         }
         knLogger.exit(methodName, KnGDPRTemplate.mdnList(mdns));
@@ -1343,7 +1347,7 @@ KnXDMSubscriberInfoDAO implements ITableDAO {
         String methodName = "updateMcsIdForMdnList(mdnList, KnPersisterTxn)";
         String query = null;
         Connection conn;
-        PreparedStatement pStmt;
+        PreparedStatement pStmt = null;
         knLogger.debug(methodName, "ENTRY: updateMcsIdForMdnList - ", mdnList.size());
         try {
             StringBuilder queryBuffer = new StringBuilder();
@@ -1385,7 +1389,7 @@ KnXDMSubscriberInfoDAO implements ITableDAO {
         String methodName = "updateSubsTS(List<String>,KnPersisterTxn)";
         knLogger.debug( methodName, "ENTRY Point : mdnList - " , KnGDPRTemplate.mdnList(mdnList)," exists ",exists);
         Connection conn;
-        PreparedStatement pstmt;
+        PreparedStatement pstmt = null;
         ResultSet rs = null;
         String selectQuery = null;
         String updateQuery = null;
@@ -1449,6 +1453,7 @@ KnXDMSubscriberInfoDAO implements ITableDAO {
                     pttServerId, KnDAOSourceTypes.POCSUBSCRINFO, selectQuery + " , " + updateQuery);
         } finally {
             KnDbUtil.closeResultSet(rs);
+            KnDbUtil.closePreparedStatement(pstmt);
         }
     }
 
@@ -1456,7 +1461,7 @@ KnXDMSubscriberInfoDAO implements ITableDAO {
         String methodName = "selectProfileIdMDNsByMcpttIds(String, KnPersisterTxn)";
         String query = null;
         Connection conn;
-        Statement stmt;
+        Statement stmt = null;
         ResultSet rs = null;
         Map<String,Map<Integer,String>> mcPttIdprofileIdMdns= new HashMap<>();
         Map<Integer,String> profileIdMdns= new HashMap<>();
@@ -1497,6 +1502,7 @@ KnXDMSubscriberInfoDAO implements ITableDAO {
                     KnDAOSourceTypes.POCSUBSCRINFO, query);
         } finally {
             KnDbUtil.closeResultSet(rs);
+            KnDbUtil.closeStatement(stmt);
         }
 
         return mcPttIdprofileIdMdns;
@@ -1530,7 +1536,7 @@ KnXDMSubscriberInfoDAO implements ITableDAO {
                     KnDAOSourceTypes.POCSUBSCRADDLINFO, QRY_SELECT_USER_PROFILE_NAME);
         } finally {
             KnDbUtil.closeResultSet(rs);
-            KnDbUtil.closeStatement(pStmt);
+            KnDbUtil.closePreparedStatement(pStmt);
         }
         return userProfileName;
     }
@@ -1616,7 +1622,7 @@ KnXDMSubscriberInfoDAO implements ITableDAO {
         String methodName = "getSegIndEnableSubs";
         knLogger.debug(methodName, "Entry : persistTxn ");
         Connection conn;
-        PreparedStatement pstmt;
+        PreparedStatement pstmt = null;
         ResultSet rs = null;
         Map<String,String> mdnSegmentIndicator = new HashMap<>();
         StringBuilder buffer = new StringBuilder(200);
@@ -1640,6 +1646,7 @@ KnXDMSubscriberInfoDAO implements ITableDAO {
 
         } finally {
             KnDbUtil.closeResultSet(rs);
+            KnDbUtil.closePreparedStatement(pstmt);
             knLogger.debug(methodName, "EXIT : getSegIndEnableSubs");
         }
         return mdnSegmentIndicator;
@@ -1653,7 +1660,7 @@ KnXDMSubscriberInfoDAO implements ITableDAO {
         List<String> realMdns = new ArrayList<String>();
         StringBuilder buffer = new StringBuilder(200);
         String query = null;
-        PreparedStatement pStmt;
+        PreparedStatement pStmt = null;
         StringBuffer keys = com.kodiak.common.dao.KnDbUtil.convertListToStringBuffer(mcsIds);
         String mdn=null;
         try {
@@ -1679,6 +1686,7 @@ KnXDMSubscriberInfoDAO implements ITableDAO {
 
         } finally {
             KnDbUtil.closeResultSet(rs);
+            KnDbUtil.closePreparedStatement(pStmt);
             knLogger.debug(methodName, "EXIT : Base Mdn ->", KnGDPRTemplate.mdn(mdn));
         }
         knLogger.exit(methodName, realMdns);
@@ -1913,6 +1921,9 @@ KnXDMSubscriberInfoDAO implements ITableDAO {
         } catch (Exception e) {
             knLogger.error("Exception Happened", e.getMessage());
             throw new RuntimeException(e);
+        } finally {
+            KnDbUtil.closeResultSet(rs);
+            KnDbUtil.closePreparedStatement(pstmt);
         }
         return mapOfProfileMdnWithGroupIds;
     }

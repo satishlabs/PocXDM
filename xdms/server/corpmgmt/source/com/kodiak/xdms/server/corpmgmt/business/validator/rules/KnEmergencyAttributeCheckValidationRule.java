@@ -83,6 +83,7 @@ public class KnEmergencyAttributeCheckValidationRule extends KnValidatorRule {
                         }
                         knLogger.debug(methodName, "contactList -", contactList, "groupTypeMap -", groupTypeMap,
                                 "mdnExistenceInGroup -", mdnExistenceInGroup);
+                        checkAmperGatewayDestinations(mcpttFeaturePersistDTO.getIsDestMdnIsAmGw(), mcpttFeaturePersistDTO.getIsRequestMdnIsAmGw());
                         Collection<String> broadcastGroup = new ArrayList<>();
                         Collection<String> groupsWhereMdnDoesNotExists = new ArrayList<>();
                         Collection<Integer> groupDoesNotExists = new ArrayList<>();
@@ -229,5 +230,24 @@ public class KnEmergencyAttributeCheckValidationRule extends KnValidatorRule {
                     getEntityId(), getOperationType(), getRuleId(), "DataType", "");
         }
         knLogger.debug(methodName, "EXIT: Validation Completed Successfully for emergency Attributes");
+    }
+
+    /**
+     * Amper GW clients (subscribers with a non-null GW_ID in DG.POCSUBSCRINFO) are not allowed
+     * to be configured as primary or secondary emergency destinations.
+     */
+    private void checkAmperGatewayDestinations(boolean isDestMdnIsAmGw, boolean isRequestMdnIsAmGw) throws KnValidationException {
+        knLogger.debug("checkAmperGatewayDestinations", "isDestMdnIsAmGw - ", isDestMdnIsAmGw,
+                "isRequestMdnIsAmGw - ", isRequestMdnIsAmGw);
+        if (isDestMdnIsAmGw) {
+            throw new KnCorpBOValidationException(KnErrorCodes.Validator.AMPER_GW_NOT_ALLOWED_AS_EMERGENCY_DESTINATION,
+                    "Amper Gateway client not allowed as emergency destination", getEntityId(),
+                    getOperationType(), getRuleId(), " ", "");
+        }
+        if (isRequestMdnIsAmGw) {
+            throw new KnCorpBOValidationException(KnErrorCodes.Validator.CONTACT_NOT_AALOWED_AS_EMERGENCY_DESTINATION_FOR_AMGW,
+                    "Contact not allowed as emergency for amper gateway clients", getEntityId(),
+                    getOperationType(), getRuleId(), " ", "");
+        }
     }
 }

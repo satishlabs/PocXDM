@@ -92,7 +92,7 @@ public interface ICorpUserProfileDAO {
     
     public Map<String,KnCorpGroupListInfoDTO> retriveGroupProfileInfoByGroupId( Integer groupId ,KnPersisterTxn persisterTxn) throws KnDBPersistenceException, KnDBConnectionException, KnDAOException;
 
-    public  Collection<KnCorpGroupMemberDTO>  groupProfileInfoByGroupId( Integer groupId ,KnPersisterTxn persisterTxn) throws KnDBPersistenceException, KnDBConnectionException, KnDAOException;
+    public  Collection<KnCorpGroupMemberDTO>  groupProfileInfoByGroupId( Integer groupId, String userProfileId, KnPersisterTxn persisterTxn) throws KnDBPersistenceException, KnDBConnectionException, KnDAOException;
 
     public Map<String, Integer> getAndDeleteGroupIdsFromUserProfile(Collection<Integer> groupIds) throws KnDAOException;
 

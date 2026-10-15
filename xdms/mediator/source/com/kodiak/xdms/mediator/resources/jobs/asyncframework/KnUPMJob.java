@@ -8,9 +8,7 @@ package com.kodiak.xdms.mediator.resources.jobs.asyncframework;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import com.kodiak.common.commdto.common.KnNotificationParamDTO;
-import com.kodiak.xdms.notificationmgr.beans.KnXcapDiffDirChgNotifyDTO;
-import com.kodiak.xdms.notificationmgr.impl.KnXcapDiffNotifierImpl;
+
 import com.kodiak.common.commdto.common.KnCorpGroupContactDTO;
 import com.kodiak.common.commdto.request.KnXDMSubsInfoDTO;
 import com.kodiak.common.commdto.response.KnXDMCorpUserProfileRespDTO;
@@ -35,7 +33,6 @@ import com.kodiak.xdms.mediator.resources.jobs.KnDispGrpMemChecker;
 import com.kodiak.xdms.mediator.resources.jobs.upm.*;
 import com.kodiak.xdms.server.common.business.helper.KnGenInfoUtil;
 import com.kodiak.xdms.server.common.dto.clientdat.KnOPDirChgDTO;
-import com.kodiak.xdms.server.common.dto.clientdat.KnOPDocChgDTO;
 import com.kodiak.xdms.server.common.dto.common.KnAssignEXDMSNotifyDto;
 import com.kodiak.xdms.server.common.dto.common.KnMDNDetailsDTO;
 import com.kodiak.xdms.server.common.resources.KnConstants;
@@ -56,7 +53,6 @@ import com.kodiak.xdms.server.subsmgmt.clientIntf.impl.KnProvClientImpl;
 import com.kodiak.xdms.server.subsmgmt.dto.clientdat.KnIPSubscriberInfoDTO;
 import com.kodiak.xdms.server.subsmgmt.dto.clientdat.KnOPSubsProfileInfoDTO;
 
-import static com.kodiak.common.resources.KnConstants.APP_UID_AUTH_LIST;
 import static com.kodiak.common.resources.KnConstants.DEFAULT_EMERGENCY_TIMER;
 import static com.kodiak.common.resources.KnConstants.MICROSERVICES_EVENT_TYPE.ASSIGN_USER_PROFILE;
 import static com.kodiak.common.resources.KnConstants.MICROSERVICES_NOTIFY_EVENT_TYPE.USER_NOTIFY_EVENTS;
@@ -98,7 +94,7 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
     }
 
     public boolean executeJob() {
-        String methodName = "executeJob()";
+        String methodName = "run()";
         knLogger.info(methodName, "Entry - txnId", txnId, "opType", asyncJobDTO.getOpType());
 
         try {
@@ -185,8 +181,6 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
                     if (profileMdnResp != null && !profileMdnResp.getMdnList().isEmpty()) {
                         KnTaskResult modifyGroupTaskResult = new KnTaskResult();
                         userProfileDetails.setUpmCount(upmCount);
-                        knLogger.info(methodName, "calling modifyUpmEachProfile for mdnCount=", profileMdnResp.getMdnList().size(),
-                                " txnId=", txnId);
                         for (String profileMdn : profileMdnResp.getMdnList()) {
                             modifyGroupTaskResult = modifyUpmEachProfile(userProfileDetails, dbSublistId, cbsDocUpdateCount, failedTxnCount, modifyGroupTaskResult, profileMdn);
                             profileMdns.add(userProfileDetails.getMdn());
@@ -217,7 +211,7 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
                             generalCacheUtil.insertTempStaleRecords(uuid.toString(), KnConstants.UPM_JOB_STATUS.RETRY.Value(), profileMdns, userProfileId, corpId, payload, RETRY_MODIFY_USER_PROFILE.Value());
                         }
                     } else {
-                        knLogger.info(methodName, "skip modifyUpmEachProfile: no profile MDN assigned to this UPM. updating UPM CB doc only. txnId=", txnId);
+                        knLogger.info(methodName, "updating UPM CB doc ");
                         //Case where only upm template is modified and not assinged to any subscriber.
                         KnPersisterTxn modifyUpmCBTxn = null;
                         try {
@@ -440,15 +434,6 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
         List<KnAssignEXDMSNotifyDto> notifyDtoList = new ArrayList<>();
         KnOPSubsProfileInfoDTO subsProfileInfo = provClientIntf.getSubscriberDetails(subscriberInfoDTO, userProfileNotificationTxn);
         userProfileNotificationTxn.save();
-        // send xcap diff notifications for profile assign (self + watcher)
-        Collection<KnXcapDiffDirChgNotifyDTO> assignXcapDiffList = commonMediator.prepareNotification(profileNotifyResp);
-        KnXcapDiffNotifierImpl upmNotifier = new KnXcapDiffNotifierImpl();
-        KnNotificationParamDTO mcsxcapSelfOnProfileAssignNotificationParamDTO = new KnNotificationParamDTO();
-        mcsxcapSelfOnProfileAssignNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_SELF_ON_PROFILE_ASSIGN.value());
-        upmNotifier.sendXcapDiffNotifications(assignXcapDiffList, userProfileNotificationTxn, mcsxcapSelfOnProfileAssignNotificationParamDTO);
-//        KnNotificationParamDTO notifParam40002 = new KnNotificationParamDTO();
-//        notifParam40002.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_WATCHER_CLIENTS_ON_PROFILE_ASSIGN.value());
-//        upmNotifier.sendXcapDiffNotifications(assignXcapDiffList, userProfileNotificationTxn, notifParam40002);
         List<KnCorpEXDMSNotifyDto> microserviceNotify = new ArrayList<>();
         knLogger.info(methodName, "xcapMobileSync:: ", xcapMobileSync);
         if (xcapMobileSync) {
@@ -689,14 +674,8 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
         String methodName = "modifyUpmEachProfile(KnCorpResponseDTO, Integer , AtomicInteger, AtomicInteger, KnTaskResult, String)";
         KnPersisterTxn modifyUpmTxn = null;
         Map<Integer, Collection<KnCorpContactDTO>> getAddedGroupMembersMap = new HashMap<>();
-        boolean contactAdded = false;
-        boolean contactRemoved = false;
-        boolean groupAdded = false;
-        boolean groupRemoved = false;
-        boolean groupPropertyUpdated = false;
-        KnCorpResponseDTO permissionNotifySource = null;
         try {
-            knLogger.info(methodName, "Start: profileMdn- ", profileMdn, " failedTxnCount- ", failedTxnCount, " cbsDocUpdateCount-", cbsDocUpdateCount);
+            knLogger.entry(methodName, "Start: profileMdn- ", profileMdn, " failedTxnCount- ", failedTxnCount, " cbsDocUpdateCount-", cbsDocUpdateCount);
             //open transaction
             modifyUpmTxn = KnPersisterTxn.getPersisterTxn();
             modifyUpmTxn.open();
@@ -710,13 +689,6 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
                 taskResult = modifyGroupTaskResult;
                 upmCount.add(modifyGroupTaskResult.getUpmCount());
                 userProfileDetails.setGroupIds(modifyGroupTaskResult.getGroupIds());
-                groupPropertyUpdated = modifyGroupTaskResult.isGroupPropertyUpdated();
-                // 40008/40009/40011: copy before modifyUpmContact overwrites taskResult.
-                groupAdded = modifyGroupTaskResult.isGroupAdded();
-                groupRemoved = modifyGroupTaskResult.isGroupRemoved();
-                knLogger.info(methodName, "groupAdded=", groupAdded, " groupRemoved=", groupRemoved,
-                        " groupPropertyUpdated=", groupPropertyUpdated);
-
                 if (modifyGroupTaskResult.getAddGroupResp() != null && modifyGroupTaskResult.getAddGroupResp().getAddedGroupMembersMap() != null) {
                     getAddedGroupMembersMap = modifyGroupTaskResult.getAddGroupResp().getAddedGroupMembersMap();
                 }
@@ -731,16 +703,11 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
             }
 
             //modifyUpmContact
-            knLogger.info(methodName, " modify upm contact transaction status =", modifyUpmTxn.getTransactionStatus(), " taskResult- ", taskResult);
+            knLogger.debug(methodName, " modify upm contact transaction status =", modifyUpmTxn.getTransactionStatus(), " taskResult- ", taskResult);
             if (taskResult != null && taskResult.getTaskStatus() == KnConstants.STATUS_SUCCESS) {
                 taskResult = modifyUpmContact(profileMdn, modifyUpmTxn, dbSublistId);
                 userProfileDetails.setContactEtagToBeUpdated(taskResult.isContactEtagToBeUpdated());
-                contactAdded = taskResult.isContactAdded();
-                contactRemoved = taskResult.isContactRemoved();
-                knLogger.info(methodName, "contactAdded=", contactAdded, " contactRemoved=", contactRemoved,
-                        " isContactEtagToBeUpdated=", taskResult.isContactEtagToBeUpdated());
-            } else {
-                knLogger.info(methodName, "skip modifyUpmContact: prior task failed or null. taskResult=", taskResult);
+                knLogger.debug(methodName, " taskResult- ", taskResult, "isContactEtagToBeUpdated-", taskResult.isContactEtagToBeUpdated());
             }
 
             //modifyUpmPermission
@@ -748,10 +715,7 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
             if (taskResult != null && taskResult.getTaskStatus() == KnConstants.STATUS_SUCCESS) {
                 taskResult = modifyUpmPermission(profileMdn, modifyUpmTxn);
                 userProfileDetails.setPermissionEtagToBeUpdated(taskResult.isPermissionEtagToBeUpdated());
-                permissionNotifySource = taskResult.getPermissionNotifySource();
-                // Independent of 40006-40013. Those flags are set by their own tasks.
-                knLogger.info(methodName, "40014 isPermissionEtagToBeUpdated=", taskResult.isPermissionEtagToBeUpdated(),
-                        " profileMdn=", KnGDPRTemplate.mdn(profileMdn));
+                knLogger.debug(methodName, " taskResult- ", taskResult, "isPermissionEtagToBeUpdated-", taskResult.isPermissionEtagToBeUpdated());
             }
 
             //modifyEmergencyAttributesTask
@@ -785,195 +749,9 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
                         xcapDirChgDTO.setPocHome(dirChgDTOs.getPocHome());
                         xcapDirChgDTO.setPresenceHome(dirChgDTOs.getPresenceHome());
                         xcapDirChgDTO.setDirNewEtag(dirChgDTOs.getDirNewEtag());
-                        // Sending Directory Notify
-                        // 40007: MCSXCAP on profile modify remove contact.
-                        // 40006: MCSXCAP on profile modify add contact.
-                        // Same pattern as 40008/40009: do not hide remove when both flags are true (list switch).
-                        if (contactRemoved && !contactAdded) {
-                            KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
-                            notificationParamDTO.setOpsCode(
-                                    KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_REMOVE_CONTACT.value()); // 40007
-                            notificationParamDTO.setPriority(
-                                    KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
-                            knLogger.info(methodName, "==> : Sending UPM directory notification - 40007");
-                            commonMediator.sendXcapNotification(xcapDirChgDTO, null, notificationParamDTO);
-                        } else if (contactAdded && !contactRemoved) {
-                            KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
-                            notificationParamDTO.setOpsCode(
-                                    KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_ADD_CONTACT.value()); // 40006
-                            notificationParamDTO.setPriority(
-                                    KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
-                            knLogger.info(methodName, "==> : Sending UPM directory notification - 40006");
-                            commonMediator.sendXcapNotification(xcapDirChgDTO, null, notificationParamDTO);
-                        } else if (contactAdded && contactRemoved) {
-                            KnNotificationParamDTO addContactParam = new KnNotificationParamDTO();
-                            addContactParam.setOpsCode(
-                                    KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_ADD_CONTACT.value()); // 40006
-                            addContactParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
-                            knLogger.info(methodName, "==> : Sending UPM directory notification - 40006");
-                            commonMediator.sendXcapNotification(xcapDirChgDTO, null, addContactParam);
-                            KnNotificationParamDTO removeContactParam = new KnNotificationParamDTO();
-                            removeContactParam.setOpsCode(
-                                    KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_REMOVE_CONTACT.value()); // 40007
-                            removeContactParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
-                            knLogger.info(methodName, "==> : Sending UPM directory notification - 40007");
-                            commonMediator.sendXcapNotification(xcapDirChgDTO, null, removeContactParam);
-                        }
-                        // 40008: MCSXCAP on profile modify add group (KnModifyGroupTask.setGroupAdded).
-                        // 40009: MCSXCAP on profile modify remove group (KnModifyGroupTask.setGroupRemoved).
-                        // 40011: MCSXCAP on profile modify update group property (setGroupPropertyUpdated).
-                        // Independent of contact and of each other so one UPM modify can stamp 40008+40009+40011.
-                        if (groupRemoved && !groupAdded) {
-                            KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
-                            notificationParamDTO.setOpsCode(
-                                    KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_REMOVE_GROUP.value()); // 40009
-                            notificationParamDTO.setPriority(
-                                    KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
-                            knLogger.info(methodName, "==> : Sending UPM directory notification - 40009");
-                            commonMediator.sendXcapNotification(xcapDirChgDTO, null, notificationParamDTO);
-                        } else if (groupAdded && !groupRemoved) {
-                            KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
-                            notificationParamDTO.setOpsCode(
-                                    KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_ADD_GROUP.value()); // 40008
-                            notificationParamDTO.setPriority(
-                                    KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
-                            knLogger.info(methodName, "==> : Sending UPM directory notification - 40008");
-                            commonMediator.sendXcapNotification(xcapDirChgDTO, null, notificationParamDTO);
-                        } else if (groupAdded && groupRemoved) {
-                            KnNotificationParamDTO addGroupParam = new KnNotificationParamDTO();
-                            addGroupParam.setOpsCode(
-                                    KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_ADD_GROUP.value()); // 40008
-                            addGroupParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
-                            knLogger.info(methodName, "==> : Sending UPM directory notification - 40008");
-                            commonMediator.sendXcapNotification(xcapDirChgDTO, null, addGroupParam);
-                            KnNotificationParamDTO removeGroupParam = new KnNotificationParamDTO();
-                            removeGroupParam.setOpsCode(
-                                    KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_REMOVE_GROUP.value()); // 40009
-                            removeGroupParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
-                            knLogger.info(methodName, "==> : Sending UPM directory notification - 40009");
-                            commonMediator.sendXcapNotification(xcapDirChgDTO, null, removeGroupParam);
-                        }
-                        if (groupPropertyUpdated) {
-                            KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
-                            notificationParamDTO.setOpsCode(
-                                    KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_GROUP_PROPERTY.value()); // 40011
-                            notificationParamDTO.setPriority(
-                                    KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
-                            knLogger.info(methodName, "==> : Sending UPM directory notification - 40011");
-                            commonMediator.sendXcapNotification(xcapDirChgDTO, null, notificationParamDTO);
-                        }
-                        // 40014 directory notify. Sent only when MCPTT permissions changed.
-                        // Does not replace 40006-40013. CRITICAL (0) so this row is written even when
-                        // the watermark drops HIGH. A LOW row for 40014 in DG.XCAP_NOTIFICATION_PRIORITY
-                        // still suppresses it.
-                        if (userProfileDetails.isPermissionEtagToBeUpdated()) {
-                            KnNotificationParamDTO permissionParam = new KnNotificationParamDTO();
-                            permissionParam.setOpsCode(
-                                    KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_PERMISSIONS.value()); // 40014
-                            permissionParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.CRITICAL.value());
-                            boolean dir40014 = commonMediator.sendXcapNotification(xcapDirChgDTO, null, permissionParam);
-                            knLogger.info(methodName, "==> : Sending UPM directory notification - 40014 status - ", dir40014,
-                                    " reason=permission changed",
-                                    " opsCode=", permissionParam.getOpsCode(), " priority=", permissionParam.getPriority());
-                        }
-                        // 40012 and 40013 are separate notifies for the same emergency-config change.
-                        // HIGH so both are written to XCAP_PENDING_NOTIFYQ. LOW is dropped and the poller stays at 0 rows.
-                        if (userProfileDetails.isEmergencyEtagToBeUpdated()) {
-                            KnNotificationParamDTO emergencyDirParam = new KnNotificationParamDTO();
-                            emergencyDirParam.setOpsCode(
-                                    KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_EMERGENCY_CONFIG.value()); // 40012
-                            emergencyDirParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
-                            boolean dir40012 = commonMediator.sendXcapNotification(xcapDirChgDTO, null, emergencyDirParam);
-                            KnNotificationParamDTO oidcEmergencyDirParam = new KnNotificationParamDTO();
-                            oidcEmergencyDirParam.setOpsCode(
-                                    KnConstants.OPS_CODE.OIDCXCAP_ON_UPDATE_EMERGENCY_CONFIG.value()); // 40013
-                            oidcEmergencyDirParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
-                            boolean dir40013 = commonMediator.sendXcapNotification(xcapDirChgDTO, null, oidcEmergencyDirParam);
-                            knLogger.info(methodName, "==> : Sending UPM directory notification - 40012 status - ", dir40012,
-                                    " 40013 status - ", dir40013);
-                        }
-                        // Untagged directory notify (ops 0) is only for a profile modify that matched
-                        // none of 40006-40014. A permission or emergency change already has its own row.
-                        if (!contactAdded && !contactRemoved && !groupAdded && !groupRemoved && !groupPropertyUpdated
-                                && !userProfileDetails.isPermissionEtagToBeUpdated()
-                                && !userProfileDetails.isEmergencyEtagToBeUpdated()) {
-                            commonMediator.sendXcapNotification(xcapDirChgDTO);
-                            knLogger.info(methodName, "UPM directory notify opsCode=0: no 40006-40014 change on this profile");
-                        }
+                        //Sending Directory Notify
+                        commonMediator.sendXcapNotification(xcapDirChgDTO);
                     }
-                }
-                // Directory notify above has no group-doc diff. changeLogMap is filled by updateEtag
-                // and is the payload that carries the modified group-member properties for 40011.
-                if (groupPropertyUpdated) {
-                    Collection<KnXcapDiffDirChgNotifyDTO> groupPropDiffList = commonMediator.prepareNotification(etagResp);
-                    KnNotificationParamDTO groupPropParam = new KnNotificationParamDTO();
-                    groupPropParam.setOpsCode(
-                            KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_GROUP_PROPERTY.value()); // 40011
-                    groupPropParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
-                    KnXcapDiffNotifierImpl groupPropNotifier = new KnXcapDiffNotifierImpl();
-                    boolean groupPropNotified = groupPropNotifier.sendXcapDiffNotifications(
-                            groupPropDiffList, modifyUpmTxn, groupPropParam);
-                    knLogger.info(methodName, "Group property XCAP diff 40011 status - ", groupPropNotified,
-                            " diffCount=", groupPropDiffList == null ? 0 : groupPropDiffList.size());
-                }
-                // 40014 XCAP diff. permissionChangeLogMap holds the authorization document.
-                // changeLogMap stays the group payload, so 40011 is not mixed with 40014.
-                if (userProfileDetails.isPermissionEtagToBeUpdated()) {
-                    int permissionChangeLogSize = etagResp.getPermissionChangeLogMap() == null
-                            ? 0 : etagResp.getPermissionChangeLogMap().size();
-                    knLogger.info(methodName, "40014 preparing XCAP diff. permissionChangeLogSize=", permissionChangeLogSize);
-                    if (permissionChangeLogSize == 0) {
-                        knLogger.info(methodName, "40014 XCAP diff skipped: permission changelog is empty. directory 40014 is the queued row");
-                    } else {
-                        applyPermissionTargetDiff(etagResp.getPermissionChangeLogMap(), permissionNotifySource, profileMdn);
-                        KnCorpResponseDTO permissionNotifySourceDto = new KnCorpResponseDTO();
-                        permissionNotifySourceDto.setChangeLogMap(etagResp.getPermissionChangeLogMap());
-                        Collection<KnXcapDiffDirChgNotifyDTO> permissionDiffList = commonMediator.prepareNotification(permissionNotifySourceDto);
-                        KnNotificationParamDTO permissionDiffParam = new KnNotificationParamDTO();
-                        permissionDiffParam.setOpsCode(
-                                KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_PERMISSIONS.value()); // 40014
-                        permissionDiffParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.CRITICAL.value());
-                        KnXcapDiffNotifierImpl permissionNotifier = new KnXcapDiffNotifierImpl();
-                        boolean permissionNotified = permissionNotifier.sendXcapDiffNotifications(
-                                permissionDiffList, modifyUpmTxn, permissionDiffParam);
-                        knLogger.info(methodName, "Permission XCAP diff 40014 status - ", permissionNotified,
-                                " reason=permission changed",
-                                " diffCount=", permissionDiffList == null ? 0 : permissionDiffList.size(),
-                                " changeLogSize=", permissionChangeLogSize,
-                                " opsCode=", permissionDiffParam.getOpsCode());
-                    }
-                } else {
-                    knLogger.info(methodName, "40014 skipped: no added, modified, or removed MCPTT permission in this profile modify");
-                }
-                knLogger.info(methodName, "UPM notify summary profileMdn=", KnGDPRTemplate.mdn(profileMdn),
-                        " 40006=", contactAdded ? "sent (contact added)" : "skipped (no contact add)",
-                        " 40007=", contactRemoved ? "sent (contact removed)" : "skipped (no contact remove)",
-                        " 40008=", groupAdded ? "sent (group added)" : "skipped (no group add)",
-                        " 40009=", groupRemoved ? "sent (group removed)" : "skipped (no group remove)",
-                        " 40011=", groupPropertyUpdated ? "sent (group property changed)" : "skipped (no group property change)",
-                        " 40012=", userProfileDetails.isEmergencyEtagToBeUpdated() ? "sent (emergency changed)" : "skipped (no emergency change)",
-                        " 40013=", userProfileDetails.isEmergencyEtagToBeUpdated() ? "sent (same emergency change, OIDC)" : "skipped (no emergency change)",
-                        " 40014=", userProfileDetails.isPermissionEtagToBeUpdated() ? "sent (permission changed)" : "skipped (no permission change)");
-                // 40012 MCSXCAP and 40013 OIDCXCAP. changeLogMap is filled by updateEtag above.
-                // Both must be queued here; the earlier commented block never inserted 40013.
-                if (userProfileDetails.isEmergencyEtagToBeUpdated()) {
-                    Collection<KnXcapDiffDirChgNotifyDTO> emergencyDiffList = commonMediator.prepareNotification(etagResp);
-                    KnXcapDiffNotifierImpl emergencyNotifier = new KnXcapDiffNotifierImpl();
-                    KnNotificationParamDTO emergencyDiffParam = new KnNotificationParamDTO();
-                    emergencyDiffParam.setOpsCode(
-                            KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_EMERGENCY_CONFIG.value()); // 40012
-                    emergencyDiffParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
-                    boolean emergencyNotified = emergencyNotifier.sendXcapDiffNotifications(
-                            emergencyDiffList, modifyUpmTxn, emergencyDiffParam);
-                    KnNotificationParamDTO oidcEmergencyDiffParam = new KnNotificationParamDTO();
-                    oidcEmergencyDiffParam.setOpsCode(
-                            KnConstants.OPS_CODE.OIDCXCAP_ON_UPDATE_EMERGENCY_CONFIG.value()); // 40013
-                    oidcEmergencyDiffParam.setPriority(KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
-                    boolean oidcEmergencyNotified = emergencyNotifier.sendXcapDiffNotifications(
-                            emergencyDiffList, modifyUpmTxn, oidcEmergencyDiffParam);
-                    knLogger.info(methodName, "Emergency XCAP diff 40012 status - ", emergencyNotified,
-                            " OIDC emergency XCAP diff 40013 status - ", oidcEmergencyNotified,
-                            " diffCount=", emergencyDiffList == null ? 0 : emergencyDiffList.size());
                 }
                 //Sending MCS Events
                 if (null != modifyGroupTaskResult.getAddGroupResp()) {
@@ -1036,64 +814,8 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
                 if (null != taskResult.getMicroserviceNotify() && !taskResult.getMicroserviceNotify().isEmpty()) {
                     commonMediator.startNotifyMicroServicesJob(microserviceNotify);
                 }
-                if (null != taskResult) {
+                if (null != taskResult)
                     modifyUpmTxn.save();
-//                    // send xcap diff notifications for profile modify operations
-//                    Collection<KnXcapDiffDirChgNotifyDTO> modifyXcapDiffList = commonMediator.prepareNotification(etagResp);
-//                    KnXcapDiffNotifierImpl modifyNotifier = new KnXcapDiffNotifierImpl();
-//                    if (modifyGroupTaskResult.getAddGroupResp() != null) {
-//                        KnNotificationParamDTO notifParam40008 = new KnNotificationParamDTO();
-//                        notifParam40008.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_ADD_GROUP.value());
-//                        modifyNotifier.sendXcapDiffNotifications(modifyXcapDiffList, modifyUpmTxn, notifParam40008);
-//                    }
-//                    if (modifyGroupTaskResult.getRemoveGroupResp() != null) {
-//                        KnNotificationParamDTO notifParam40009 = new KnNotificationParamDTO();
-//                        notifParam40009.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_REMOVE_GROUP.value());
-//                        modifyNotifier.sendXcapDiffNotifications(modifyXcapDiffList, modifyUpmTxn, notifParam40009);
-//                    }
-//                    if (modifyGroupTaskResult.getModifyGroupMemPropResp() != null) {
-//                        KnNotificationParamDTO notifParam40011 = new KnNotificationParamDTO();
-//                        notifParam40011.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_GROUP_PROPERTY.value());
-//                        modifyNotifier.sendXcapDiffNotifications(modifyXcapDiffList, modifyUpmTxn, notifParam40011);
-//                    }
-//                    if (userProfileDetails.isContactEtagToBeUpdated()) {
-//                        KnIPUserProfileDTO ipProfileForContact = KnCorpCommonInfoUtil.jsonToObject(asyncJobDTO.getPayLoad(), KnIPUserProfileDTO.class);
-//                        Integer reqSubListId = ipProfileForContact.getModifiedUserProfileDTO() != null ? ipProfileForContact.getModifiedUserProfileDTO().getContactListID() : null;
-//                        if (reqSubListId != null && reqSubListId != -1) {
-//                            KnNotificationParamDTO notifParam40006 = new KnNotificationParamDTO();
-//                            notifParam40006.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_ADD_CONTACT.value());
-//                            modifyNotifier.sendXcapDiffNotifications(modifyXcapDiffList, modifyUpmTxn, notifParam40006);
-//                        }
-//                        if (reqSubListId == null || reqSubListId == -1 || (reqSubListId != null && !reqSubListId.equals(dbSublistId))) {
-//                            KnNotificationParamDTO notifParam40007 = new KnNotificationParamDTO();
-//                            notifParam40007.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_REMOVE_CONTACT.value());
-//                            modifyNotifier.sendXcapDiffNotifications(modifyXcapDiffList, modifyUpmTxn, notifParam40007);
-//                        }
-//                    }
-//                    // 40010: profile property update (name, FS, etc.)
-//                    KnIPUserProfileDTO ipProfilePayload = KnCorpCommonInfoUtil.jsonToObject(asyncJobDTO.getPayLoad(), KnIPUserProfileDTO.class);
-//                    if (ipProfilePayload.getUserProfileName() != null || ipProfilePayload.getUserProfileFSDto() != null) {
-//                        KnNotificationParamDTO notifParam40010 = new KnNotificationParamDTO();
-//                        notifParam40010.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_PROPERTY.value());
-//                        modifyNotifier.sendXcapDiffNotifications(modifyXcapDiffList, modifyUpmTxn, notifParam40010);
-//                    }
-//                    // 40012: emergency config updated
-//                    if (userProfileDetails.isEmergencyEtagToBeUpdated()) {
-//                        KnNotificationParamDTO notifParam40012 = new KnNotificationParamDTO();
-//                        notifParam40012.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_EMERGENCY_CONFIG.value());
-//                        modifyNotifier.sendXcapDiffNotifications(modifyXcapDiffList, modifyUpmTxn, notifParam40012);
-//                        // 40013 (OIDCXCAP): emergency config updated — OIDC client notification
-//                        KnNotificationParamDTO notifParam40013Emerg = new KnNotificationParamDTO();
-//                        notifParam40013Emerg.setOpsCode(KnConstants.OPS_CODE.OIDCXCAP_ON_UPDATE_EMERGENCY_CONFIG.value());
-//                        modifyNotifier.sendXcapDiffNotifications(modifyXcapDiffList, modifyUpmTxn, notifParam40013Emerg);
-//                    }
-//                    // 40013 (MCSXCAP): permissions updated
-//                    if (userProfileDetails.isPermissionEtagToBeUpdated()) {
-//                        KnNotificationParamDTO notifParam40013Perm = new KnNotificationParamDTO();
-//                        notifParam40013Perm.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_PERMISSIONS.value());
-//                        modifyNotifier.sendXcapDiffNotifications(modifyXcapDiffList, modifyUpmTxn, notifParam40013Perm);
-//                    }
-                }
 
                 if (modifyGroupTaskResult != null) {
                     initiateDispatchGrpJob(modifyGroupTaskResult, asyncJobDTO.getCorpId());
@@ -1309,7 +1031,7 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
     private KnTaskResult modifyUpmContact(String profileMdn, KnPersisterTxn modifyUpmTxn, Integer dbSublistId) throws KnDAOException {
         final String methodName = "modifyUpmContact()";
         long taskId = System.nanoTime();
-        knLogger.info(methodName, "triggering modify Upm Contact", taskId);
+        knLogger.debug(methodName, "triggering modify Upm Contact", taskId);
         updateAsyncJobTask(taskId, KnConstants.UPM_OPERATION_TYPE.MODIFY_USER_PROFILE.Value(), KnConstants.UPM_TASK_TYPE.MODIFYUPMSUBLIST.Value());
         KnModifyContactTask modifyUpm = new KnModifyContactTask(
                 String.valueOf(asyncJobDTO.getCorpId())
@@ -1324,62 +1046,8 @@ public class KnUPMJob extends KnAbstractJob implements Runnable {
         KnTaskStatusUpdatePostProcssor postProcssor = new KnTaskStatusUpdatePostProcssor(String.valueOf(taskId), KnConstants.UPM_JOB_STATUS.COMPLETE.Value());
         modifyUpm.addPostprocessor(postProcssor);
         KnTaskResult taskResult = modifyUpm.execute();
-        knLogger.info(methodName, "Completed modify Upm Contact", taskId);
+        knLogger.debug(methodName, "Completed modify Upm Contact", taskId);
         return taskResult;
-    }
-
-    /**
-     * Copies added, modified, and removed MCPTT targets onto the authorization document
-     * already stored in permissionChangeLogMap. Group and contact changelogs are not touched.
-     * A failure here leaves the authorization etag notify in place.
-     */
-    private void applyPermissionTargetDiff(Map<String, KnOPDirChgDTO> permissionChangeLog,
-                                           KnCorpResponseDTO permissionNotifySource,
-                                           String profileMdn) {
-        final String methodName = "applyPermissionTargetDiff()";
-        if (permissionChangeLog == null || permissionChangeLog.isEmpty() || permissionNotifySource == null) {
-            knLogger.info(methodName, "40014 target diff not attached: changelog or permission delta is missing");
-            return;
-        }
-        if (permissionNotifySource.getPermissionSubsEntitiesMap() == null) {
-            knLogger.info(methodName, "40014 target diff not attached: subscriber entities missing");
-            return;
-        }
-        boolean sawAuthDoc = false;
-        boolean firstAuthorizationDoc = true;
-        for (KnOPDirChgDTO directory : permissionChangeLog.values()) {
-            if (directory == null || directory.getDocChgDTO() == null) {
-                knLogger.info(methodName, "40014 target diff not attached: authorization document list is missing");
-                return;
-            }
-            for (KnOPDocChgDTO doc : directory.getDocChgDTO()) {
-                if (doc.getDocUri() != null && doc.getDocUri().contains(APP_UID_AUTH_LIST)) {
-                    sawAuthDoc = true;
-                    if (doc.getDocumentChgType() != KnConstants.DOC_CHANGE_TYPE.ADD.value()) {
-                        firstAuthorizationDoc = false;
-                    }
-                }
-            }
-        }
-        if (!sawAuthDoc) {
-            knLogger.info(methodName, "40014 target diff not attached: authorization document is not in the changelog");
-            return;
-        }
-        try {
-            KnCorpCommonInfoUtil.formXcapAuthDiffNotification(
-                    permissionChangeLog,
-                    permissionNotifySource.getAddedMcpttTargetMap(),
-                    permissionNotifySource.getModifiedMcpttTargetMap(),
-                    permissionNotifySource.getRemovedMcpttTargetMap(),
-                    permissionNotifySource.getPermissionResourceListUpdate(),
-                    permissionNotifySource.getPermissionSubsEntitiesMap(),
-                    profileMdn,
-                    firstAuthorizationDoc);
-            knLogger.info(methodName, "40014 authorization diff includes added, modified, and removed MCPTT targets. firstDoc=",
-                    firstAuthorizationDoc);
-        } catch (Exception e) {
-            knLogger.error(methodName, "40014 target diff attach failed. Authorization etag notify is still sent", e);
-        }
     }
 
     private KnTaskResult modifyUpmPermission(String profileMdn, KnPersisterTxn modifyUpmTxn) throws KnDAOException {

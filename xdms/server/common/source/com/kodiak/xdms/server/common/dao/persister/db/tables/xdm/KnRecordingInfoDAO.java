@@ -194,6 +194,7 @@ public class KnRecordingInfoDAO implements ITableDAO {
         knLogger.info(methodName, "Entry : ", KnGDPRTemplate.mdnList(targetList));
         Connection conn;
         PreparedStatement pstmt = null;
+        ResultSet resultSet = null;
         String query = null;
         final String GET_RECORDING_TARGET_INFO_BY_TARGET = " SELECT TARGET, PRIRECIP, PRIRECPORT, SECRECIP, SECRECPORT,RECTYPE FROM DG.RECORDING_TARGET_INFO WHERE TARGET IN(TARGETLIST) ";
         int index = 1;
@@ -206,7 +207,7 @@ public class KnRecordingInfoDAO implements ITableDAO {
             for (String target : targetList) {
                 pstmt.setString(index++, target);
             }
-            ResultSet resultSet = pstmt.executeQuery();
+            resultSet = pstmt.executeQuery();
             while (resultSet.next()) {
                 recordingTargetInfoList.add(new KnRecordingTargetInfoDTO()
                         .setTarget(resultSet.getString("TARGET"))
@@ -225,6 +226,7 @@ public class KnRecordingInfoDAO implements ITableDAO {
             knLogger.error(methodName, "Exception occured - ", e);
             throw KnDbUtil.processException(e, "Failed while getting recording info target ", pttServerId, RECORDING_TARGET_INFO, query);
         } finally {
+            KnDbUtil.closeResultSet(resultSet);
             KnDbUtil.closePreparedStatement(pstmt);
         }
         return recordingTargetInfoList;

@@ -57,6 +57,7 @@ public class KnDAOSourceTypes {
     public static final String SUBSCRPTTRADIOTGLIST = "SUBSCRPTTRADIOTGLIST";
     public static final String MCPTT_PERM_INFO = "MCPTT_PERM_INFO";
     public static final String POCSUBSCRADDLINFO= "POCSUBSCRADDLINFO";
+    public static final String XDM_CORP_SUBSCRIBER_INFO = "XDM_CORP_SUBSCRIBER_INFO";
 
 
 

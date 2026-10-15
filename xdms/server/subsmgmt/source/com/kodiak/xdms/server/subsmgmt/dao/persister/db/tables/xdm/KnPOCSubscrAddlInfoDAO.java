@@ -409,7 +409,7 @@ public class KnPOCSubscrAddlInfoDAO implements ITableDAO {
             throw KnDbUtil.processException(e, "Failed to updateSubscrPkgAddlInfo - " + e.getMessage(), pttServerId,
                     KnProvDAOSourceTypes.POCSUBSCRADDLINFO, QRY_UPDATE_POCSUBSCR_ADDLINFO);
         } finally {
-            KnDbUtil.closePrepareStmt(pStmt);
+            KnDbUtil.closePreparedStatement(pStmt);
         }
     }
 
@@ -450,7 +450,7 @@ public class KnPOCSubscrAddlInfoDAO implements ITableDAO {
             throw KnDbUtil.processException(e, "Failed to updateSubscrPkgAddlInfo - " + e.getMessage(), pttServerId,
                     KnProvDAOSourceTypes.POCSUBSCRADDLINFO, QRY_UPDATE_POCSUBSCR_ADDLINFO);
         } finally {
-            KnDbUtil.closePrepareStmt(pStmt);
+            KnDbUtil.closePreparedStatement(pStmt);
             knLogger.info(methodName, "EXIT : Updated the pkg info for profileMdns");
         }
     }
@@ -478,7 +478,7 @@ public class KnPOCSubscrAddlInfoDAO implements ITableDAO {
             throw KnDbUtil.processException(e, "Failed to updateSubscrOnBoardingMail - " + e.getMessage(), pttServerId,
                     KnProvDAOSourceTypes.POCSUBSCRADDLINFO, QRY_UPDATE_POCSUBSCR_ADDLINFO_ON_BOARD);
         } finally {
-            KnDbUtil.closePrepareStmt(pStmt);
+            KnDbUtil.closePreparedStatement(pStmt);
         }
     }
 
@@ -512,7 +512,7 @@ public class KnPOCSubscrAddlInfoDAO implements ITableDAO {
             knLogger.error(methodName, "Unexpected Exception - ", e);
             throw KnDbUtil.processException(e, "Failed to createSubscrPkgAddlInfo - " + e.getMessage(), pttServerId, KnProvDAOSourceTypes.POCSUBSCRADDLINFO, QRY_INSERT_POCSUBSCR_ADDLINFO);
         } finally {
-            KnDbUtil.closePrepareStmt(pStmt);
+            KnDbUtil.closePreparedStatement(pStmt);
         }
     }
 
@@ -553,7 +553,7 @@ public class KnPOCSubscrAddlInfoDAO implements ITableDAO {
             knLogger.error(methodName, "Unexpected Exception - ", e);
             throw KnDbUtil.processException(e, "Failed to createBulkSubscrPkgAddlInfo - " + e.getMessage(), pttServerId, KnProvDAOSourceTypes.POCSUBSCRADDLINFO, QRY_INSERT_POCSUBSCR_ADDLINFO);
         } finally {
-            KnDbUtil.closePrepareStmt(pStmt);
+            KnDbUtil.closePreparedStatement(pStmt);
         }
     }
 
@@ -589,7 +589,7 @@ public class KnPOCSubscrAddlInfoDAO implements ITableDAO {
             knLogger.error(methodName, "Unexpected Exception - ", e);
             throw KnDbUtil.processException(e, "Failed to updateBulkSubscrPkgAddlInfo - " + e.getMessage(), pttServerId, KnProvDAOSourceTypes.POCSUBSCRADDLINFO, QRY_UPDATE_POCSUBSCR_ADDLINFO);
         } finally {
-            KnDbUtil.closePrepareStmt(pStmt);
+            KnDbUtil.closePreparedStatement(pStmt);
         }
 
     }
@@ -618,7 +618,7 @@ public class KnPOCSubscrAddlInfoDAO implements ITableDAO {
             throw KnDbUtil.processException(e, "Failed to updateSubscrPkgAddlInfo - " + e.getMessage(), pttServerId,
                     KnProvDAOSourceTypes.POCSUBSCRADDLINFO, QRY_UPDATE_USER_PROFILE_NAME);
         } finally {
-            KnDbUtil.closePrepareStmt(pStmt);
+            KnDbUtil.closePreparedStatement(pStmt);
         }
     }
 
@@ -649,7 +649,7 @@ public class KnPOCSubscrAddlInfoDAO implements ITableDAO {
                     KnProvDAOSourceTypes.POCSUBSCRADDLINFO, QRY_SELECT_USER_PROFILE_NAME);
         } finally {
             KnDbUtil.closeResultSet(rs);
-            KnDbUtil.closePrepareStmt(pStmt);
+            KnDbUtil.closePreparedStatement(pStmt);
         }
         return userProfileName;
     }
@@ -681,7 +681,7 @@ public class KnPOCSubscrAddlInfoDAO implements ITableDAO {
                     KnProvDAOSourceTypes.POCSUBSCRADDLINFO, QRY_SELECT_USER_PROFILE_NAME);
         } finally {
             KnDbUtil.closeResultSet(rs);
-            KnDbUtil.closePrepareStmt(pStmt);
+            KnDbUtil.closePreparedStatement(pStmt);
             KnDbUtil.closeStatement(statement);
         }
         return profileNameMap;
@@ -715,7 +715,7 @@ public class KnPOCSubscrAddlInfoDAO implements ITableDAO {
                     KnProvDAOSourceTypes.POCSUBSCRADDLINFO, QRY_SELECT_USER_PROFILE_NAME);
         } finally {
             KnDbUtil.closeResultSet(rs);
-            KnDbUtil.closePrepareStmt(pStmt);
+            KnDbUtil.closePreparedStatement(pStmt);
         }
         return subsProfileInfoDTO;
     }

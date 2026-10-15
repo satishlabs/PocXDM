@@ -75,6 +75,8 @@ public class KnIPSubscriberInfoDTO implements ISubscriberDTO {
     private KnConstants.HIERARCHY_TYPE hierarchyType;
 
     private List<String> aliasMdnList;
+    private String hierarchyId;
+
     public String getExtGatewayId() {
         return extGatewayId;
     }
@@ -269,6 +271,9 @@ public class KnIPSubscriberInfoDTO implements ISubscriberDTO {
         this.profile = profile;
     }
 
+    public String getHierarchyId() { return hierarchyId; }
+
+    public void setHierarchyId(String hierarchyId) { this.hierarchyId = hierarchyId; }
 
     public String getApnName() {
         return apnName;
@@ -456,6 +461,7 @@ public class KnIPSubscriberInfoDTO implements ISubscriberDTO {
                 ", aliasMdnList='" + KnGDPRTemplate.mdnList(aliasMdnList) +'\''+
                 ", isUpmCall'='" + isUpmCall()  + '\''+
                 ", hierarchyType='" + hierarchyType + '\'' +
+                ", hierarchyId='" + hierarchyId + '\'' +
                 '}';
     }
 

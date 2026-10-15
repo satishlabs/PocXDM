@@ -376,7 +376,7 @@ public class KnXDMSLoader {
     private static void startLargeGroupRecoverAudit() throws KnBOException {
         int clusterId = Integer.parseInt(System.getenv(CLUSTERID_ENV_NAME));
         Map<String, String> microServicesParamNameValueMap = KnGenInfoUtil.getInstance().retrieveMSSvcsCommonConfig(clusterId);
-        int notifyJobAuditInterval = Integer.parseInt(microServicesParamNameValueMap.get(LARGE_GROUP_AUDIT_INTRVAL) != null ? microServicesParamNameValueMap.get(LARGE_GROUP_AUDIT_INTRVAL) : "360");
+        int notifyJobAuditInterval = Integer.parseInt(microServicesParamNameValueMap.get(LARGE_GROUP_AUDIT_INTRVAL) != null ? microServicesParamNameValueMap.get(LARGE_GROUP_AUDIT_INTRVAL) : "180");
         KnLargeGroupRecovery knLargeGroupRecovery = KnLargeGroupRecovery.getInstance();
         ScheduledExecutorService largeProcessorService = KnThreadExecutors.newScheduledThreadPool(1, "LargeProcessorService");
         largeProcessorService.scheduleAtFixedRate(knLargeGroupRecovery, 1, notifyJobAuditInterval, TimeUnit.MINUTES);

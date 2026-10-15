@@ -422,6 +422,10 @@ public class KnErrorCodes {
         public static final String UPDATE_PRECONFIG_GROUP_MEMBER_IS_NOT_ALLOWED = "Validator.KNEC-CP16279";
         public static final String PRECONFIG_GROUP_IS_NOT_ALLOWED = "Validator.KNEC-CP16280";
 
+        public static final String AMPER_GW_NOT_ALLOWED_AS_EMERGENCY_DESTINATION = "Validator.KNEC-CP16324";
+        public static final String CONTACT_NOT_AALOWED_AS_EMERGENCY_DESTINATION_FOR_AMGW = "Validator.KNEC-CP16325";
+        public static final String AMPER_GW_NOT_ALLOWED_AS_AU_FOR_TARGET_PERMISSIONS = "BOEntity.KNEC-CP16326";
+
         //UGW Config
         public static final String UGW_CONFIG_NOT_EXISTS = "Validator.KNEC-CP16281";
 

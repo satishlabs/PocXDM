@@ -3590,6 +3590,9 @@ public class KnProvInfoUtil implements Observer {
             oidcAttributes.put(MCVIDEO_ID_OIDC, mcVideoId);
             String mcDataId = subsProfilePersistDTO!=null?subsProfilePersistDTO.getMcDataId():oldSubsProfileInfoDTO.getMcDataId();
             oidcAttributes.put(MCDATA_ID_OIDC, mcDataId);
+            if (appId.equalsIgnoreCase(APP_ID.CAT.value()) || appId.equalsIgnoreCase(APP_ID.DISPATCHER.value())) {
+                oidcAttributes.put(CORP_ID_EXT, oldSubsProfileInfoDTO.getExtCorpId() != null ? oldSubsProfileInfoDTO.getExtCorpId() : oldSubsProfileInfoDTO.getCorpId());
+            }
             oidcUserProfile.setAttributes(oidcAttributes);
             oidcUserProfile.setTemppwd(Boolean.FALSE);
             if(oldSubsProfileInfoDTO.getMcpttCompliance() == MCPTT_COMPLIANCE_ENABLED){

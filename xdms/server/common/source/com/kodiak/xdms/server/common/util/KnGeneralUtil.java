@@ -56,6 +56,8 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static com.kodiak.common.resources.KnGeneralUtil.getFeatureBitValue;
 import static com.kodiak.xdms.server.common.resources.KnConstants.MCPTT_COMPLAIANCE_BIT;
@@ -1157,5 +1159,12 @@ public class KnGeneralUtil {
         return KnConstants.TARGET_INFO_OPTIMIZATION_ENABLED.equals(targetInfoOptimization);
     }
 
+    public static <T> List<List<T>> splitList(List<T> alist, final int len) {
+        return IntStream.range(0, alist.size()) // Iterate over the whole thing
+                .filter(i -> i % len == 0) // Filter out every 'len' number
+                .boxed() // Create a stream (instead of IntStream)
+                .map(i -> alist.subList(i, Math.min(i + len, alist.size()))) // create sublists
+                .collect(Collectors.toList()); // Collect the whole thing to a list of lists
+    }
 }
 

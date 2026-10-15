@@ -1527,16 +1527,24 @@ public class KnCorpSublistInfoController implements ICorpSublistInfoController {
                         Map<Integer, Integer> memberCountForAllGrps = groupInfoUtil.getGroupMemCount(groupIdLst, xdmsHomePttId, persisterTxn);
                         for(Integer grpId : groupIdLst){
                             Integer memberCount = memberCountForAllGrps.get(grpId);
-                            if ((groupDetailsMap.get(grpId).getGroupType() == KnConstants.STANDARD_GROUP && memberCount != null) ||
-                                    (groupDetailsMap.get(grpId).getGroupType() == KnConstants.DISPATCH_GROUP && memberCount != null)) {
-                                int maxMembers = (groupDetailsMap.get(grpId).getGroupType() == KnConstants.STANDARD_GROUP)
-                                        ? corpProfile.getMaxMemPerCorpGroup(): corpProfile.getMaxMembersPerDispatchGroup();
-                                if(memberCount > maxMembers){
-                                    largeGrpInfoMap.put(grpId, 1);
-                                }else if(memberCount <= maxMembers && groupDetailsMap.get(grpId).isLargeGroup()){
-                                    largeGrpInfoMap.put(grpId, 0);
-                                }
+                            if (memberCount != null) {
+                            int grpType = groupDetailsMap.get(grpId).getGroupType();
+                            int maxMembers;
+                            if (grpType == KnConstants.STANDARD_GROUP) {
+                                maxMembers = corpProfile.getMaxMemPerCorpGroup();
+                            } else if (grpType == KnConstants.DISPATCH_GROUP) {
+                                maxMembers = corpProfile.getMaxMembersPerDispatchGroup();
+                            } else if (grpType == KnConstants.BROADCAST_GROUP) {
+                                maxMembers = corpProfile.getMaxMemPerBCGrp();
+                            } else {
+                                maxMembers = 0;
                             }
+                            if (maxMembers > 0 && memberCount > maxMembers) {
+                                largeGrpInfoMap.put(grpId, 1);
+                            } else if (maxMembers > 0 && memberCount <= maxMembers && groupDetailsMap.get(grpId).isLargeGroup()) {
+                                largeGrpInfoMap.put(grpId, 0);
+                            }
+                        }
                         }
                     }
 
@@ -2142,10 +2150,13 @@ public class KnCorpSublistInfoController implements ICorpSublistInfoController {
             List <String> profileMdns= new ArrayList<String>();
             if(contactList!=null&&!contactList.isEmpty())
 			{
+                Set<String> uniqueBaseMdns = new HashSet<>();
 				for (KnCorpContactDTO knCorpContactDTO : contactList) {
 					if (!KnConstants.USEPROFILEINDEX.equals(knCorpContactDTO.getUserProfileIndex())) {
 						profileMdns.add(knCorpContactDTO.getMdn());
-					}
+					}else{
+                        uniqueBaseMdns.add(knCorpContactDTO.getMdn());
+                    }
 				}
 				if (!profileMdns.isEmpty()) {
                     Map<String, String> baseMdnProfileMdnMap = corpSubsProvInfoUtil.getProfileMdnBaseMdnMap(profileMdns,
@@ -2153,10 +2164,13 @@ public class KnCorpSublistInfoController implements ICorpSublistInfoController {
 					knLogger.debug(methodName, " baseMdnProfileMdnMap-->", KnGDPRTemplate.mdnMap(baseMdnProfileMdnMap));
 
 					for (KnCorpContactDTO knCorpContactDTO : contactList) {
-						if (baseMdnProfileMdnMap.containsKey(knCorpContactDTO.getMdn())) {
-							knCorpContactDTO.setMdn(baseMdnProfileMdnMap.get(knCorpContactDTO.getMdn()));
+						if (baseMdnProfileMdnMap.containsKey(knCorpContactDTO.getMdn()) && !uniqueBaseMdns.contains(baseMdnProfileMdnMap.get(knCorpContactDTO.getMdn()))) {
+                            String baseMdn=baseMdnProfileMdnMap.get(knCorpContactDTO.getMdn());
+							knCorpContactDTO.setMdn(baseMdn);
+                            uniqueBaseMdns.add(baseMdn);
 						}
 					}
+                    contactList = contactList.stream().filter(i -> uniqueBaseMdns.contains(i.getMdn())).collect(Collectors.toList());
 					respDTO.setContactList(contactList);
 				}
 			}

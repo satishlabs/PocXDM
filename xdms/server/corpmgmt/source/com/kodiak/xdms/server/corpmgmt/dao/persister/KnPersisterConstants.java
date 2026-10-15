@@ -784,7 +784,7 @@ public class KnPersisterConstants {
     public static final String GET_ALL_REGIONS = "729";
     public static final String SELECT_GROUP_PROFILE_LIST_BY_HIERARCHY_ID = "730";
     public static final String SELECT_GROUP_PROFILE_COUNT_BY_CORP_ID_BY_HIERARCHY_ID = "731";
-
+    public static final String GET_SUBSCRIBER_FS2 = "756";
 
 
 

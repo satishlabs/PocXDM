@@ -489,7 +489,7 @@ public interface ICorpXdmContactDAO {
 
     public String updateCatAccessPermSet(String extCorpId, String catAccessPermSet, KnPersisterTxn persisterTxn) throws KnDAOException;
 
-
+    public Map<String, String> getSubscriberFs2(Collection<String> mdns, KnPersisterTxn persisterTxn) throws KnDAOException;
     public String selectCorpFS(int corpId, boolean readOnly, KnPersisterTxn persisterTxn) throws KnDAOException;
 
     public void updateDispMem(Collection<String> mdnList, KnPersisterTxn persisterTxn) throws KnDAOException;

@@ -400,7 +400,7 @@ public class KnXDMProfilGroupInfoDAO implements ITableDAO {
         return groupList;
     }
 
-    public Collection<KnCorpGroupMemberDTO> groupProfileInfoByGroupId(Integer groupId, KnPersisterTxn persisterTxn) throws KnDBPersistenceException, KnDBConnectionException, KnDAOException {
+    public Collection<KnCorpGroupMemberDTO> groupProfileInfoByGroupId(Integer groupId, String userProfileId, KnPersisterTxn persisterTxn) throws KnDBPersistenceException, KnDBConnectionException, KnDAOException {
         String methodName = "groupProfileInfoByGroupId( Integer groupId, KnPersisterTxn persisterTxn)";
         Connection conn = null;
         boolean ownedTxn = false;
@@ -419,6 +419,7 @@ public class KnXDMProfilGroupInfoDAO implements ITableDAO {
             query = queryMapper.getQuery(SELECT_PROFILE_GROUP_INFO_BY_GROUPID);
             pstmt = conn.prepareStatement(query);
             pstmt.setInt(1, groupId);
+            pstmt.setString(2, userProfileId);
             knLogger.debug(methodName, "Executing query - ", query);
             rs = pstmt.executeQuery();
             knLogger.debug(methodName, "EXIT: Query executed successfully.", rs);

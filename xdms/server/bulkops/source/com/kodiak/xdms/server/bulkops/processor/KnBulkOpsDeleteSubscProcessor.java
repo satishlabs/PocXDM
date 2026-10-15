@@ -64,7 +64,6 @@ import com.kodiak.xdms.server.subsmgmt.dto.persistdat.KnSubsProfilePersistDTO;
 import com.kodiak.xdms.server.subsmgmt.dto.persistdat.KnTPUserPersistDTO;
 import com.kodiak.xdms.server.subsmgmt.resources.KnProvConstants;
 import com.kodiak.xdms.server.bulkops.utils.KnBulkOpsNotifyUtil;
-import com.kodiak.common.commdto.common.KnNotificationParamDTO;
 
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -394,15 +393,9 @@ public class KnBulkOpsDeleteSubscProcessor {
                 });
 
                 KnXcapDiffNotifier xcapDiffNotifier = KnXcapDiffNotifier.getInstance();
-                if (!xcapDiffNotifyDTOList.isEmpty()) {
-                    knLogger.info(methodName, "Sending XCAP Diff notifications for ", xcapDiffNotifyDTOList.size());
-                    KnNotificationParamDTO xcapWatcherClientsOnSubsDeleteNotificationParamDTO = new KnNotificationParamDTO();
-                    xcapWatcherClientsOnSubsDeleteNotificationParamDTO.setPriority(com.kodiak.xdms.server.common.resources.KnConstants.NOTIFICATION_PRIORITY.CRITICAL.value());
-                    xcapWatcherClientsOnSubsDeleteNotificationParamDTO.setOpsCode(com.kodiak.xdms.server.common.resources.KnConstants.OPS_CODE.XCAP_WATCHER_CLIENTS_ON_SUBS_DELETE.value());
-                    boolean notificationStatus = notifier.sendXcapDiffNotifications(xcapDiffNotifyDTOList, xcapWatcherClientsOnSubsDeleteNotificationParamDTO);
-                    if (notificationStatus) {
-                        knLogger.debug(methodName, "Successfully sent the notification");
-                    }
+                boolean notificationStatus = notifier.sendXcapDiffNotifications(xcapDiffNotifyDTOList);
+                if (notificationStatus) {
+                    knLogger.debug(methodName, "Successfully sent the notification");
                 }
             }
 

@@ -1123,6 +1123,7 @@ public class KnSubsProvController implements ISubsProvController {
                     knLogger.debug(methodName, "realm ", realm);
                     oidcAttributes.put(MCVIDEO_ID_OIDC, subsProfileInfoDTO.getMcVideoId());
                     oidcAttributes.put(MCDATA_ID_OIDC, subsProfileInfoDTO.getMcDataId());
+                    //oidcAttributes.put(CORP_ID_EXT, subsProfileInfoDTO.getExtCorpId() != null ? subsProfileInfoDTO.getExtCorpId() : subsProfileInfoDTO.getCorpId());
                     subsAliasDetailsReqDTO.setAttributes(oidcAttributes);
 				}else if(appId == APP_ID.USERMCSCLIENTS.value()){
                     xdmPttServerId = KnDbUtil.getDBConfigInfo().getLocalPttId();
@@ -1140,6 +1141,7 @@ public class KnSubsProvController implements ISubsProvController {
                     oidcAttributes.put(DEVICEIMPL_OIDC, KnConstants.TEL_URI_TEMPLATE + mdn);
                     oidcAttributes.put(DEVICEIMPU_OIDC, KnConstants.TEL_URI_TEMPLATE + mdn);
                     oidcAttributes.put(MCS_SCOPES_OIDC, KnGeneralUtil.populateOidcScopes(subsProfileInfoDTO.getActiveFS2()));
+                    //oidcAttributes.put(CORP_ID_EXT, subsProfileInfoDTO.getExtCorpId() != null ? subsProfileInfoDTO.getExtCorpId() : subsProfileInfoDTO.getCorpId());
                     subsAliasDetailsReqDTO.setAttributes(oidcAttributes);
                     String randomPwd = pwdUtil.generatePassword(password, appId);
                     subsAliasDetailsReqDTO.setTemppwd(Boolean.TRUE);
@@ -1169,6 +1171,7 @@ public class KnSubsProvController implements ISubsProvController {
                 oidcAttributes.put(MCPTT_ID_OIDC, subsProvPersistDTO.getMcpttId());
                 oidcAttributes.put(MCVIDEO_ID_OIDC, subsProvPersistDTO.getMcVideoId());
                 oidcAttributes.put(MCDATA_ID_OIDC, subsProvPersistDTO.getMcDataId());
+                oidcAttributes.put(CORP_ID_EXT, subsProvPersistDTO.getExtCorpId() != null ? subsProvPersistDTO.getExtCorpId() : subsProvPersistDTO.getCorpId());
                 subsAliasDetailsReqDTO.setAttributes(oidcAttributes);
                 subsAliasDetailsReqDTO.setPwd(password);
                 subsAliasDetailsReqDTO.setGeneratepwd(password == null);
@@ -1922,6 +1925,8 @@ public class KnSubsProvController implements ISubsProvController {
             String dbUserId = existingSubsProfileDTO.getUserId();
             //Validating extGatewayId
             if(null!=subsProvInputDTO.getExtGatewayId() && !subsProvInputDTO.getExtGatewayId().isEmpty()) {
+                IProvXDMServerDAO gatewayValidationDAO = KnProvFactorySelector.getProvDAOFactory(KnFactorySelector.DB).createProvXDMServerDAO();
+                validateExternalGatewayAssignment(mdn, subsProvInputDTO.getExtGatewayId(), persisterTxn, gatewayValidationDAO);
                 if (!provInfoUtil.validateExtGatewayId(subsProvInputDTO.getExtGatewayId(),persisterTxn)) {
                     knLogger.error(methodName, "External GatewayId does not exist : ", subsProvInputDTO.getExtGatewayId());
                     throw new KnProvBOException(KnErrorCodes.BOEntity.EXTERNAL_GATEWAY_ID_NOT_EXIST, "Invalid External Gateway Id passed");
@@ -10999,6 +11004,37 @@ public class KnSubsProvController implements ISubsProvController {
         return isProvFSBitValid;
     }
 
+    private static void validateExternalGatewayAssignment(String mdn, String extGatewayId, KnPersisterTxn persisterTxn, IProvXDMServerDAO xdmServerDAO) throws KnDAOException, KnProvBOException {
+        // Check if the external gateway ID is invalid (null, empty, or "0")
+        if (isNullOrEmpty(extGatewayId) || "0".equals(extGatewayId)) {
+            return; // No validation needed if the gateway ID is invalid
+        }
+
+        // Check if the user is AU
+        if (!xdmServerDAO.getMCPTTPermInfo(mdn, persisterTxn).isEmpty()) {
+            String errorMessage = "An Amper gateway assignment is not allowed for an authorized user.";
+            knLogger.error("validateExternalGatewayAssignment", errorMessage);
+            throw new KnProvBOException(KnErrorCodes.BOEntity.EXTERNAL_GATEWAY_ASSIGNMENT_NOT_ALLOWED_AU, errorMessage);
+        }
+
+        // Check if the user has a contact set as an emergency destination
+        if (xdmServerDAO.hasContactEmergencyDestination(mdn, persisterTxn)) {
+            String errorMessage = "An Amper gateway assignment is not allowed for a subscriber with a contact set as an emergency destination.";
+            knLogger.error("validateExternalGatewayAssignment", errorMessage);
+            throw new KnProvBOException(KnErrorCodes.BOEntity.EXTERNAL_GATEWAY_ASSIGNMENT_NOT_ALLOWED_EMR, errorMessage);
+        }
+    }
+
+    /**
+     * Utility method to check if a string is null or empty.
+     *
+     * @param str The string to check.
+     * @return True if the string is null or empty; false otherwise.
+     */
+    private static boolean isNullOrEmpty(String str) {
+        return str == null || str.isEmpty();
+    }
+
 
     private void setMCPTTFeatureDisable(String mdn, String activeFS1, KnPersisterTxn persisterTxn, IProvXDMServerDAO xdmServerDAO)throws KnDAOException{
 
@@ -11444,6 +11480,7 @@ public class KnSubsProvController implements ISubsProvController {
 					}
 				}
 			}
+            subscriberDTO.setHierarchyId(existingProfileInfoDTO.getHierarchyId());
 	          
 			subsProfileRespDTO = provXdmServerDAO.searchCorpAddressBook(subscriberDTO, persisterTxn);
 

@@ -37,13 +37,14 @@ public class KnPAMSubsAddOnPkgInfoDAO implements ITableDAO {
         knLogger.debug(methodName,"ENTRY: pamAccId",pamAccId);
         Connection conn;
         PreparedStatement pStmt = null;
+        ResultSet rs = null;
         List<String> addonPkgCodes=new ArrayList<>();
         try {
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
             pStmt = conn.prepareStatement(QRY_SELECT_ADDONPACKAGES);
             pStmt.setInt(1,pamAccId);
             knLogger.debug(methodName, "QUERY: Executing the query - ", QRY_SELECT_ADDONPACKAGES);
-            ResultSet rs=pStmt.executeQuery();
+            rs=pStmt.executeQuery();
             while(rs.next())
             {
             	addonPkgCodes.add(rs.getString("ADDON_PKGCODE"));
@@ -53,9 +54,10 @@ public class KnPAMSubsAddOnPkgInfoDAO implements ITableDAO {
             knLogger.error(methodName, "Unexpected Exception - ", e);
             throw KnDbUtil.processException(e, "Failed to select addon package - " + e.getMessage(), pttServerId, KnProvDAOSourceTypes.ADDONPKGINFO, QRY_SELECT_ADDONPACKAGES);
         } finally {
+            KnDbUtil.closeResultSet(rs);
             KnDbUtil.closePreparedStatement(pStmt);
         }
-        
+
         knLogger.debug(methodName, "selectPAMSubAddOnPkgs(int pamAccId, KnPersisterTxn persistTxn) ,pkgCodes",addonPkgCodes);
 		return addonPkgCodes;
 	}

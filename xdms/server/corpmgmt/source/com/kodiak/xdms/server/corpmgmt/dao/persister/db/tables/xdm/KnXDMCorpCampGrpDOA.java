@@ -118,7 +118,7 @@ public class KnXDMCorpCampGrpDOA implements ITableDAO {
             pstmt = conn.prepareStatement(query);
             pstmt.setString(1, mdn);
             knLogger.debug(methodName, "Executing query - ", query);
-            pstmt.executeQuery();
+            pstmt.executeUpdate();
             knLogger.debug(methodName, "Exit: Query executed successfully");
         } catch (SQLException e) {
             throw KnDbUtil.processException(e, "Failed while deleting entries from DG.CAMPEDGROUPINFO", pttServerId,
@@ -228,7 +228,7 @@ public class KnXDMCorpCampGrpDOA implements ITableDAO {
             pstmt.setInt(2, mode);
             pstmt.setInt(3, 1);
             knLogger.debug(methodName, "Executing Query- ", query);
-            pstmt.executeQuery();
+            pstmt.executeUpdate();
             knLogger.debug(methodName, "Exit: Query executed successfully.");
         } catch (SQLException e) {
             throw KnDbUtil.processException(e, "Failed while createSubsTalkGrpScanMode", pttServerId, KnDAOSourceTypes.CAMPEDGROUPINFO, query);
@@ -397,7 +397,7 @@ public class KnXDMCorpCampGrpDOA implements ITableDAO {
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
             pstmt = conn.prepareStatement(query);
             knLogger.debug(methodName, "Executing Query- ", query);
-            pstmt.executeQuery();
+            pstmt.executeUpdate();
             knLogger.debug(methodName, "Exit: Query executed successfully.");
         } catch (SQLException e) {
             throw KnDbUtil.processException(e, "Failed while deleteAllCampedGroups", pttServerId, KnDAOSourceTypes.CAMPEDGROUPINFO, query);
@@ -420,7 +420,7 @@ public class KnXDMCorpCampGrpDOA implements ITableDAO {
             pstmt.setInt(1, mode);
             pstmt.setString(2, mdn);
             knLogger.debug(methodName, "Executing Query- ", query);
-            pstmt.executeQuery();
+            pstmt.executeUpdate();
             knLogger.debug(methodName, "Exit: Query executed successfully.");
         } catch (SQLException e) {
             throw KnDbUtil.processException(e, "Failed while createSubsTalkGrpScanMode", pttServerId, KnDAOSourceTypes.CAMPEDGROUPINFO, query);
@@ -443,7 +443,7 @@ public class KnXDMCorpCampGrpDOA implements ITableDAO {
             pstmt.setInt(1, etag);
             pstmt.setString(2, mdn);
             knLogger.debug(methodName, "Executing Query- ", query);
-            pstmt.executeQuery();
+            pstmt.executeUpdate();
             knLogger.debug(methodName, "Exit: Query executed successfully.");
         } catch (SQLException e) {
             throw KnDbUtil.processException(e, "Failed while createSubsTalkGrpScanMode", pttServerId, KnDAOSourceTypes.CAMPEDGROUPINFO, query);
@@ -505,6 +505,7 @@ public class KnXDMCorpCampGrpDOA implements ITableDAO {
         List<String> mdns = new ArrayList<String>();
         Connection conn;
         PreparedStatement pstmt = null;
+        ResultSet rs = null;
         String query = null;
         try {
             KnQueryMapper queryMapper = KnQueryMapper.getInstance();
@@ -513,18 +514,18 @@ public class KnXDMCorpCampGrpDOA implements ITableDAO {
             pstmt = conn.prepareStatement(query);
             pstmt.setInt(1, grpId);
             knLogger.debug(methodName, "Executing Query- ", query);
-            ResultSet rs = pstmt.executeQuery();
+            rs = pstmt.executeQuery();
             while (rs.next()) {
                 mdns.add(rs.getString(1).trim());
             }
             knLogger.debug(methodName, "Exit: Query executed successfully.");
-            return mdns;
         } catch (SQLException e) {
             throw KnDbUtil.processException(e, "Failed while createSubsTalkGrpScanMode", pttServerId, KnDAOSourceTypes.CAMPEDGROUPINFO, query);
         } finally {
-            KnDbUtil.closeStatement(pstmt);
+            KnDbUtil.closeResultSet(rs);
+            KnDbUtil.closePreparedStatement(pstmt);
         }
-
+        return mdns;
     }
 
     public int getCampedGrpCount(String mdn, KnPersisterTxn persisterTxn) throws KnDAOException {
@@ -533,6 +534,7 @@ public class KnXDMCorpCampGrpDOA implements ITableDAO {
         int count = 0;
         Connection conn;
         PreparedStatement pstmt = null;
+        ResultSet rs = null;
         String query = null;
         try {
             KnQueryMapper queryMapper = KnQueryMapper.getInstance();
@@ -541,27 +543,28 @@ public class KnXDMCorpCampGrpDOA implements ITableDAO {
             query = replaceContactWithValue(query, MDNLIST, "'" + mdn + "'");
             pstmt = conn.prepareStatement(query);
             knLogger.debug(methodName, "Executing Query- ", query);
-            ResultSet rs = pstmt.executeQuery();
+            rs = pstmt.executeQuery();
             if (rs.next()) {
                 count = rs.getInt(2);
             }
             knLogger.debug(methodName, "Exit: Query executed successfully.");
-            return count;
         } catch (SQLException e) {
             throw KnDbUtil.processException(e, "Failed while createSubsTalkGrpScanMode", pttServerId, KnDAOSourceTypes.CAMPEDGROUPINFO, query);
         } finally {
-            KnDbUtil.closeStatement(pstmt);
+            KnDbUtil.closeResultSet(rs);
+            KnDbUtil.closePreparedStatement(pstmt);
         }
+        return count;
     }
 
     public Map<String, Integer> getCampedGrpCount(List<String> mdnList, KnPersisterTxn persisterTxn) throws KnDAOException {
         String methodName = "getMdnsForCampedGrp(Set<String> mdnList, KnPersisterTxn persisterTxn)";
         knLogger.debug(methodName, "mdnList", mdnList == null ? mdnList : KnGDPRTemplate.mdnList(mdnList));
         Connection conn;
-        Map<String, Integer> subscCampGrpCount = new HashMap<String, Integer>();
         PreparedStatement pstmt = null;
-        String query = null;
         ResultSet rs = null;
+        Map<String, Integer> subscCampGrpCount = new HashMap<String, Integer>();
+        String query = null;
         try {
             KnQueryMapper queryMapper = KnQueryMapper.getInstance();
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
@@ -572,28 +575,32 @@ public class KnXDMCorpCampGrpDOA implements ITableDAO {
                 query = com.kodiak.common.dao.KnDbUtil.formCommaSeperatedQuesMarks(mdns, query, MDNLIST);
                 pstmt = conn.prepareStatement(query);
                 knLogger.debug(methodName, "Executing Query- ", query);
-                
-                for(String mdn : mdns) {
-                	pstmt.setString(index++, mdn);
-                }                	         
+
+                for (String mdn : mdns) {
+                    pstmt.setString(index++, mdn);
+                }
                 rs = pstmt.executeQuery();
                 while (rs.next()) {
-                    subscCampGrpCount.put(rs.getString(1).trim(), rs.getInt(2) );
+                    subscCampGrpCount.put(rs.getString(1).trim(), rs.getInt(2));
                 }
+                KnDbUtil.closeResultSet(rs);
+                KnDbUtil.closePreparedStatement(pstmt);
+                rs = null;
+                pstmt = null;
             }
-            for(String mdn : mdnList){
-                if(subscCampGrpCount.get(mdn) == null){
+            for (String mdn : mdnList) {
+                if (subscCampGrpCount.get(mdn) == null) {
                     subscCampGrpCount.put(mdn, Integer.valueOf(0));
                 }
             }
             knLogger.debug(methodName, "Exit: Query executed successfully.");
-            return subscCampGrpCount;
         } catch (SQLException e) {
             throw KnDbUtil.processException(e, "Failed while createSubsTalkGrpScanMode", pttServerId, KnDAOSourceTypes.CAMPEDGROUPINFO, query);
         } finally {
             KnDbUtil.closeResultSet(rs);
-            KnDbUtil.closeStatement(pstmt);
+            KnDbUtil.closePreparedStatement(pstmt);
         }
+        return subscCampGrpCount;
     }
 
     public void deleteCampedGrps(Map<Integer, List<String>> map, KnPersisterTxn persisterTxn) throws KnDAOException {
@@ -654,6 +661,10 @@ public class KnXDMCorpCampGrpDOA implements ITableDAO {
                 while (rs.next()) {
                     mdnTGSCEtag.put(rs.getString(1).trim(), rs.getInt(2));
                 }
+                KnDbUtil.closeResultSet(rs);
+                KnDbUtil.closePreparedStatement(pstmt);
+                rs = null;
+                pstmt = null;
             }
             knLogger.debug(methodName, "Exit: Query executed successfully.",mdnTGSCEtag);
         } catch (SQLException e) {

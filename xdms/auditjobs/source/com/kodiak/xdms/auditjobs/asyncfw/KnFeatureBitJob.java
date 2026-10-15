@@ -33,6 +33,7 @@ import com.kodiak.common.resources.KnGeneralCacheUtil;
 import com.kodiak.logger.KnLogger;
 import com.kodiak.utilities.featuresetupgrade.util.KnDowngradeFs;
 import com.kodiak.utilities.featuresetupgrade.util.KnDowngradeFsConfig;
+import com.kodiak.utilities.featuresetupgrade.util.KnFeatureVersion;
 import com.kodiak.utilities.featuresetupgrade.util.KnUpgardeFS;
 import com.kodiak.utilities.featuresetupgrade.util.KnUpgardeFSConfig;
 import com.kodiak.utilities.statusmgr.IStatusMgrNotifyIntf;
@@ -87,12 +88,14 @@ public class KnFeatureBitJob implements Runnable, IStatusMgrNotifyIntf {
             }
             Thread.sleep(30000);
             knLogger.info(methodName, " KnFeatureBitJob version ", version);
-            if (Float.parseFloat(KnUpgardeFSConfig.masterFeatureSetDetails.getFsCurrentVersion()) > Float.parseFloat(version)) {
+            KnFeatureVersion parsedFsCurrentVersion = KnFeatureVersion.parse(KnUpgardeFSConfig.masterFeatureSetDetails.getFsCurrentVersion());
+            KnFeatureVersion parsedVersion = KnFeatureVersion.parse(version);
+            if (parsedFsCurrentVersion.isGreaterThan(parsedVersion)) {
                 knLogger.info(methodName, " ENTRY Upgrade triggered ");
                 KnUpgardeFS.getInstance();
                 KnXDMFeatureBitUpdateAudit.getInstance();
                 knLogger.info(methodName, "Upgrade triggered ");
-            } else if (!downgradeBitFlag && downgradeBit.entrySet().iterator().next().getValue().getCorpId() != 0 && getCurrentRedundancyStatus() == KnStatusMgrConstants.CARD_STATES.ACTIVE && Float.parseFloat(KnUpgardeFSConfig.masterFeatureSetDetails.getFsCurrentVersion()) < Float.parseFloat(version)) {
+            } else if (!downgradeBitFlag && downgradeBit.entrySet().iterator().next().getValue().getCorpId() != 0 && getCurrentRedundancyStatus() == KnStatusMgrConstants.CARD_STATES.ACTIVE && parsedFsCurrentVersion.isLessThan(parsedVersion)) {
                 downgradeBitFlag = true;
                 knLogger.info(methodName, "ENTRY KnFeatureBitJob rollback ", downgradeBitFlag);
                 try {

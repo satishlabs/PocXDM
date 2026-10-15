@@ -162,6 +162,8 @@ public class KnErrorCodes {
         public static final String EXTERNAL_GATEWAY_ID_NOT_EXIST = "BOEntity.KNEC-CM10559";
         public static final String LOCATION_ENABLE_TO_DISABLE_NOT_ALLOWED = "BOEntity.KNEC-CM10561";
         public static final String CLIENT_IS_IN_EMER = "BOENTITY.KNEC-SP12157";
+        public static final String EXTERNAL_GATEWAY_ASSIGNMENT_NOT_ALLOWED_AU = "BOEntity.KNEC-SP12160";
+        public static final String EXTERNAL_GATEWAY_ASSIGNMENT_NOT_ALLOWED_EMR = "BOEntity.KNEC-SP12161";
 
     }
 

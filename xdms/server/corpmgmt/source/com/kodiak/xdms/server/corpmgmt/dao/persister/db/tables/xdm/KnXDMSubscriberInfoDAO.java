@@ -6515,4 +6515,42 @@ public class KnXDMSubscriberInfoDAO implements ITableDAO {
         return subscMap;
     }
 
+    public Map<String, String> getSubscriberFs2(Collection<String> mdns, KnPersisterTxn persisterTxn) throws KnDAOException {
+        String methodName = "getSubscriberFs2(Collection<String>, KnPersisterTxn)";
+        knLogger.info(methodName, "Entry : mdns - ", mdns == null ? mdns : KnGDPRTemplate.mdnList(mdns));
+        Map<String, String> subscriberFs2 = new HashMap<>();
+        ResultSet rs = null;
+        String query = null;
+        PreparedStatement pstmt = null;
+        Connection conn = null;
+        try {
+            KnQueryMapper queryMapper = KnQueryMapper.getInstance();
+            conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, true);
+            var mdnLists = com.kodiak.xdms.server.common.util.KnGeneralUtil.splitList(new ArrayList<>(mdns), KnXDMCorpContactCountDAO.BULK_UPDATE_SIZE);
+            for (var subList : mdnLists) {
+                query = queryMapper.getQuery(GET_SUBSCRIBER_FS2);
+                query = replaceContactWithValue(query, MDNLIST, formCommaSeperatedQuesMarks(subList));
+                knLogger.debug(methodName, "query", query);
+                pstmt = conn.prepareStatement(query);
+                int index = 1;
+                for (String mdn : subList) {
+                    pstmt.setString(index++, mdn);
+                }
+                rs = pstmt.executeQuery();
+                while (rs.next()) {
+                    subscriberFs2.put(rs.getString(MDN).trim(), rs.getString(SUBS_FS2));
+                }
+            }
+        } catch (SQLException e) {
+            knLogger.error(methodName, "Failed while retrieving subscriber FS2 ", e);
+            throw KnDbUtil.processException(e, "Failed while getSubscriberFs2 -",
+                    pttServerId, com.kodiak.xdms.server.common.resources.KnDAOSourceTypes.XDM_CORP_SUBSCRIBER_INFO, query);
+        } finally {
+            knLogger.info(methodName, "EXIT: subscriberFs2 size ", subscriberFs2.size());
+            KnDbUtil.closeResultSet(rs);
+            KnDbUtil.closePreparedStatement(pstmt);
+        }
+        return subscriberFs2;
+    }
+
 }

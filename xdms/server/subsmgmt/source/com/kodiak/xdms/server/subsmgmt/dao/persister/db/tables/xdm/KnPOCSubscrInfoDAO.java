@@ -4701,6 +4701,12 @@ public KnOPSubsProfileInfoDTO selectSubscriberProfileByUserId(String userId, KnP
 		KnOPSubsProfileInfoDTO subsProfileInfoDto = new KnOPSubsProfileInfoDTO();
 		knLogger.debug(methodName, "ENTRY: searchCorpAddressBook " + subscriberDTO);
 		int corpId = subscriberDTO.getCorpId();
+        String requestingMdn = subscriberDTO.getMdn();
+
+        // Step : Detect environment context (AT&T vs Standard Product)
+        Integer fanId = getFanIdByMdn(requestingMdn, persistTxn);
+        String hierarchyId = subscriberDTO.getHierarchyId();
+
 		String searchString = subscriberDTO.getSearchString().toUpperCase();
         boolean specialCharecterFound = false;
 
@@ -4732,10 +4738,29 @@ public KnOPSubsProfileInfoDTO selectSubscriberProfileByUserId(String userId, KnP
             }else {
                 query = CORP_SUBS_CNT_REAL_MDN_QRY + SELECT_ADDRESS_BOOK_CONDITION.replace("SEARCHSTRING", searchString);
             }
+            // STC Flow: Restrict to specific Hierarchy ID
+            if (hierarchyId != null && !hierarchyId.trim().isEmpty()) {
+                knLogger.debug(methodName, ": Appending HIERARCHY_ID filter to count query = ", hierarchyId);
+                query += " AND HIERARCHY_ID = ?";
+            }
+            // AT&T Flow: Restrict to FAN_ID subscribers
+            else if (fanId != null) {
+                knLogger.debug(methodName, "AT&T: Appending FAN_ID filter to count query = ", fanId);
+                query += " AND MDN IN (SELECT SAI.MDN FROM DG.SUBSCRIBER_ADDLINFO SAI WHERE SAI.FAN_ID = ?)";
+            }
+
 			conn = persistTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
             knLogger.debug(methodName, "Query: Executing - ", query, ", corpId - ", corpId);
 			pStmt = conn.prepareStatement(query);
-			pStmt.setInt(1, subscriberDTO.getCorpId());
+            int idxCount = 1;
+            pStmt.setInt(idxCount++, subscriberDTO.getCorpId());
+			// pStmt.setInt(1, subscriberDTO.getCorpId());
+            // Bind STC Hierarchy or AT&T FAN parameters
+            if (hierarchyId != null && !hierarchyId.trim().isEmpty()) {
+                pStmt.setString(idxCount++, hierarchyId.trim());
+            } else if (fanId != null) {
+                pStmt.setInt(idxCount++, fanId);
+            }
 			rs = pStmt.executeQuery();
 			knLogger.debug(methodName, "Query: Executed ");
 
@@ -4750,7 +4775,7 @@ public KnOPSubsProfileInfoDTO selectSubscriberProfileByUserId(String userId, KnP
 			}
 
 			if (total >= Integer.valueOf(first)) {
-				subsRespMap = new HashMap<String, KnSubsProfileDTO>();
+				subsRespMap = new LinkedHashMap<String, KnSubsProfileDTO>();
                 if (specialCharecterFound) {
                     query2 = SELECT_ADDRESS_BOOK_QUERY_WITH_ESCAPE.replace("FIRST", first).replace("LAST", last).replace("SEARCHSTRING",
                             searchString);
@@ -4758,8 +4783,39 @@ public KnOPSubsProfileInfoDTO selectSubscriberProfileByUserId(String userId, KnP
                     query2 = SELECT_ADDRESS_BOOK_QUERY.replace("FIRST", first).replace("LAST", last).replace("SEARCHSTRING",
                             searchString);
                 }
+                // STC : Filter by HIERARCHY_ID prior to ORDER BY
+                if (hierarchyId != null && !hierarchyId.trim().isEmpty()) {
+                    knLogger.debug(methodName, "STC Flow: Appending HIERARCHY_ID filter to data query = ", hierarchyId);
+                    String hierarchyFilter = " AND HIERARCHY_ID = ?";
+                    if (query2.contains(" ORDER BY")) {
+                        query2 = query2.replace(" ORDER BY", hierarchyFilter + " ORDER BY");
+                    } else {
+                        query2 = query2 + hierarchyFilter;
+                    }
+                }
+                // AT&T : Filter by FAN_ID prior to ORDER BY
+                else if (fanId != null) {
+                    knLogger.debug(methodName, "AT&T Flow: Appending FAN_ID filter to data query = ", fanId);
+                    String fanFilter = " AND MDN IN (SELECT SAI.MDN FROM DG.SUBSCRIBER_ADDLINFO SAI WHERE SAI.FAN_ID = ?)";
+                    if (query2.contains(" ORDER BY")) {
+                        query2 = query2.replace(" ORDER BY", fanFilter + " ORDER BY");
+                    } else {
+                        query2 = query2 + fanFilter;
+                    }
+                }
+
+                knLogger.debug(methodName, "Data Query: Executing - ", query2, ", corpId - ", corpId);
 				pStmt = conn.prepareStatement(query2);
-				pStmt.setInt(1, subscriberDTO.getCorpId());
+				// pStmt.setInt(1, subscriberDTO.getCorpId());
+                int idxData = 1;
+                pStmt.setInt(idxData++, subscriberDTO.getCorpId());
+
+                // Bind STC Hierarchy or AT&T FAN parameters
+                if (hierarchyId != null && !hierarchyId.trim().isEmpty()) {
+                    pStmt.setString(idxData++, hierarchyId.trim());
+                } else if (fanId != null) {
+                    pStmt.setInt(idxData++, fanId);
+                }
 				knLogger.debug(methodName, "Query: Executing - ", query2, ", corpId - ", corpId);
 				rs2 = pStmt.executeQuery();
 				knLogger.debug(methodName, "Query: Executed ");
@@ -4788,6 +4844,45 @@ public KnOPSubsProfileInfoDTO selectSubscriberProfileByUserId(String userId, KnP
 		}
 
 		return subsProfileInfoDto;
+    }
+
+    /**
+     * Retrieves the FAN_ID associated with a given MDN from DG.SUBSCRIBER_ADDLINFO.
+     * <p>
+     * This method acts as the feature detector for AT&T environment filtering:
+     */
+    private Integer getFanIdByMdn(String mdn, KnPersisterTxn persisterTxn) {
+        final String methodName = "getFanIdByMdn";
+        if (mdn == null || mdn.trim().isEmpty()) {
+            knLogger.debug(methodName, "Provided MDN is null or empty; skipping FAN_ID lookup.");
+            return null;
+        }
+
+        String query = "SELECT FAN_ID FROM DG.SUBSCRIBER_ADDLINFO WHERE MDN = ?";
+        knLogger.debug(methodName, "ENTRY : Executing FAN_ID lookup for MDN: ", KnGDPRTemplate.mdn(mdn));
+
+        try (PreparedStatement pstmt = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, true)
+                .prepareStatement(query)) {
+
+            pstmt.setString(1, mdn.trim());
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    int fanId = rs.getInt(1);
+                    if (rs.wasNull()) {
+                        knLogger.debug(methodName, "MDN found in DG.SUBSCRIBER_ADDLINFO, but FAN_ID is NULL. Defaulting to Product flow.");
+                        return null;
+                    }
+                    knLogger.info(methodName, "AT&T Environment Detected: Found FAN_ID = ", fanId, " for MDN: ", KnGDPRTemplate.mdn(mdn));
+                    return fanId;
+                }
+            }
+        } catch (Exception e) {
+            // Table or record missing in Standard Product; log gracefully at debug level
+            knLogger.debug(methodName, "DG.SUBSCRIBER_ADDLINFO lookup unpopulated or bypassed: ", e.getMessage());
+        }
+
+        knLogger.debug(methodName, "EXIT : No FAN_ID found for MDN. Defaulting to Standard Product flow.");
+        return null;
     }
 
 	public List<KnOPSubsProfileInfoDTO> selectSubscriberProfileByMCSIds(List<String> mcsIds, KnPersisterTxn persistTxn)

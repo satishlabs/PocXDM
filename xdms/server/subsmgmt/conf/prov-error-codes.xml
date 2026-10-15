@@ -483,4 +483,20 @@ Motorola Solutions Confidential Restricted
         <originators>BOEntity</originators>
         <error-context>PROVLIB-BOEntity-Error</error-context>
     </error>
+    <error code="KNEC-SP12160">
+        <label>EXTERNAL_GATEWAY_ASSIGNMENT_NOT_ALLOWED_AU</label>
+        <msg>An Amper gateway assignment is not allowed for an authorized user.</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
+    <error code="KNEC-SP12161">
+        <label>EXTERNAL_GATEWAY_ASSIGNMENT_NOT_ALLOWED_EMR</label>
+        <msg>An Amper gateway assignment is not allowed for a subscriber with a contact set as an emergency destination.</msg>
+        <level>ERROR</level>
+        <cause/>
+        <originators>BOEntity</originators>
+        <error-context>PROVLIB-BOEntity-Error</error-context>
+    </error>
 </error-codes>

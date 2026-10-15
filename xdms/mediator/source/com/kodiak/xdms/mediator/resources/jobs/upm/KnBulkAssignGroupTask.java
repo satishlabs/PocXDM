@@ -25,7 +25,6 @@ import com.kodiak.xdms.server.corpmgmt.dto.common.KnCorpGroupListInfoDTO;
 import com.kodiak.xdms.server.corpmgmt.dto.impl.KnCorpGrpBasicInfoRespDto;
 import com.kodiak.xdms.server.corpmgmt.dto.impl.KnCorpGrpListInfoRespDto;
 import com.kodiak.xdms.server.corpmgmt.dto.impl.KnCorpResponseDTO;
-import com.kodiak.common.commdto.common.KnNotificationParamDTO;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -248,9 +247,7 @@ public class KnBulkAssignGroupTask extends KnAbstractTask {
                 //notifation
               /*  Collection<KnXcapDiffDirChgNotifyDTO> tgGrpxcapDiffList = commonMediator.prepareNotification(assignZoneChannelResp);
                 notifier.setMaxNotfnsPerJob(2);
-                KnNotificationParamDTO xcapExistingMembersOnGroupMemberAddNotificationParamDTO = new KnNotificationParamDTO();
-                xcapExistingMembersOnGroupMemberAddNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_EXISTING_MEMBERS_ON_GROUP_MEMBER_ADD.value());
-                boolean tgListRespNotified = notifier.sendXcapDiffNotifications(tgGrpxcapDiffList, assignGroupTxn, xcapExistingMembersOnGroupMemberAddNotificationParamDTO);
+                boolean tgListRespNotified = notifier.sendXcapDiffNotifications(tgGrpxcapDiffList, assignGroupTxn);
                 knLogger.debug(methodName, " tgGrpxcapDiffList talkGroupResp notified- ", tgListRespNotified);*/
             }
 
@@ -289,9 +286,7 @@ public class KnBulkAssignGroupTask extends KnAbstractTask {
                 //notifation
               /*  Collection<KnXcapDiffDirChgNotifyDTO> scanListRespxcapDiffList = commonMediator.prepareNotification(assignPriorityResp);
                 notifier.setMaxNotfnsPerJob(2);
-                KnNotificationParamDTO xcapOnScanlistUpdateNotificationParamDTO = new KnNotificationParamDTO();
-                xcapOnScanlistUpdateNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_ON_SCANLIST_UPDATE.value());
-                boolean scanListRespisNotified = notifier.sendXcapDiffNotifications(scanListRespxcapDiffList, assignGroupTxn, xcapOnScanlistUpdateNotificationParamDTO);
+                boolean scanListRespisNotified = notifier.sendXcapDiffNotifications(scanListRespxcapDiffList, assignGroupTxn);
                 knLogger.debug(methodName, " scanListRespxcapDiffList scanListRespisNotified- ", scanListRespisNotified);*/
 
             }

@@ -45,14 +45,15 @@ public class KnSubsAddOnPkgInfoDAO implements ITableDAO {
         knLogger.debug(methodName,"ENTRY: mdn ",KnGDPRTemplate.mdn(mdn));
         Connection conn;
         PreparedStatement pStmt = null;
+        ResultSet rs = null;
         List<String> addonPkgCodes=new ArrayList<>();
         try {
-        	 
+
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
             pStmt = conn.prepareStatement(QRY_SELECT_ADDONPACKAGES);
             pStmt.setString(1,mdn);
             knLogger.debug(methodName, "QUERY: Executing the query - ", QRY_SELECT_ADDONPACKAGES);
-            ResultSet rs=pStmt.executeQuery();
+            rs=pStmt.executeQuery();
             while(rs.next())
             {
             	addonPkgCodes.add(rs.getString(ADDON_PKGCODE));
@@ -62,6 +63,7 @@ public class KnSubsAddOnPkgInfoDAO implements ITableDAO {
             knLogger.error(methodName, "Unexpected Exception - ", e);
             throw KnDbUtil.processException(e, "Failed to select addon package - " + e.getMessage(), pttServerId, KnProvDAOSourceTypes.ADDONPKGINFO, QRY_SELECT_ADDONPACKAGES);
         } finally {
+            KnDbUtil.closeResultSet(rs);
             KnDbUtil.closePreparedStatement(pStmt);
         }
         knLogger.debug(methodName, "selectSubAddOnPkgs(String mdn, KnPersisterTxn persistTxn) ,pkgCodes",addonPkgCodes);
@@ -156,6 +158,7 @@ public class KnSubsAddOnPkgInfoDAO implements ITableDAO {
         knLogger.debug(methodName,"ENTRY:mdns",KnGDPRTemplate.mdnList(mdns));
         Connection conn;
         PreparedStatement pStmt = null;
+        ResultSet rs = null;
         Map<String,List<String>> mdnAddonPkgMap=new HashMap<>();
         StringBuilder strBuffer = new StringBuilder();
         strBuffer.append(QRY_BULK_SELECT_ADDONPACKAGES);
@@ -167,16 +170,16 @@ public class KnSubsAddOnPkgInfoDAO implements ITableDAO {
         String query = strBuffer.toString();
         knLogger.debug(methodName, "QUERY: Executing the query - ", query);
         try {
-        	 
+
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, true);
             pStmt = conn.prepareStatement(query);
             int i=0;
             for (String mdn : mdns) {
             	  pStmt.setString(++i,mdn);
 			}
-          
-          
-            ResultSet rs=pStmt.executeQuery();
+
+
+            rs=pStmt.executeQuery();
             while(rs.next())
             {
             	if(mdnAddonPkgMap.get(rs.getString(MDN))!=null)
@@ -196,11 +199,12 @@ public class KnSubsAddOnPkgInfoDAO implements ITableDAO {
             knLogger.error(methodName, "Unexpected Exception - ", e);
             throw KnDbUtil.processException(e, "Failed to select addon package - " + e.getMessage(), pttServerId, KnProvDAOSourceTypes.ADDONPKGINFO, query);
         } finally {
+            KnDbUtil.closeResultSet(rs);
             KnDbUtil.closePreparedStatement(pStmt);
         }
         knLogger.debug(methodName, "selectSubAddOnPkgs(List<String> mdns, KnPersisterTxn persisterTxn) ,mdnAddonPkgMap",KnGDPRTemplate.mapKeyMdn(mdnAddonPkgMap));
 		return mdnAddonPkgMap;
-		
+
 	}
 
 	public void createBulkSubAddOnPkgs(List<String> mdns, List<String> addOnPkgs, KnPersisterTxn persisterTxn)

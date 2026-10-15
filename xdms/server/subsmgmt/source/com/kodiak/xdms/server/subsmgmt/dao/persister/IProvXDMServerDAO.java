@@ -564,4 +564,6 @@ public interface IProvXDMServerDAO {
 
     public void updateEmergencyDocEtag(String mdn, KnPersisterTxn persisterTxn) throws KnDAOException;
 
+    public boolean hasContactEmergencyDestination(String mdn, KnPersisterTxn persisterTxn) throws KnDAOException;
+
 }

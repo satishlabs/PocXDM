@@ -259,7 +259,7 @@ public class KnUserprofileSharedlistDAO implements ITableDAO {
                         pttServerId, XDM_POCSUBSCRINFO, query);
             } finally {
                 KnDbUtil.closeResultSet(rs);
-                KnDbUtil.closePrepareStmt(pstmt);
+                KnDbUtil.closePreparedStatement(pstmt);
             }
             knLogger.debug(methodName, "EXit: mdnList : ", KnGDPRTemplate.mdnList(mdnList));
             return mdnList;

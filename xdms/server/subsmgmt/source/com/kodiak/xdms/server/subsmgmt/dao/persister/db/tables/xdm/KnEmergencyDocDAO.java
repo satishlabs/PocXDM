@@ -11,6 +11,7 @@ import com.kodiak.xdms.server.subsmgmt.resources.KnProvDAOSourceTypes;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
 
@@ -19,6 +20,7 @@ public class KnEmergencyDocDAO implements ITableDAO {
     private static final KnLogger knLogger = KnLogger.getLogger(KnEmergencyDocDAO.class);
     public String pttServerId = null;
     private static final String UPDATE_EMERG_USER_DOC = "UPDATE DG.EMERGENCY_DOC SET ETAG = ? WHERE MDN = ?";
+    private static final String SELECT_CONTACT_EMERGENCY_DEST = "SELECT MDN FROM DG.EMERGENCY_SUBSCR_DESTINFO WHERE MDN = ? AND EMERGDESTTYPE = 1";
 
     KnEmergencyDocDAO(String pttServerId) {
         this.pttServerId = pttServerId;
@@ -44,6 +46,25 @@ public class KnEmergencyDocDAO implements ITableDAO {
             throw KnDbUtil.processException(e, "Failed to insertOrUpdate Emergency Doc from DG.EMERGENCY_DOC table " + e,
                     pttServerId, KnProvDAOSourceTypes.SUBS_EMERGENCY_DOC, query);
         } finally {
+            KnDbUtil.closeStatement(pstmt);
+        }
+    }
+
+    public boolean hasContactEmergencyDestination(String mdn, KnPersisterTxn persisterTxn) throws KnDAOException {
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        try {
+            Connection conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, false);
+            pstmt = conn.prepareStatement(SELECT_CONTACT_EMERGENCY_DEST);
+            pstmt.setString(1, mdn);
+            rs = pstmt.executeQuery();
+            return rs.next();
+        } catch (SQLException e) {
+            knLogger.error("hasContactEmergencyDestination", "Failed to retrieve contact emergency destination", e);
+            throw KnDbUtil.processException(e, "Failed to retrieve contact emergency destination",
+                    pttServerId, "EMERGENCY_SUBSCR_DESTINFO", SELECT_CONTACT_EMERGENCY_DEST);
+        } finally {
+            KnDbUtil.closeResultSet(rs);
             KnDbUtil.closeStatement(pstmt);
         }
     }

@@ -71,6 +71,24 @@ public class KnCorpMcpttFeaturePersistDTO implements IPersistenceDTO {
     private String mcpttId;
     private int mcpttCompliance;
     private boolean isUPMSharingEnabled;
+    private boolean isDestMdnIsAmGw;
+    private boolean isRequestMdnIsAmGw;
+
+    public boolean getIsDestMdnIsAmGw() {
+        return isDestMdnIsAmGw;
+    }
+
+    public void setDestMdnIsAmGw(boolean destMdnIsAmGw) {
+        isDestMdnIsAmGw = destMdnIsAmGw;
+    }
+
+    public boolean getIsRequestMdnIsAmGw() {
+        return isRequestMdnIsAmGw;
+    }
+
+    public void setRequestMdnIsAmGw(boolean requestMdnIsAmGw) {
+        isRequestMdnIsAmGw = requestMdnIsAmGw;
+    }
 
     public boolean isUPMSharingEnabled() {
         return isUPMSharingEnabled;

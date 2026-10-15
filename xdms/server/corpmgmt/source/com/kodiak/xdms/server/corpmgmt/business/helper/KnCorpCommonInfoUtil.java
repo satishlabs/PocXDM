@@ -288,6 +288,38 @@ public class KnCorpCommonInfoUtil {
         }
     }
 
+    /**
+     * Build a &lt;GROUPTYPE, MAX_MEMBERS&gt; map by reading the configured
+     * per-group-type limits from DG.XDMS_SVC_CONFIG.
+     *
+     * <ul>
+     *   <li>STANDARD_GROUP  &lt;- MAXMEMBERSPERCORPPOCGRP</li>
+     *   <li>DISPATCH_GROUP  &lt;- MAXMEMBERSPERDISPATCHGRP</li>
+     *   <li>BROADCAST_GROUP &lt;- MAX_MEMBERS_PER_BG</li>
+     * </ul>
+     *
+     * @param xdmPttServerId local XDM PTT server id
+     * @param persisterTxn   caller-managed transaction
+     * @return map keyed by KnConstants group-type constants
+     * @throws KnCorpBOException on DB / BO failure
+     */
+    public static Map<Integer, Integer> getGroupTypeThresholdMap(String xdmPttServerId, KnPersisterTxn persisterTxn) throws KnCorpBOException {
+        final String methodName = "getGroupTypeThresholdMap(String, KnPersisterTxn)";
+        knLogger.debug(methodName, "ENTRY : xdmPttServerId - ", xdmPttServerId, " , persisterTxn - ", persisterTxn);
+        try {
+            KnXDMSServiceConfigDTO configDto = KnGenInfoUtil.getInstance().retrieveXDMSServiceConfig(xdmPttServerId, persisterTxn);
+            Map<Integer, Integer> map = new HashMap<>();
+            map.put(KnConstants.GROUP_TYPE_STANDARD,  configDto.getMaxMembersPerCorpPOCGrp());
+            map.put(KnConstants.GROUP_TYPE_DISPATCH,  configDto.getMaxMembersPerDispatchGroup());
+            map.put(KnConstants.GROUP_TYPE_BROADCAST, configDto.getMaxMemPerBCGrp());
+            knLogger.info(methodName, "GroupType threshold map from DG.XDMS_SVC_CONFIG - ", map);
+            return map;
+        } catch (KnBOException e) {
+            knLogger.error(methodName, "KnBOException occurred while building group type threshold map - ", e);
+            throw new KnCorpBOException(KnErrorCodes.BOEntity.INTERNAL_ERROR, e.getErrorMessage(), e);
+        }
+    }
+
     public int getCorpId(String extCorpId, KnPersisterTxn persisterTxn) throws KnCorpBOException {
         return getCorpId(extCorpId, false, persisterTxn);
     }

@@ -63,18 +63,12 @@ public class KnUPMJobMonitor implements Runnable, IStatusMgrNotifyIntf {
                 if (null != jobNotifyDTOS.get(KnConstants.UPM_JOB_STATUS.NEW.Value())) {
                     newJobsMap = jobNotifyDTOS.get(KnConstants.UPM_JOB_STATUS.NEW.Value());
                 }
-                if (newJobsMap == null || newJobsMap.isEmpty()) {
-                    knLogger.info(methodName, "ASYNC_JOB_NOTIFY has no NEW (status=0) jobs. KnUPMJob.executeJob will not run.");
-                } else {
-                    LinkedHashMap<String, KnAsyncJobDTO> dbJobs = generalCacheUtil.getNewJobs(jobsToBePulled, newJobsMap);
-                    if (dbJobs != null && !dbJobs.isEmpty()) {
-                        knLogger.info(methodName, "dbjobs txnIds", dbJobs.keySet());
-                        newJobs.putAll(dbJobs);
-                    } else {
-                        knLogger.info(methodName, "getNewJobs returned empty for corps", newJobsMap.keySet());
-                    }
+                LinkedHashMap<String, KnAsyncJobDTO> dbJobs = generalCacheUtil.getNewJobs(jobsToBePulled, newJobsMap);
+                if (dbJobs != null && !dbJobs.isEmpty()) {
+                    knLogger.debug(methodName, "dbjobs txnIds", dbJobs.keySet());
+                    newJobs.putAll(dbJobs);
                 }
-                knLogger.info(methodName, "newJobs", newJobs);
+                knLogger.debug(methodName, "newJobs", newJobs);
                 knLogger.info(methodName, "Total threads -",JOB_THREAD_POOL_SIZE,"busy threads - ", newJobs.size(),"ideal threads - ",jobsToBePulled);
             }else {
                 knLogger.info(methodName, "jobs already available in new jobs", newJobs.keySet());
@@ -98,14 +92,8 @@ public class KnUPMJobMonitor implements Runnable, IStatusMgrNotifyIntf {
                      */
 
                     if (queueSize < 5 && isValidUpmJob(upmJobNotifyDTO.getOpType())) {
-                        knLogger.info(methodName, "submitting KnUPMJob.executeJob txnId=", txnId,
-                                " opType=", upmJobNotifyDTO.getOpType());
                         generalCacheUtil.updateAsyncJobStatus(txnId, KnConstants.UPM_JOB_STATUS.INPROGRESS.Value());
                         executor.submit(upmJob);
-                    } else {
-                        knLogger.info(methodName, "skip submit KnUPMJob txnId=", txnId,
-                                " opType=", upmJobNotifyDTO.getOpType(), " queueSize=", queueSize,
-                                " isValidUpmJob=", isValidUpmJob(upmJobNotifyDTO.getOpType()));
                     }
                     Thread.sleep(1000);
                     itr.remove();

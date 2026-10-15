@@ -17,14 +17,17 @@ import com.kodiak.logger.KnLogger;
 import com.kodiak.utilities.statusmgr.IStatusMgrNotifyIntf;
 import com.kodiak.utilities.statusmgr.KnStatusManagerClient;
 import com.kodiak.utilities.statusmgr.utils.KnStatusMgrConstants;
+import com.kodiak.xdms.server.corpmgmt.business.KnCorpBOException;
+import com.kodiak.xdms.server.corpmgmt.business.helper.KnCorpCommonInfoUtil;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-
+import java.util.Map;
 public class KnLargeGroupRecovery implements Runnable, IStatusMgrNotifyIntf {
 
     private static final KnLogger knLogger = KnLogger.getLogger(KnLargeGroupRecovery.class);
@@ -80,21 +83,34 @@ public class KnLargeGroupRecovery implements Runnable, IStatusMgrNotifyIntf {
         knLogger.info("isLargeGroupRecovery ");
     }
 
+    private Map<Integer, Integer> buildGroupTypeThresholdMap(KnPersisterTxn persisterTxn) {
+        String methodName = "buildGroupTypeThresholdMap(KnPersisterTxn)";
+        try {
+            return KnCorpCommonInfoUtil.getGroupTypeThresholdMap(pttServerId, persisterTxn);
+        } catch (KnCorpBOException e) {
+            knLogger.error(methodName, "Failed to load group-type thresholds from DG.XDMS_SVC_CONFIG - ", e);
+            return Collections.emptyMap();
+        }
+    }
+
     private void startLargeGroupRecoverAudit() throws KnPersistenceException {
-        String methodName = "printLargeGroupQueryResults";
-        KnLogger knLogger = KnLogger.getLogger(KnLargeGroupRecovery.class);
+        String methodName = "startLargeGroupRecoverAudit";
         KnPersisterTxn persisterTxn = KnPersisterTxn.getPersisterTxn();
         Connection connection;
-        String query1 = "SELECT CORPGROUPID, MEMBERCOUNT FROM DG.CORPGROUPMEMBERCOUNT " +
-                "WHERE CORPGROUPID IN (SELECT CORPGROUPID FROM DG.CORPGROUPINFO WHERE IS_LARGEGROUP='1') " +
-                "AND MEMBERCOUNT <= 250";
 
-        String query2 = "SELECT CORPGROUPID, MEMBERCOUNT FROM DG.CORPGROUPMEMBERCOUNT " +
-                "WHERE CORPGROUPID IN (SELECT CORPGROUPID FROM DG.CORPGROUPINFO WHERE IS_LARGEGROUP='0') " +
-                "AND MEMBERCOUNT > 250";
+        String downgradeSelect = "SELECT FIRST 100 mc.CORPGROUPID, mc.MEMBERCOUNT "
+                + "FROM DG.CORPGROUPMEMBERCOUNT mc "
+                + "INNER JOIN DG.CORPGROUPINFO info ON mc.CORPGROUPID = info.CORPGROUPID "
+                + "WHERE info.IS_LARGEGROUP = '1' AND info.GROUPTYPE = ? AND mc.MEMBERCOUNT < ?";
+
+        String upgradeSelect = "SELECT FIRST 100 mc.CORPGROUPID, mc.MEMBERCOUNT "
+                + "FROM DG.CORPGROUPMEMBERCOUNT mc "
+                + "INNER JOIN DG.CORPGROUPINFO info ON mc.CORPGROUPID = info.CORPGROUPID "
+                + "WHERE info.IS_LARGEGROUP = '0' AND info.GROUPTYPE = ? AND mc.MEMBERCOUNT > ?";
 
         String updateToZero = "UPDATE DG.CORPGROUPINFO SET IS_LARGEGROUP='0' WHERE CORPGROUPID=?";
-        String updateToOne = "UPDATE DG.CORPGROUPINFO SET IS_LARGEGROUP='1' WHERE CORPGROUPID=?";
+        String updateToOne  = "UPDATE DG.CORPGROUPINFO SET IS_LARGEGROUP='1' WHERE CORPGROUPID=?";
+
 
         persisterTxn.open();
         try {
@@ -103,38 +119,50 @@ public class KnLargeGroupRecovery implements Runnable, IStatusMgrNotifyIntf {
             throw new RuntimeException(e);
         }
 
-        try (PreparedStatement stmt1 = connection.prepareStatement(query1);
-             PreparedStatement stmt2 = connection.prepareStatement(query2);
+        Map<Integer, Integer> groupTypeThresholdMap = buildGroupTypeThresholdMap(persisterTxn);
+
+        try (PreparedStatement downgradeStmt    = connection.prepareStatement(downgradeSelect);
+             PreparedStatement upgradeStmt      = connection.prepareStatement(upgradeSelect);
              PreparedStatement updateStmtToZero = connection.prepareStatement(updateToZero);
-             PreparedStatement updateStmtToOne = connection.prepareStatement(updateToOne)) {
+             PreparedStatement updateStmtToOne  = connection.prepareStatement(updateToOne)) {
 
-            knLogger.info(methodName, "Executing Query 1: " + query1);
-            try (ResultSet rs1 = stmt1.executeQuery()) {
-                while (rs1.next()) {
-                    String corpGroupId = rs1.getString("CORPGROUPID");
-                    knLogger.info(methodName, "Query 1 Result - CORPGROUPID: " + corpGroupId +
-                            ", MEMBERCOUNT: " + rs1.getInt("MEMBERCOUNT"));
+            for (Map.Entry<Integer, Integer> entry : groupTypeThresholdMap.entrySet()) {
+                int groupType = entry.getKey();
+                int threshold = entry.getValue();
 
-                    // Update IS_LARGEGROUP to 0
-                    updateStmtToZero.setString(1, corpGroupId);
-                    updateStmtToZero.executeUpdate();
-                    knLogger.info(methodName, "Updated IS_LARGEGROUP to 0 for CORPGROUPID: " + corpGroupId);
+                knLogger.info(methodName, "Auditing GROUPTYPE=", groupType, " threshold=", threshold);
+
+                downgradeStmt.setInt(1, groupType);
+                downgradeStmt.setInt(2, threshold);
+                try (ResultSet rs = downgradeStmt.executeQuery()) {
+                    while (rs.next()) {
+                        int corpGroupId = rs.getInt("CORPGROUPID");
+                        int memberCount = rs.getInt("MEMBERCOUNT");
+                        knLogger.info(methodName, "Downgrade candidate GROUPTYPE=", groupType,
+                                " CORPGROUPID=", corpGroupId, " MEMBERCOUNT=", memberCount);
+
+                        updateStmtToZero.setInt(1, corpGroupId);
+                        updateStmtToZero.executeUpdate();
+                        knLogger.info(methodName, "Updated IS_LARGEGROUP to 0 for CORPGROUPID: ", corpGroupId);
+                    }
+                }
+
+                upgradeStmt.setInt(1, groupType);
+                upgradeStmt.setInt(2, threshold);
+                try (ResultSet rs = upgradeStmt.executeQuery()) {
+                    while (rs.next()) {
+                        int corpGroupId = rs.getInt("CORPGROUPID");
+                        int memberCount = rs.getInt("MEMBERCOUNT");
+                        knLogger.info(methodName, "Upgrade candidate GROUPTYPE=", groupType,
+                                " CORPGROUPID=", corpGroupId, " MEMBERCOUNT=", memberCount);
+
+                        updateStmtToOne.setInt(1, corpGroupId);
+                        updateStmtToOne.executeUpdate();
+                        knLogger.info(methodName, "Updated IS_LARGEGROUP to 1 for CORPGROUPID: ", corpGroupId);
+                    }
                 }
             }
 
-            knLogger.info(methodName, "Executing Query 2: " + query2);
-            try (ResultSet rs2 = stmt2.executeQuery()) {
-                while (rs2.next()) {
-                    String corpGroupId = rs2.getString("CORPGROUPID");
-                    knLogger.info(methodName, "Query 2 Result - CORPGROUPID: " + corpGroupId +
-                            ", MEMBERCOUNT: " + rs2.getInt("MEMBERCOUNT"));
-
-                    // Update IS_LARGEGROUP to 1
-                    updateStmtToOne.setString(1, corpGroupId);
-                    updateStmtToOne.executeUpdate();
-                    knLogger.info(methodName, "Updated IS_LARGEGROUP to 1 for CORPGROUPID: " + corpGroupId);
-                }
-            }
             persisterTxn.save();
 
         } catch (SQLException | KnPersistenceException e) {

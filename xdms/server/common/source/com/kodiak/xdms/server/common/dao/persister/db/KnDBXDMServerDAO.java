@@ -4778,6 +4778,7 @@ public class KnDBXDMServerDAO implements IXDMServerDAO, IStatusMgrNotifyIntf {
                 }
             }
             knLogger.debug( methodName, "Now executing update query- " , QRY_UPDATE_TGSC_MODE);
+            KnDbUtil.closePreparedStatement(pstmt);
             pstmt = conn.prepareStatement(QRY_UPDATE_TGSC_MODE);
             for (String mdn : tgscEtagMap.keySet()) {
                 mdn = mdn.trim();

@@ -98,6 +98,8 @@ public class KnSMSUtil {
         String methodName = "sendSMS(KnSMSDTO,KnPersisterTxn)";
         knLogger.debug( methodName, "proSMS DTO ", provSMSDTO);
         boolean tlvInsertStatus = false;
+        PreparedStatement pStmt = null;
+        Connection conn2 = null;
         try {
             int srcSubsystem = SRC_SUB_SYSTEM;
             int recipientType = provSMSDTO.getRecipientType();
@@ -117,10 +119,7 @@ public class KnSMSUtil {
             }
             long insertionTimeStamp = System.currentTimeMillis() / 1000;
             Connection conn = null;
-            Connection conn2 = null;
             int sequeceNum = 0;
-            ResultSet rs;
-            PreparedStatement pStmt = null;
             KnDBConfigInfo dbConfigInfo = KnDbUtil.getDBConfigInfo();
             String localPttId = dbConfigInfo.getLocalPttId();
 
@@ -160,9 +159,6 @@ public class KnSMSUtil {
             int result = pStmt.executeUpdate();
             tlvInsertStatus = true;
             knLogger.debug( methodName, "Query: Executed with result ", result);
-            if (conn2 != null) {
-				conn2.close();
-			}
             if (ownedTxn) {
                 knLogger.debug( methodName, "Saving the transaction ");
                 persisterTxn.save();
@@ -175,6 +171,8 @@ public class KnSMSUtil {
             knLogger.error( methodName, "Unexpected Exception occurred -  ", e.getMessage());
             rollback(persisterTxn);
         } finally {
+            KnDbUtil.closeStatement(pStmt);
+            KnDbUtil.closeConnection(conn2);
             knLogger.info( methodName, "EXIT: PROV-SMS Send Notification ");
         }
         return tlvInsertStatus;

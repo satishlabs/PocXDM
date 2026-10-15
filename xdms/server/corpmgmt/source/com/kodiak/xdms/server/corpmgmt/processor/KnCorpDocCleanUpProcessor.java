@@ -375,6 +375,9 @@ public class KnCorpDocCleanUpProcessor {
                         } else if ((groupDetailsMap.get(entry.getKey()).getGroupType()) == KnConstants.DISPATCH_GROUP &&
                                 memCount <= corpProfile.getMaxMembersPerDispatchGroup() && groupDetailsMap.get(entry.getKey()).isLargeGroup()) {
                             isLargeGrpDisable.put(entry.getKey(), 0);
+                        } else if ((groupDetailsMap.get(entry.getKey()).getGroupType()) == KnConstants.BROADCAST_GROUP &&
+                                memCount <= corpProfile.getMaxMemPerBCGrp() && groupDetailsMap.get(entry.getKey()).isLargeGroup()) {
+                            isLargeGrpDisable.put(entry.getKey(), 0);
                         }
                     }
                     if (!isLargeGrpDisable.isEmpty()) {
