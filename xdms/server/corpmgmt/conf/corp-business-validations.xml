@@ -760,6 +760,8 @@ Motorola Solutions Confidential Restricted
                                  enabled="true" consolidate-dtos="true" throw-on="false"/>
                 <validation-rule id="GroupMembershipChecker" validator-id="GroupMembershipValidator"
                                  enabled="true" consolidate-dtos="true" throw-on="false"/>
+                <validation-rule id="sharedCorpFanValidation" validator-id="KnCorpGroupSharedFanValidation"
+                                 enabled="true" throw-on="true"/>
                <!--  <validation-rule id="MinGrpMemberCountChecker" validator-id="MinGrpMemberCountValidator" throw-on="false"
                                  enabled="true"/> -->
                 <validation-rule id="MaxGroupsPerMemberCountChecker" validator-id="MaxGroupsPerMemberCountValidator"
@@ -952,6 +954,8 @@ Motorola Solutions Confidential Restricted
                 <validation-rule id="InterOPCountChecker" validator-id="InterOPCountValidator"
                                  throw-on="false"
                                  enabled="true"/>
+                <validation-rule id="sharedCorpFanValidation" validator-id="KnCorpGroupSharedFanValidation"
+                                 enabled="true" throw-on="true"/>
                 <validation-rule id="MaxGroupTypeChangeCountChecker" validator-id="MaxGroupTypeChangeCountValidator"
                                  throw-on="false"
                                  enabled="true"/>
@@ -1425,6 +1429,8 @@ Motorola Solutions Confidential Restricted
 		        throw-on="false" />
 		        <validation-rule id="GroupTypeChecker" validator-id="McxGroupTypeValidator" enabled="true" throw-on="false"/>
 		        <validation-rule id="MaxGroupsPerGrpMdnChecker" validator-id="MaxGroupsPerGrpMdnValidator" enabled="true" throw-on="false"/>
+                <validation-rule id="sharedCorpFanValidation" validator-id="KnCorpGroupSharedFanValidation"
+                                 enabled="true" throw-on="true"/>
         
                 <validation-rule id="MemberClientTypeCheck" validator-id="MemberClientTypeValidator"
                                  enabled="true" throw-on="false">
@@ -2285,6 +2291,8 @@ Motorola Solutions Confidential Restricted
                 <validation-rule id="sharedCorpTrustMatrixValidator" validator-id="sharedCorpTrustMatrixValidator" enabled="true" throw-on="true"/>
                 <validation-rule id="grpSharingModifyValidator" validator-id="grpSharingModifyValidator" enabled="true" throw-on="false"/>
                 <validation-rule id="ugwInteropFlagCheck" validator-id="ugwInteropFlagValidator" enabled="true" throw-on="true"/>
+                <validation-rule id="sharedCorpFanValidation" validator-id="KnCorpGroupSharedFanValidation"
+                                 enabled="true" throw-on="true"/>
             </operation>
             <operation id="deleteGrpProfileGroupList"
                        dto-type="com.kodiak.xdms.server.corpmgmt.dto.persistdat.KnCorpGroupProfilePersistDTO"
@@ -3334,6 +3342,10 @@ Motorola Solutions Confidential Restricted
         </validator>
         <validator id="grpSharingModifyValidator"
                    class-name="com.kodiak.xdms.server.corpmgmt.business.validator.rules.groupsharing.KnGroupSharingModifyValidator"
+                   dto-type="com.kodiak.xdms.server.corpmgmt.dto.persistdat.KnCorpGroupInfoPersistDTO">
+        </validator>
+        <validator id="KnCorpGroupSharedFanValidation"
+                   class-name="com.kodiak.xdms.server.corpmgmt.business.validator.rules.groupsharing.KnCorpGroupSharedFanValidation"
                    dto-type="com.kodiak.xdms.server.corpmgmt.dto.persistdat.KnCorpGroupInfoPersistDTO">
         </validator>
         <validator id="SharedCorpMembersValidator"

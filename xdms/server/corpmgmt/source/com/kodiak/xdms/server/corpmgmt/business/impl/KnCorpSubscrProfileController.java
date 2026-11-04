@@ -1950,7 +1950,7 @@ public class KnCorpSubscrProfileController implements ICorpSubscrProfileControll
                 throw new KnCorpBOException(com.kodiak.xdms.server.corpmgmt.resources.KnErrorCodes.BOEntity.INVALID_SUBSCRIPTION_TYPE, "Invalid Corp Subscriber");
             }
             // UCSPROVCONFIG-11083 - Amper Gateway clients are restricted to be AU.
-            boolean isAuthMdnAmGwClient = KnGeneralUtil.getFeatureBitValue(subscProfile.getSubscriberFS2(), 137);
+            boolean isAuthMdnAmGwClient = KnGeneralUtil.getFeatureBitValue(subscProfile.getActiveFS2(), 137);
             if (isAuthMdnAmGwClient) {
                 knLogger.error(methodName, "Amper Gateway client not allowed as AU. MDN - ",
                         KnGDPRTemplate.mdn(authorizedMdn));
@@ -2964,11 +2964,11 @@ public class KnCorpSubscrProfileController implements ICorpSubscrProfileControll
             //UCSPROVCONFIG-11084
             if (!contactAsDest.isEmpty()) {
                 // Check if the requesting MDN is an Amper Gateway Client
-                boolean isRequestMdnAmGwClient = KnGeneralUtil.getFeatureBitValue(subscProfile.getSubscriberFS2(), 137);
+                boolean isRequestMdnAmGwClient = KnGeneralUtil.getFeatureBitValue(subscProfile.getActiveFS2(), 137);
                 emergencyMcpttFeaturePersistDTO.setRequestMdnIsAmGw(isRequestMdnAmGwClient);
 
                 // Check if any destination MDN is an Amper Gateway Client
-                Map<String, String> destMdnMap = contactInfoUtil.getSubscriberFs2(contactAsDest, xdmsHome, persisterTxn);
+                Map<String, String> destMdnMap = contactInfoUtil.getActiveFs2(contactAsDest, xdmsHome, persisterTxn);
                 for (Map.Entry<String, String> entry : destMdnMap.entrySet()) {
                     if (KnGeneralUtil.getFeatureBitValue(entry.getValue(), 137)) {
                         emergencyMcpttFeaturePersistDTO.setDestMdnIsAmGw(true);

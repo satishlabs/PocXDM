@@ -169,6 +169,7 @@ public class KnCorpProfileInfoDTO {
     private String catAccessPermUpdateTS;
     private int largeAgencyDispatch;
     private int emergConfigTimerFeature;
+    private boolean bulkGrpUsrExportFlag;
 
     public int getPocGwSynEnable() {
         return pocGwSynEnable;
@@ -874,7 +875,12 @@ public class KnCorpProfileInfoDTO {
         this.emergConfigTimerFeature = emergConfigTimerFeature;
     }
 
-
+    public boolean getBulkGrpUsrExportFlag() {
+        return bulkGrpUsrExportFlag;
+    }
+    public void setBulkGrpUsrExportFlag(boolean bulkGrpUsrExportFlag) {
+        this.bulkGrpUsrExportFlag = bulkGrpUsrExportFlag;
+    }
 
     @Override
     public String toString() {
@@ -965,6 +971,7 @@ public class KnCorpProfileInfoDTO {
                 ", catAccessPermUpdateTS =" + catAccessPermUpdateTS +
                 ", largeAgencyDispatch =" + largeAgencyDispatch +
                 ", emergConfigTimerFeature =" + emergConfigTimerFeature +
+                ", bulkGrpUsrExportFlag =" + bulkGrpUsrExportFlag +
                 '}';
     }
 }

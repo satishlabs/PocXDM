@@ -4048,7 +4048,7 @@ public class KnXDMCommonMediator {
                 if (subscriberServiceAuthStatus != null
                         && com.kodiak.xdms.server.common.resources.KnConstants.SERVICE_AUTH_STATUS.MARKED_FOR_ASYNC_DELETION.value() == subscriberServiceAuthStatus) {
                     knLogger.error(methodName, "Inactive subscriber deletion in-progress for MDN=",currentMdn, " ServiceAuthStatus: ", subscriberServiceAuthStatus);
-                    throw new KnProvBOException(com.kodiak.xdms.server.subsmgmt.resources.KnErrorCodes.Validator.INACTIVE_SUBSCRIBER_DELETE_IN_PROGRESS, "Inactive subscriber deletion in-progress for MDN: " + currentMdn
+                    throw new KnProvBOException(com.kodiak.xdms.server.subsmgmt.resources.KnErrorCodes.BOEntity.SUBSCRIBER_INFO_NOT_FOUND, currentMdn
                     );
                 }
             }

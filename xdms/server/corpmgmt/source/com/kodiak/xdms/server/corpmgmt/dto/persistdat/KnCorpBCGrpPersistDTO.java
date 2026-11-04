@@ -132,6 +132,8 @@ public class KnCorpBCGrpPersistDTO extends KnCorpGroupInfoDTO implements IPersis
     private Map<String,Integer> extIntCorpIdMap;
     private Map<Integer, KnCorpTrustMatrixDTO> trustMatrixMap;
     private int groupCorpId;
+    private List<Integer> removedSharedCorpIds;
+    private Map<Integer, List<Integer>> sharedCorpFanMap;
     private String systemMaxAllowedPreConfigGroup;
     private Integer dbPreConfiguredGroupCount;
     private Integer dbIsPreConfiguredGroup;
@@ -635,6 +637,23 @@ public class KnCorpBCGrpPersistDTO extends KnCorpGroupInfoDTO implements IPersis
 
     public void setExistingGrpMemDetail(List<KnCorpGroupMemberDTO> existingGrpMemDetail) {
         this.existingGrpMemDetail = existingGrpMemDetail;
+    }
+
+    public List<Integer> getRemovedSharedCorpIds() {
+        return removedSharedCorpIds;
+    }
+
+    public void setRemovedSharedCorpIds(List<Integer> removedSharedCorpIds) {
+        this.removedSharedCorpIds = removedSharedCorpIds;
+    }
+
+
+    public Map<Integer, List<Integer>> getSharedCorpFanMap() {
+        return sharedCorpFanMap;
+    }
+
+    public void setSharedCorpFanMap(Map<Integer, List<Integer>> sharedCorpFanMap) {
+        this.sharedCorpFanMap = sharedCorpFanMap;
     }
 
     public Map<String, Integer> getExtIntCorpIdMap() {

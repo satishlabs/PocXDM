@@ -79,6 +79,18 @@ public class KnCorpSubsProvInfoUtil {
         }
     }
 
+    public Map<Integer, List<Integer>> getFanDetails(Set<Integer> fanIds, String xdmsHome, KnPersisterTxn persisterTxn) throws KnCorpBOException {
+        final String methodName = "getFanDetails(fanIds, xdmsHome, persisterTxn)";
+        knLogger.debug(methodName, "ENTRY : fanIds - ", fanIds);
+        try {
+            KnCorpXdmDAO corpXdmDao = new KnCorpXdmDAO(xdmsHome);
+            return corpXdmDao.getFanDetails(fanIds, persisterTxn);
+        } catch (KnDAOException e) {
+            knLogger.error(methodName, "KnDAOException occured while getting fan details - ", e);
+            throw new KnCorpBOException(e.getErrorCode(), e.getErrorMessage(), e);
+        }
+    }
+
     public void updateSubscrProfiles(Map<String, KnCorpSubscriberDTO> updateSubscrMap, String xdmsHome, KnPersisterTxn
             persisterTxn) throws KnCorpBOException{
         ICorpXdmDAO corpXdmDao = new KnCorpXdmDAO(xdmsHome);

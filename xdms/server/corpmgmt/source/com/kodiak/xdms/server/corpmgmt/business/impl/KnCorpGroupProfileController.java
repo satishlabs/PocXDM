@@ -669,6 +669,14 @@ public class KnCorpGroupProfileController implements ICorpGroupProfileController
 					}
 				}
 			}
+			List<Integer> removedSharedCorpIds = new ArrayList<>(markingCorpIds);
+			if (groupProfileIPDto.getSharedCorpList() != null) {
+				groupProfileIPDto.getSharedCorpList().forEach(item -> removedSharedCorpIds.remove(Integer.valueOf(item.getCorpId())));
+			}
+			groupProfilePersistDTO.setRemovedSharedCorpIds(removedSharedCorpIds);
+			groupProfilePersistDTO.setSharedCorpFanMap(groupInfoUtil.getSharedCorpFanInfo(null, new ArrayList<>(allGroupMap.keySet()), xdmsHome, persisterTxn));
+			knLogger.debug(methodName, "removedSharedCorpIds - ", removedSharedCorpIds,
+					", sharedCorpFanMap - ", groupProfilePersistDTO.getSharedCorpFanMap());
 		}
 
 			knLogger.debug(methodName, "Before Validation", groupProfilePersistDTO);

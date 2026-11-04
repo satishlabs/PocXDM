@@ -459,6 +459,8 @@ public class KnConstants {
     public static final String DAO_EXCEPTION_OCCURED = "DAO Exception occurred - ";
     //TP constants
     public static final String DELIM = ":";
+    public static final String XDM_INTRSVC_TLS_FLAG = "XDM_INTRSVC_TLS_FLAG";
+    public static final String HTTPS_PORT = "443";
 
     //Added for 8.1.2 release
     public static final String XDMS_LMR_SUB_DEFAULT_NAME = "XDMS_LMR_SUB_DEFAULT_NAME";

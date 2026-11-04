@@ -288,7 +288,14 @@ public class KnProvCreateSubscProcessor {
                 subsProvPersistDTO.setExtCorpId(extCorpId);
             }
 
-            subsProvPersistDTO.setAccountId(subsProvInputDTO.getAccountId());
+            String accountIdCreate = subsProvInputDTO.getAccountId();
+            if (accountIdCreate != null) {
+                accountIdCreate = accountIdCreate.trim();
+                if (accountIdCreate.isEmpty()) {
+                    accountIdCreate = null;
+                }
+            }
+            subsProvPersistDTO.setAccountId(accountIdCreate);
             subsProvPersistDTO.setAffiliateId(subsProvInputDTO.getAffiliateId());
             subsProvPersistDTO.setPayType(subsProvInputDTO.getPayType());
             subsProvPersistDTO.setRoamingTypes(subsProvInputDTO.getRoamingTypes());

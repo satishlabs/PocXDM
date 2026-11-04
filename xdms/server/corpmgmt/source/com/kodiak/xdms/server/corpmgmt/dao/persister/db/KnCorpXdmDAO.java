@@ -9294,6 +9294,12 @@ public class KnCorpXdmDAO implements ICorpXdmDAO {
         return pocSubscInfoDAO.getFanDetailsByCorporateId(corpId, persisterTxn, readyOnly);
     }
 
+    public Map<Integer, List<Integer>> getFanDetails(Set<Integer> fanIds, KnPersisterTxn persisterTxn) throws KnDAOException {
+        KnXDMSubscriberInfoDAO pocSubscInfoDAO = KnCorpDBTablesRegistry.getDBXdmTableRegistry().
+                createXDMSubscriberInfoDAO(pttServerId);
+        return pocSubscInfoDAO.getFanDetails(fanIds, persisterTxn);
+    }
+
     public Map<Integer,String> getBanDetailsByCorporateId(int corpId, KnPersisterTxn persisterTxn, boolean readyOnly) throws KnDAOException {
         KnXDMSubscriberInfoDAO pocSubscInfoDAO = KnCorpDBTablesRegistry.getDBXdmTableRegistry().
                 createXDMSubscriberInfoDAO(pttServerId);
@@ -9961,12 +9967,12 @@ public class KnCorpXdmDAO implements ICorpXdmDAO {
         knLogger.debug(methodName, "POC Home updated successfully");
     }
 
-    public Map<String, String> getSubscriberFs2(Collection<String> mdns, KnPersisterTxn persisterTxn) throws KnDAOException {
-        final String methodName = "getSubscriberFs2(Collection<String>,KnPersisterTxn) ";
+    public Map<String, String> getActiveFs2(Collection<String> mdns, KnPersisterTxn persisterTxn) throws KnDAOException {
+        final String methodName = "getActiveFs2(Collection<String>,KnPersisterTxn) ";
         knLogger.debug(methodName, "ENTRY: ");
         KnXDMSubscriberInfoDAO subscriberTable = KnCorpDBTablesRegistry.getDBXdmTableRegistry().
                 createXDMSubscriberInfoDAO(pttServerId);
-        Map<String, String> subscriberFs2 = subscriberTable.getSubscriberFs2(mdns, persisterTxn);
+        Map<String, String> subscriberFs2 = subscriberTable.getActiveFs2(mdns, persisterTxn);
         knLogger.debug(methodName, "EXIT Point.");
         return subscriberFs2;
     }

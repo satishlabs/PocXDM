@@ -2418,6 +2418,14 @@ public class KnCorpGroupInfoController implements ICorpGroupInfoController {
                 groupPersistDTO.setGrpSharedModified(grpSharedModified);
                 groupPersistDTO.setGrpShared(grpBasicInfo.getGrpShared());
             }
+            List<Integer> removedSharedCorpIds = new ArrayList<>(sharedCorpIds);
+            if (groupInfoDTO.getCorpSharedCorpInfoList() != null) {
+                groupInfoDTO.getCorpSharedCorpInfoList().forEach(item -> removedSharedCorpIds.remove(Integer.valueOf(item.getCorpId())));
+            }
+            groupPersistDTO.setRemovedSharedCorpIds(removedSharedCorpIds);
+            groupPersistDTO.setSharedCorpFanMap(groupInfoUtil.getSharedCorpFanInfo(grpId, null, xdmsHome, persisterTxn));
+            knLogger.debug(methodName, "removedSharedCorpIds - ", removedSharedCorpIds,
+                    ", sharedCorpFanMap - ", groupPersistDTO.getSharedCorpFanMap());
             groupPersistDTO.setExistingGrpMemDetail(new ArrayList<>(grpMemberMap.values()));
             Map<Integer, KnCorpTrustMatrixDTO> trustMatrixMap = corpUserProfileUtil.getTrustMatrixMap(corpProfile.getExtCorpId(),
                     generalCacheUtil, commonInfoUtil, xdmsHome, persisterTxn);
@@ -10566,6 +10574,14 @@ public class KnCorpGroupInfoController implements ICorpGroupInfoController {
                     }
                 }
             }
+            List<Integer> removedSharedCorpIds = new ArrayList<>(bcMarkingCorpIds);
+            if (groupInfoDTO.getCorpSharedCorpInfoList() != null) {
+                groupInfoDTO.getCorpSharedCorpInfoList().forEach(item -> removedSharedCorpIds.remove(Integer.valueOf(item.getCorpId())));
+            }
+            bcGrpPersistDTO.setRemovedSharedCorpIds(removedSharedCorpIds);
+            bcGrpPersistDTO.setSharedCorpFanMap(groupInfoUtil.getSharedCorpFanInfo(grpId, null, xdmsHome, persisterTxn));
+            knLogger.debug(methodName, "bc removedSharedCorpIds - ", removedSharedCorpIds,
+                    ", sharedCorpFanMap - ", bcGrpPersistDTO.getSharedCorpFanMap());
 
             bcGrpPersistDTO.setIsPreConfiguredGroup(groupInfoDTO.getIsPreConfiguredGroup());
             bcGrpPersistDTO.setDbIsPreConfiguredGroup(grpBasicInfo.getIsPreConfiguredGroup());
@@ -13953,6 +13969,12 @@ public class KnCorpGroupInfoController implements ICorpGroupInfoController {
                     }
                 }
             }
+            List<Integer> removedSharedCorpIds = new ArrayList<>(sharedCorpIds);
+            if (groupInfoDTO.getCorpSharedCorpInfoList() != null) {
+                groupInfoDTO.getCorpSharedCorpInfoList().forEach(item -> removedSharedCorpIds.remove(Integer.valueOf(item.getCorpId())));
+            }
+            groupPersistDTO.setRemovedSharedCorpIds(removedSharedCorpIds);
+            groupPersistDTO.setSharedCorpFanMap(groupInfoUtil.getSharedCorpFanInfo(grpId, null, xdmsHome, persisterTxn));
 
             knLogger.debug(methodName, "groupListIds - ",grpBasicInfo.getGroupListId());
             Collection<KnCorpSubscriberDTO> privateSublistDetails = contactInfoUtil.

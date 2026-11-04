@@ -93,8 +93,14 @@ public class KnCorpUpdateSubscProcessor {
             int corpId = Integer.parseInt(corpSubsRequestDTO.getCorpId());
             respDTO.setCorpId(corpId);
 
-            KnCorpProfileDTO corpProfile = commonInfoUtil.getProfileDetails("" + subsProfile.getCorpId(), CORP_PROFILE,
-                    false, persisterTxn);
+            KnCorpProfileDTO corpProfile = null;
+            int subscriberCorpId = subsProfile.getCorpId();
+            if (subscriberCorpId > 0) {
+                corpProfile = commonInfoUtil.getProfileDetails("" + subscriberCorpId, CORP_PROFILE,
+                        false, persisterTxn);
+            } else {
+                knLogger.info(methodName, "Subscriber is public; corpId is 0, skipping corporate profile lookup for package update");
+            }
 
             //use the xdms home pttServerId from Corp profile
             String xdmsHomePttId = subsProfile.getXdmsHome();

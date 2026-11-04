@@ -454,6 +454,13 @@ public class KnCorpGenericInfoController implements ICorpGenericInfoController {
             profileInfoDto.setEmergConfigTimerFeature(
                     systemEmergConfigTimer.equalsIgnoreCase(ENABLED_STRING) && emergencyBit ? ENABLED : DISABLED);
 
+            //Adding Bulk Group User Export feature
+            boolean bulkGrpUsrExportBit = Optional.ofNullable(corpProfile.getXdmCorpFS2Set())
+                    .map(set -> KnGeneralUtil.getFeatureBitValue(set, XDMCORPFS2_SET.BULK_GRP_USR_EXPORT_FEATURE.value()))
+                    .orElse(false);
+            knLogger.debug(methodName, "Systemlevel Bulk Group User Export value - ", bulkGrpUsrExportBit);
+            profileInfoDto.setBulkGrpUsrExportFlag(bulkGrpUsrExportBit);
+
             respDTO.setProfileInfoDTO(profileInfoDto);
             populate(respDTO);
         } catch (KnCorpBOException e) {

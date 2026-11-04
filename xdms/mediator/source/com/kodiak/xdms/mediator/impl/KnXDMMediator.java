@@ -6438,6 +6438,17 @@ public class KnXDMMediator implements IXDMMediatorIntf {
             // save the transaction
             persisterTxn.save();
             KnStatisticsManagerImpl.getInstance().increment(KnOMConstants.XDM_NUM_EXT_CORP_CONTACT_ADDED);
+        } catch (KnProvException kpe){
+            knLogger.error(methodName, "Auth status validation failed ", "adding external Contact - ", kpe);
+            List<KnXDMFailureRespDTO> failureList = new ArrayList<>();
+            KnXDMFailureRespDTO xdmResp = new KnXDMFailureRespDTO();
+            xdmResp.setFcode(kpe.getErrorCode());
+            xdmResp.setMsg(kpe.getErrorMessage());
+            xdmResp.setAttribute(kpe.getMessage());
+            failureList.add(xdmResp);
+            xdmRespDto.setFailureDetails(failureList);
+            xdmRespDto.setResponseCode(kpe.getErrorCode());
+            xdmRespDto.setResponseMessage(kpe.getErrorMessage());
         } catch (KnPersistenceException e) {
             rollback(persisterTxn);
             knLogger.error(methodName, "KnPersistenceException occured while ", "adding external Contact - ", e);

@@ -6407,6 +6407,40 @@ public class KnXDMSubscriberInfoDAO implements ITableDAO {
         return fanDetails;
     }
 
+    public Map<Integer, List<Integer>> getFanDetails(Set<Integer> fanIds, KnPersisterTxn persisterTxn) throws KnDAOException {
+        String methodName = "getFanDetails(fanIds, persisterTxn)";
+        knLogger.debug(methodName, "Entry : fanIds - ", fanIds);
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        String query = "SELECT FAN_ID,CORPID FROM DG.FAN_DETAILS WHERE FAN_ID IN (FANLIST);";
+        Map<Integer, List<Integer>> fanDetails = new HashMap<Integer, List<Integer>>();
+        try {
+            Connection conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, true);
+            query = replaceContactWithValue(query, "FANLIST", formIntegerCommaSeperatedIdList(fanIds));
+            pstmt = conn.prepareStatement(query);
+            knLogger.debug(methodName, "Executing query - ", query);
+            rs = pstmt.executeQuery();
+            while (rs.next()) {
+                int fanId = rs.getInt(FAN_ID);
+                int corpId = rs.getInt(2);
+                fanDetails.computeIfAbsent(corpId, key -> new ArrayList<Integer>()).add(fanId);
+            }
+            knLogger.debug(methodName, "fanDetails size returned - ", fanDetails.size());
+        } catch (KnDAOException e) {
+            knLogger.error(methodName, "KnDAOException occured while getFanDetails - ", e);
+            throw e;
+        } catch (Exception e) {
+            knLogger.error(methodName, "Unexpected Exception occurred while getFanDetails - ", e);
+            throw KnDbUtil.processException(e, "Failed while getFanDetails -" + e,
+                    pttServerId, "", query);
+        } finally {
+            KnDbUtil.closeResultSet(rs);
+            KnDbUtil.closePreparedStatement(pstmt);
+            knLogger.debug(methodName, "EXIT.");
+        }
+        return fanDetails;
+    }
+
     public Map<Integer, String> getBanDetailsByCorporateId(int corpId, KnPersisterTxn persisterTxn, boolean readOnly) throws KnDAOException {
         String methodName = "getBanDetailsByCorporateId(corpId, persisterTxn)";
         knLogger.debug(methodName, "Entry : corpId - ", corpId);
@@ -6515,8 +6549,8 @@ public class KnXDMSubscriberInfoDAO implements ITableDAO {
         return subscMap;
     }
 
-    public Map<String, String> getSubscriberFs2(Collection<String> mdns, KnPersisterTxn persisterTxn) throws KnDAOException {
-        String methodName = "getSubscriberFs2(Collection<String>, KnPersisterTxn)";
+    public Map<String, String> getActiveFs2(Collection<String> mdns, KnPersisterTxn persisterTxn) throws KnDAOException {
+        String methodName = "getActiveFs2(Collection<String>, KnPersisterTxn)";
         knLogger.info(methodName, "Entry : mdns - ", mdns == null ? mdns : KnGDPRTemplate.mdnList(mdns));
         Map<String, String> subscriberFs2 = new HashMap<>();
         ResultSet rs = null;
@@ -6528,7 +6562,7 @@ public class KnXDMSubscriberInfoDAO implements ITableDAO {
             conn = persisterTxn.getDBConnection(pttServerId, KnDBConst.DataStores.XDM_SHARED_DATA, true);
             var mdnLists = com.kodiak.xdms.server.common.util.KnGeneralUtil.splitList(new ArrayList<>(mdns), KnXDMCorpContactCountDAO.BULK_UPDATE_SIZE);
             for (var subList : mdnLists) {
-                query = queryMapper.getQuery(GET_SUBSCRIBER_FS2);
+                query = queryMapper.getQuery(GET_ACTIVE_FS2);
                 query = replaceContactWithValue(query, MDNLIST, formCommaSeperatedQuesMarks(subList));
                 knLogger.debug(methodName, "query", query);
                 pstmt = conn.prepareStatement(query);
@@ -6538,7 +6572,7 @@ public class KnXDMSubscriberInfoDAO implements ITableDAO {
                 }
                 rs = pstmt.executeQuery();
                 while (rs.next()) {
-                    subscriberFs2.put(rs.getString(MDN).trim(), rs.getString(SUBS_FS2));
+                    subscriberFs2.put(rs.getString(MDN).trim(), rs.getString(ACTIVE_FS2));
                 }
             }
         } catch (SQLException e) {

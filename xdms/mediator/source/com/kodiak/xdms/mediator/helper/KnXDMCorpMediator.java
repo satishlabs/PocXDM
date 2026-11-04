@@ -245,6 +245,7 @@ public class KnXDMCorpMediator {
             xdmRespDto.setCatAccessPermUpdateTS(String.valueOf(corpProfile.getCatAccessPermUpdateTS()));
             xdmRespDto.setLargeAgencyDispatch(String.valueOf(corpProfile.getLargeAgencyDispatch()));
             xdmRespDto.setEmergConfigTimerFeature(String.valueOf(corpProfile.getEmergConfigTimerFeature()));
+            xdmRespDto.setBulkGrpUsrExportFlag(corpProfile.getBulkGrpUsrExportFlag());
             if (KnPersisterConstants.HIERARCHY == corpProfile.getHierarchyType()) {
                 xdmRespDto.setHierarchyEnabled(KnPersisterConstants.TRUE);
             } else {

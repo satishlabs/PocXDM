@@ -153,6 +153,8 @@ public class KnCorpGroupInfoPersistDTO extends KnCorpGroupInfoDTO implements IPe
     private Map<String,Integer> extIntCorpIdMap;
     private Map<Integer, KnCorpTrustMatrixDTO> trustMatrixMap;
     private int groupCorpId;
+    private List<Integer> removedSharedCorpIds;
+    private Map<Integer, List<Integer>> sharedCorpFanMap;
     private Boolean isUPMCall;
     private boolean reachedMaxDispacherAllowedPerMcxGroup;
     private int maxAllowedDispatcherPerMcxGroup;
@@ -969,6 +971,14 @@ public class KnCorpGroupInfoPersistDTO extends KnCorpGroupInfoDTO implements IPe
         this.existingGrpMemDetail = existingGrpMemDetail;
     }
 
+    public List<Integer> getRemovedSharedCorpIds() {
+        return removedSharedCorpIds;
+    }
+
+    public void setRemovedSharedCorpIds(List<Integer> removedSharedCorpIds) {
+        this.removedSharedCorpIds = removedSharedCorpIds;
+    }
+
     public Map<Integer, KnCorpTrustMatrixDTO> getTrustMatrixMap() {
         return trustMatrixMap;
     }
@@ -1103,6 +1113,14 @@ public class KnCorpGroupInfoPersistDTO extends KnCorpGroupInfoDTO implements IPe
 
     public void setCorpIdAndLargeGroupFlagMap(Map<Integer, Integer> corpIdAndLargeGroupFlagMap) {
         this.corpIdAndLargeGroupFlagMap = corpIdAndLargeGroupFlagMap;
+    }
+
+    public Map<Integer, List<Integer>> getSharedCorpFanMap() {
+        return sharedCorpFanMap;
+    }
+
+    public void setSharedCorpFanMap(Map<Integer, List<Integer>> sharedCorpFanMap) {
+        this.sharedCorpFanMap = sharedCorpFanMap;
     }
 
     public Integer getClusterId() {

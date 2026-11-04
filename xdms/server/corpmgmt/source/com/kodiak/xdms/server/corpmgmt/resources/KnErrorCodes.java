@@ -414,6 +414,7 @@ public class KnErrorCodes {
         public static final String MAXIMUM_DISPATCHER_EXCEEDED_FOR_MCX_GROUP = "Validator.KNEC-CP16265";
         public static final String LAST_MEMBER_SUBLIST_UPM_MAP_CHECK = "Validator.KNEC-CP16268";
         public static final String USER_PROFILE_DOESNT_BELONG_TO_MDN = "Validator.KNEC-CP16266";
+        public static final String SHARED_FAN_EXIST_CANNOT_UNSHARE = "Validator.KNEC-CP16324";
 
         //Group Regroup
         public static final String PRECONFIG_GROUP_FEATURE_IS_NOT_ALLOWED = "Validator.KNEC-CP16276";

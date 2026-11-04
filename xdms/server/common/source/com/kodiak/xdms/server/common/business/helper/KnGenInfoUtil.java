@@ -1504,9 +1504,14 @@ public class KnGenInfoUtil implements Observer {
             idmUrl = new StringBuilder();
             String idmFqdn = rtxConfigValues.get(IDM_INTF_INT_FQDN);
             knLogger.debug(methodName, "idmFqdn - ", idmFqdn);
-            String port = rtxConfigValues.get(IDM_WS_FQDN_INT_PORT);
-            knLogger.debug(methodName, "port - ", port);
-            idmUrl.append(idmFqdn).append(COLON).append(port);
+            String intraSvcTlsFlag = rtxConfigValues.get(KnConstants.XDM_INTRSVC_TLS_FLAG);
+            boolean isIntraSvcTlsEnabled = KnConstants.SSL_ENABLED.equals(intraSvcTlsFlag);
+            String scheme = isIntraSvcTlsEnabled ? HTTP_SCHEME_TLS : HTTP_SCHEME;
+            String port = isIntraSvcTlsEnabled
+                    ? HTTPS_PORT
+                    : rtxConfigValues.get(IDM_WS_FQDN_INT_PORT);
+            knLogger.debug(methodName, "intraSvcTlsFlag - ", intraSvcTlsFlag, " scheme - ", scheme, "port - ", port);
+            idmUrl.append(scheme).append(idmFqdn).append(COLON).append(port);
         } catch (KnBOException ex) {
             throw ex;
         }

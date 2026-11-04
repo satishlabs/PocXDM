@@ -3957,12 +3957,12 @@ public class KnCorpContactInfoUtil {
         return corpXdmDao.getSubsMappedSublistList(contactDTOMap, corpListId, persisterTxn,corpId);
     }
 
-    public Map<String, String> getSubscriberFs2(Collection<String> mdns, String pttServerId, KnPersisterTxn persisterTxn) throws KnCorpBOException {
-        final String methodName = "getSubscriberFs2(Collection<String>, String, KnPersisterTxn)";
+    public Map<String, String> getActiveFs2(Collection<String> mdns, String pttServerId, KnPersisterTxn persisterTxn) throws KnCorpBOException {
+        final String methodName = "getActiveFs2(Collection<String>, String, KnPersisterTxn)";
         knLogger.debug(methodName, "ENTRY :");
         try {
             ICorpXdmDAO corpXdmDao = new KnCorpXdmDAO(pttServerId);
-            return corpXdmDao.getSubscriberFs2(mdns, persisterTxn);
+            return corpXdmDao.getActiveFs2(mdns, persisterTxn);
         } catch (KnDAOException e) {
             knLogger.error(methodName, "DAO Exception occured - ", e.getMessage());
             throw new KnCorpBOException(e.getErrorCode(), e.getErrorMessage(), e);

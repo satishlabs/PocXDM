@@ -4811,6 +4811,45 @@ public class KnCorpGroupInfoUtil {
         return groupCorpIdMap;
     }
 
+    public Map<Integer, List<Integer>> getSharedCorpFanInfo(Integer groupId, List<Integer> inpGroupIdList, String xdmshome, KnPersisterTxn persisterTxn) {
+        final String methodName = "getSharedCorpFanInfo(groupId, xdmshome, persisterTxn)";
+        Map<Integer, List<Integer>> result = new HashMap<>();
+        try {
+            knLogger.debug(methodName, "ENTRY : groupId - ", groupId, ", xdmshome - ", xdmshome);
+            List<Integer> groupIdList = new ArrayList<>();
+            if (groupId != null) {
+                groupIdList.add(groupId);
+            }
+            if (inpGroupIdList != null && !inpGroupIdList.isEmpty()) {
+                groupIdList.addAll(inpGroupIdList);
+            }
+            Map<Integer, Integer> groupHierarchyMap = getGroupHierarchyMap(groupIdList, xdmshome, persisterTxn);
+            knLogger.debug(methodName, "groupHierarchyMap - ", groupHierarchyMap);
+
+            List<Integer> fanIds = new ArrayList<>();
+            for (Map.Entry<Integer, Integer> entry : groupHierarchyMap.entrySet()) {
+                if (Integer.valueOf(SHARED_FAN_TYPE).equals(entry.getValue())) {
+                    fanIds.add(entry.getKey());
+                }
+            }
+            knLogger.debug(methodName, "shared fanIds - ", fanIds);
+            if (fanIds.isEmpty()) {
+                knLogger.debug(methodName, "No shared fan ids found. Returning empty map.");
+                return result;
+            }
+
+            Set<Integer> fanIdSet = new HashSet<>(fanIds);
+            KnCorpSubsProvInfoUtil corpSubsProvInfoUtil = new KnCorpSubsProvInfoUtil();
+            result = corpSubsProvInfoUtil.getFanDetails(fanIdSet, xdmshome, persisterTxn);
+            knLogger.debug(methodName, "sharedCorpFanMap - ", result);
+        } catch (KnCorpBOException e) {
+            knLogger.error(methodName, "Failed while fetching shared corp fan info", e);
+        } catch (Exception e) {
+            knLogger.error(methodName, "Unexpected exception while building shared corp fan info", e);
+        }
+        knLogger.debug(methodName, "EXIT.");
+        return result;
+    }
 
     public Map<Integer, KnCorpGroupDTO> getGroupInfoList(int corpId, int gropIdList, String
             xdmsHome, boolean readOnly, KnPersisterTxn persisterTxn)

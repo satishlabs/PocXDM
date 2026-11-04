@@ -57,6 +57,8 @@ public class KnCorpGroupProfilePersistDTO implements IPersistenceDTO {
 	private boolean grpTypeChanged;
 	private Integer grpShared;
 	private List<KnCorpSharedCorpInfo> corpSharedCorpInfoList;
+	private List<Integer> removedSharedCorpIds;
+	private Map<Integer, List<Integer>> sharedCorpFanMap;
 	private Map<String,Integer> extIntCorpIdMap;
 	private List<KnCorpTrustMatrixDTO> trustMatrixDTOList;
 	private boolean grpSharedChanged;
@@ -346,6 +348,14 @@ public class KnCorpGroupProfilePersistDTO implements IPersistenceDTO {
 	public void setCorpSharedCorpInfoList(List<KnCorpSharedCorpInfo> corpSharedCorpInfoList) {
 		this.corpSharedCorpInfoList = corpSharedCorpInfoList;
 	}
+
+	public List<Integer> getRemovedSharedCorpIds() { return removedSharedCorpIds; }
+
+	public void setRemovedSharedCorpIds(List<Integer> removedSharedCorpIds) { this.removedSharedCorpIds = removedSharedCorpIds; }
+
+	public Map<Integer, List<Integer>> getSharedCorpFanMap() { return sharedCorpFanMap; }
+
+	public void setSharedCorpFanMap(Map<Integer, List<Integer>> sharedCorpFanMap) { this.sharedCorpFanMap = sharedCorpFanMap; }
 
 	public Map<String, Integer> getExtIntCorpIdMap() { return extIntCorpIdMap; }
 

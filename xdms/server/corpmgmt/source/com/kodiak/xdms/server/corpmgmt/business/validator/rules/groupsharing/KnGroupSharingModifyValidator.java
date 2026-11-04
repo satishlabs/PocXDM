@@ -13,15 +13,13 @@ import com.kodiak.xdms.server.common.framework.validator.KnValidatorRule;
 import com.kodiak.xdms.server.corpmgmt.business.validator.KnCorpBOValidationException;
 import com.kodiak.xdms.server.corpmgmt.dto.clientdat.KnIPCorpGorupProfileDTO;
 import com.kodiak.xdms.server.corpmgmt.dto.clientdat.KnIPCorpGroupInfoDTO;
-import com.kodiak.xdms.server.corpmgmt.dto.clientdat.KnIPCorpGroupProfileDTO;
 import com.kodiak.xdms.server.corpmgmt.dto.common.KnCorpGroupMemberDTO;
 import com.kodiak.xdms.server.corpmgmt.dto.persistdat.KnCorpBCGrpPersistDTO;
 import com.kodiak.xdms.server.corpmgmt.dto.persistdat.KnCorpGroupInfoPersistDTO;
 import com.kodiak.xdms.server.corpmgmt.dto.persistdat.KnCorpGroupProfilePersistDTO;
 import com.kodiak.xdms.server.corpmgmt.resources.KnErrorCodes;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public class KnGroupSharingModifyValidator extends KnValidatorRule {
 
@@ -37,117 +35,102 @@ public class KnGroupSharingModifyValidator extends KnValidatorRule {
     public void validate() throws KnValidationException, KnBOException {
         final String methodName = "validate()";
         IPersistenceDTO persistDTO = getDTO();
-        List<String> invalidMdnList = new ArrayList<>();
+        knLogger.debug(methodName, "ENTRY : dtoType - ", persistDTO != null ? persistDTO.getClass().getName() : null);
         if (persistDTO instanceof KnCorpGroupInfoPersistDTO) {
             KnCorpGroupInfoPersistDTO groupPersistDTO = (KnCorpGroupInfoPersistDTO) persistDTO;
             if (groupPersistDTO.getInputDTO() instanceof KnIPCorpGroupInfoDTO) {
                 KnIPCorpGroupInfoDTO groupInfoDTO = (KnIPCorpGroupInfoDTO) groupPersistDTO.getInputDTO();
+                knLogger.debug(methodName, "DTO - KnCorpGroupInfoPersistDTO, removedSharedCorpIds - ",
+                        groupPersistDTO.getRemovedSharedCorpIds(), ", corpContactExternalMdns - ",
+                        groupPersistDTO.getCorpContactExternalMdns());
                 if (groupPersistDTO.isGrpSharedModified() && groupInfoDTO.getGrpShared() == 0) {
-                    knLogger.debug(methodName, "GrpShared modifying to disable");
-                    for (KnCorpGroupMemberDTO member : groupPersistDTO.getExistingGrpMemDetail()) {
-                        knLogger.debug(methodName, "Check1 member -", member.getMdn(), ", corpId -", member.getCorpId(),
-                                ", isExternalContact -", member.isExternalContact());
-                        boolean memberExternal = member.isExternalContact();
-                        boolean mdnInExternalList = groupPersistDTO.getCorpContactExternalMdns() != null && groupPersistDTO.getCorpContactExternalMdns().contains(member.getMdn());
-                        if (mdnInExternalList) {
-                            memberExternal = true;
-                            knLogger.debug(methodName, "member ", member.getMdn(), " marked external based on corpContactExternalMdns");
-                        }
-                        if (member.getCorpId() != 0 && member.getCorpId() != groupPersistDTO.getCorpId()
-                                && !memberExternal) {
-                            knLogger.debug(methodName, "Group having other corp member -", member.getMdn());
-                            throw new KnCorpBOValidationException(KnErrorCodes.Validator.GROUP_SHARED_FLAG_MODIFY_NOT_ALLOWED,
-                                    "Group having other corp member", getEntityId(),
-                                    getOperationType(), getRuleId(), "", "");
-                        }
-                    }
+                    List<String> corpContactExternalMdns = groupPersistDTO.getCorpContactExternalMdns();
+                    knLogger.debug(methodName, "GrpShared disable path for KnCorpGroupInfoPersistDTO");
+                    validateRemovedSharedCorpMembers(groupPersistDTO.getExistingGrpMemDetail(),
+                            groupPersistDTO.getCorpId(), groupPersistDTO.getRemovedSharedCorpIds(), corpContactExternalMdns);
                 }
                 if(groupInfoDTO.getCorpSharedCorpInfoList() != null && !groupInfoDTO.getCorpSharedCorpInfoList().isEmpty()){
-                    knLogger.debug(methodName, "Shared Corp list size", groupInfoDTO.getCorpSharedCorpInfoList().size());
-                    List<Integer> sharedCorpIds = new ArrayList<>();
-                    groupInfoDTO.getCorpSharedCorpInfoList().forEach(item->sharedCorpIds.add(item.getCorpId()));
-                    knLogger.debug(methodName, "sharedCorpIds", sharedCorpIds);
-                    for (KnCorpGroupMemberDTO member : groupPersistDTO.getExistingGrpMemDetail()) {
-                        if (member.getCorpId() != 0 && member.getCorpId() != groupPersistDTO.getCorpId() &&
-                        (!sharedCorpIds.contains(member.getCorpId())) && !member.isExternalContact()) {
-                                invalidMdnList.add(member.getMdn());
-                        }
-                    }
+                    knLogger.debug(methodName, "Shared corp list update path for KnCorpGroupInfoPersistDTO");
+                    validateRemovedSharedCorpMembers(groupPersistDTO.getExistingGrpMemDetail(),
+                            groupPersistDTO.getCorpId(), groupPersistDTO.getRemovedSharedCorpIds(),null);
                 }
-                // TC-GRP-MOD-008: hierarchy-aware removal blocking is handled in KnCorpGroupInfoController P6-4 delta block
             }
         } else if (persistDTO instanceof KnCorpGroupProfilePersistDTO) {
             KnCorpGroupProfilePersistDTO groupProfilePersistDTO = (KnCorpGroupProfilePersistDTO) persistDTO;
             if (groupProfilePersistDTO.getInputDTO() instanceof KnIPCorpGorupProfileDTO) {
                 KnIPCorpGorupProfileDTO groupProfileInfoDTO = (KnIPCorpGorupProfileDTO) groupProfilePersistDTO.getInputDTO();
+                knLogger.debug(methodName, "DTO - KnCorpGroupProfilePersistDTO, removedSharedCorpIds - ",
+                        groupProfilePersistDTO.getRemovedSharedCorpIds(), ", sharedCorpFanMap - ",
+                        groupProfilePersistDTO.getSharedCorpFanMap());
                 if (groupProfilePersistDTO.isGrpSharedChanged() && groupProfileInfoDTO.getGrpShared() == 0) {
-                    knLogger.debug(methodName, "GrpShared modifying to disable");
-                    for (KnCorpGroupMemberDTO member : groupProfilePersistDTO.getExsistingGroupMemberList()) {
-                        if (member.getCorpId() != 0 && member.getCorpId() != groupProfileInfoDTO.getCorpId()
-                                && !member.isExternalContact()) {
-                            knLogger.debug(methodName, "Group having other corp member -", member.getMdn(), member.getGroupId());
-                            throw new KnCorpBOValidationException(KnErrorCodes.Validator.GROUP_SHARED_FLAG_MODIFY_NOT_ALLOWED,
-                                    "Group having other corp member", getEntityId(),
-                                    getOperationType(), getRuleId(), "", "");
-                        }
-                    }
+                    knLogger.debug(methodName, "GrpShared disable path for KnCorpGroupProfilePersistDTO");
+                    validateRemovedSharedCorpMembers(groupProfilePersistDTO.getExsistingGroupMemberList(),
+                            groupProfileInfoDTO.getCorpId(), groupProfilePersistDTO.getRemovedSharedCorpIds(),null);
                 }
                 if(groupProfileInfoDTO.getSharedCorpList() != null && !groupProfileInfoDTO.getSharedCorpList().isEmpty()){
-                    knLogger.debug(methodName, "Shared Corp list size", groupProfileInfoDTO.getSharedCorpList().size());
-                    List<Integer> sharedCorpIds = new ArrayList<>();
-                    groupProfileInfoDTO.getSharedCorpList().forEach(item->sharedCorpIds.add(item.getCorpId()));
-                    knLogger.debug(methodName, "sharedCorpIds", sharedCorpIds);
-                    for (KnCorpGroupMemberDTO member : groupProfilePersistDTO.getExsistingGroupMemberList()) {
-                        if (member.getCorpId() != 0 && member.getCorpId() != groupProfileInfoDTO.getCorpId() &&
-                                (!sharedCorpIds.contains(member.getCorpId())) && !member.isExternalContact()) {
-                            invalidMdnList.add(member.getMdn());
-                        }
-                    }
+                    knLogger.debug(methodName, "Shared corp list update path for KnCorpGroupProfilePersistDTO");
+                    validateRemovedSharedCorpMembers(groupProfilePersistDTO.getExsistingGroupMemberList(),
+                            groupProfileInfoDTO.getCorpId(), groupProfilePersistDTO.getRemovedSharedCorpIds(),null);
                 }
             }
         }else if (persistDTO instanceof KnCorpBCGrpPersistDTO) {
-            knLogger.debug(methodName, "DTO - KnCorpBCGrpPersistDTO");
             KnCorpBCGrpPersistDTO bcGrpPersistDTO = (KnCorpBCGrpPersistDTO) persistDTO;
             if (bcGrpPersistDTO.getInputDTO() instanceof KnIPCorpGroupInfoDTO) {
                 KnIPCorpGroupInfoDTO groupInfoDTO = (KnIPCorpGroupInfoDTO) bcGrpPersistDTO.getInputDTO();
-                knLogger.debug(methodName, "Changes -", bcGrpPersistDTO.isGrpSharedModified(), groupInfoDTO.getGrpShared());
+                knLogger.debug(methodName, "DTO - KnCorpBCGrpPersistDTO, removedSharedCorpIds - ",
+                        bcGrpPersistDTO.getRemovedSharedCorpIds(), ", corpContactExternalMdns - ",
+                        bcGrpPersistDTO.getCorpContactExternalMdns());
                 if (bcGrpPersistDTO.isGrpSharedModified() && groupInfoDTO.getGrpShared() == 0) {
-                    knLogger.debug(methodName, "GrpShared modifying to disable");
-                    for (KnCorpGroupMemberDTO member : bcGrpPersistDTO.getExistingGrpMemDetail()) {
-                        boolean memberExternal = member.isExternalContact();
-                        boolean mdnInExternalList2 = bcGrpPersistDTO.getCorpContactExternalMdns() != null && bcGrpPersistDTO.getCorpContactExternalMdns().contains(member.getMdn());
-                        if (mdnInExternalList2) {
-                            memberExternal = true;
-                            knLogger.debug(methodName, "member ", member.getMdn(), " marked external based on corpContactExternalMdns");
-                        }
-                        if (member.getCorpId() != 0 && member.getCorpId() != groupInfoDTO.getCorpId()
-                                && !memberExternal) {
-                            knLogger.debug(methodName, "Group having other corp member -", member.getMdn(), member.getGroupId());
-                            throw new KnCorpBOValidationException(KnErrorCodes.Validator.GROUP_SHARED_FLAG_MODIFY_NOT_ALLOWED,
-                                    "Group having other corp member", getEntityId(),
-                                    getOperationType(), getRuleId(), "", "");
-                        }
-                    }
+                    List<String> corpContactExternalMdns = bcGrpPersistDTO.getCorpContactExternalMdns();
+                    knLogger.debug(methodName, "GrpShared disable path for KnCorpBCGrpPersistDTO");
+                    validateRemovedSharedCorpMembers(bcGrpPersistDTO.getExistingGrpMemDetail(),
+                            groupInfoDTO.getCorpId(), bcGrpPersistDTO.getRemovedSharedCorpIds(), corpContactExternalMdns);
                 }
                 if((groupInfoDTO.getCorpSharedCorpInfoList() != null) && (!groupInfoDTO.getCorpSharedCorpInfoList().isEmpty())){
-                    List<Integer> sharedCorpIds = new ArrayList<>();
-                    groupInfoDTO.getCorpSharedCorpInfoList().forEach(item->sharedCorpIds.add(item.getCorpId()));
-                    for (KnCorpGroupMemberDTO member : bcGrpPersistDTO.getExistingGrpMemDetail()) {
-                        if (member.getCorpId() != 0 && member.getCorpId() != bcGrpPersistDTO.getCorpId() &&
-                                (!sharedCorpIds.contains(member.getCorpId())) && !member.isExternalContact() ) {
-                            invalidMdnList.add(member.getMdn());
-                        }
-                    }
+                    knLogger.debug(methodName, "Shared corp list update path for KnCorpBCGrpPersistDTO");
+                    validateRemovedSharedCorpMembers(bcGrpPersistDTO.getExistingGrpMemDetail(),
+                            groupInfoDTO.getCorpId(), bcGrpPersistDTO.getRemovedSharedCorpIds(),null);
                 }
             }
         }
-        knLogger.debug(methodName, "invalidMdnList - ", invalidMdnList);
-        if(!invalidMdnList.isEmpty()){
-            knLogger.debug(methodName, "Unsharing corp members exist, can not unshare the Members - ", invalidMdnList);
+        knLogger.debug(methodName, "EXIT");
+    }
+
+    private void validateRemovedSharedCorpMembers(Collection<KnCorpGroupMemberDTO> existingMembers, int ownerCorpId,
+                                                  Collection<Integer> removedSharedCorpIds, List<String> corpContactExternalMdns) throws KnCorpBOValidationException {
+        if (existingMembers == null || existingMembers.isEmpty()
+                || removedSharedCorpIds == null || removedSharedCorpIds.isEmpty()) {
+            return;
+        }
+
+        Set<Integer> removedCorpIds = new HashSet<>(removedSharedCorpIds);
+        List<String> invalidMdnList = new ArrayList<>();
+        for (KnCorpGroupMemberDTO member : existingMembers) {
+            knLogger.debug("validateRemovedSharedCorpMembers", "member - ", member.getMdn(),
+                    ", corpId - ", member.getCorpId(),
+                    ", isExternalContact - ", member.isExternalContact(),
+                    ", corpContactExternalMdns - ", corpContactExternalMdns);
+            boolean memberExternal = member.isExternalContact();
+            boolean mdnInExternalList = corpContactExternalMdns != null && corpContactExternalMdns.contains(member.getMdn());
+            if (mdnInExternalList) {
+                memberExternal = true;
+                knLogger.debug("validateRemovedSharedCorpMembers", "member ", member.getMdn(), " marked external based on corpContactExternalMdns");
+            }
+
+            if (member.getCorpId() != 0 && member.getCorpId() != ownerCorpId
+                    && removedCorpIds.contains(member.getCorpId()) && !memberExternal) {
+                knLogger.debug("validateRemovedSharedCorpMembers", "Group still has member from removed shared corp -", member.getMdn());
+                invalidMdnList.add(member.getMdn());
+            } else {
+                knLogger.debug("validateRemovedSharedCorpMembers", "member passed removed shared corp check -", member.getMdn());
+            }
+        }
+
+        if (!invalidMdnList.isEmpty()) {
+            knLogger.debug("validateRemovedSharedCorpMembers", "Unsharing corp members exist, can not unshare the Members - ", invalidMdnList);
             throw new KnCorpBOValidationException(KnErrorCodes.Validator.GROUP_SHARED_FLAG_MODIFY_NOT_ALLOWED,
                     "Group having other corp member", getEntityId(),
                     getOperationType(), getRuleId(), invalidMdnList.toString(), "");
         }
-
     }
 }

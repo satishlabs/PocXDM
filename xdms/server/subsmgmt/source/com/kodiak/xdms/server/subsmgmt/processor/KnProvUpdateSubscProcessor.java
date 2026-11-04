@@ -465,12 +465,18 @@ public class KnProvUpdateSubscProcessor {
             String newAccountId = null;
             if (subsProvInputDTO.getAccountId() != null) {
                 newAccountId = subsProvInputDTO.getAccountId().trim();
+                if (newAccountId.isEmpty()) {
+                    newAccountId = null;
+                }
             }
             if (existingSubsProfileDTO.getAccountId() != null) {
                 oldAccountId = existingSubsProfileDTO.getAccountId().trim();
+                if (oldAccountId.isEmpty()) {
+                    oldAccountId = null;
+                }
             }
 
-            if (newAccountId != null && (!newAccountId.equalsIgnoreCase(oldAccountId))) {
+            if (newAccountId != null && oldAccountId != null && (!newAccountId.equalsIgnoreCase(oldAccountId))) {
                 knLogger.error(methodName, "Account Id cannot be changed ");
                 throw new KnProvBOException(KnErrorCodes.BOEntity.ACCOUNT_ID_CHANGE_NOT_ALLOWED,
                         "Account Id Change not Allowed");
@@ -616,8 +622,13 @@ public class KnProvUpdateSubscProcessor {
 
             String oldExtCorpId = null;
             try {
-                oldExtCorpId = xdmServerDAO.retrieveExtCorporationId(existingSubsProfileDTO.getCorpId(), persisterTxn);
-                knLogger.debug(methodName, "Old Ext Corp ID - ", oldExtCorpId);
+                int subscriberCorpId = existingSubsProfileDTO.getCorpId();
+                if (subscriberCorpId > 0) {
+                    oldExtCorpId = xdmServerDAO.retrieveExtCorporationId(subscriberCorpId, persisterTxn);
+                    knLogger.debug(methodName, "Old Ext Corp ID - ", oldExtCorpId);
+                } else {
+                    knLogger.debug(methodName, "Subscriber is public; corpId is 0, skipping corporate profile lookup");
+                }
             } catch (KnDAOException e) {
                 if (com.kodiak.xdms.server.common.resources.KnErrorCodes.DAO.SERVER_ERROR.equals(e.getErrorCode())) {
                     knLogger.debug(methodName, "No Old Corporate Profile exists");
@@ -1359,7 +1370,7 @@ public class KnProvUpdateSubscProcessor {
             subsProfilePersistDTO.setCorpAdminFS2(corpAdminFS2);
 
             if (newAccountId != null) {
-                subsProfilePersistDTO.setAccountId(newAccountId.trim());
+                subsProfilePersistDTO.setAccountId(newAccountId);
             }
             Integer qppPkgId = existingSubsProfileDTO.getQppPkgId();
             Integer profileId = null;
