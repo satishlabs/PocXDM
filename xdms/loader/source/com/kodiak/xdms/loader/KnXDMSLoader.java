@@ -87,6 +87,7 @@ import com.kodiak.xdms.mediator.resources.jobs.asyncframework.KnLocationEnabledC
 import static com.kodiak.common.resources.KnConstants.CLUSTERID_ENV_NAME;
 import static com.kodiak.common.resources.KnConstants.NOTIFYJOB_AUDIT_INTRVAL;
 import static com.kodiak.common.resources.KnConstants.LARGE_GROUP_AUDIT_INTRVAL;
+import static com.kodiak.common.resources.KnConstants.XCAP_NOTIFICATION_OPTIMIZED;
 
 /**
  * XDM startup script which will initializes all the modules
@@ -367,9 +368,18 @@ public class KnXDMSLoader {
         int clusterId = Integer.parseInt(System.getenv(CLUSTERID_ENV_NAME));
         Map<String, String> microServicesParamNameValueMap = KnGenInfoUtil.getInstance().retrieveMSSvcsCommonConfig(clusterId);
         int notifyJobAuditInterval = Integer.parseInt(microServicesParamNameValueMap.get(NOTIFYJOB_AUDIT_INTRVAL) != null ? microServicesParamNameValueMap.get(NOTIFYJOB_AUDIT_INTRVAL) : "1");
+        String optimizedFlag = microServicesParamNameValueMap.get(XCAP_NOTIFICATION_OPTIMIZED);
+        boolean notificationOptimized = optimizedFlag != null
+                && ("1".equals(optimizedFlag.trim()) || "true".equalsIgnoreCase(optimizedFlag.trim()));
+        // The collection window is XCAP_NOTIFICATION_PERIOD. The poll itself runs every
+        // second while bundling is on, so a closed window is claimed on the next tick.
+        int pollIntervalSeconds = notificationOptimized ? 1 : notifyJobAuditInterval;
+        knLogger.info("notificationPoller", notificationOptimized
+                ? "[XCAP-DEBULK-FLOW] STEP-CONF1 XCAP_NOTIFICATION_OPTIMIZED=1 -> poll interval 1 second"
+                : "[XCAP-DEBULK-FLOW] STEP-CONF1 XCAP_NOTIFICATION_OPTIMIZED=0 -> poll interval " + notifyJobAuditInterval);
         KnXcapNotifyProcessor xcapNotifyProcessor = KnXcapNotifyProcessor.getInstance();
         ScheduledExecutorService notifyProcessorService = KnThreadExecutors.newScheduledThreadPool(1, "XcapNotifyProcessor");
-        notifyProcessorService.scheduleAtFixedRate(xcapNotifyProcessor, 30, notifyJobAuditInterval, TimeUnit.SECONDS);
+        notifyProcessorService.scheduleAtFixedRate(xcapNotifyProcessor, 30, pollIntervalSeconds, TimeUnit.SECONDS);
     }
 
 

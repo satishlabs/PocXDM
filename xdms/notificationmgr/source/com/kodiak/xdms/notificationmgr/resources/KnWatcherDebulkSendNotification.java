@@ -36,10 +36,12 @@ import com.kodiak.common.commdto.common.KnXDMSubsProvDTO;
 import com.kodiak.common.dao.KnDbUtil;
 import com.kodiak.common.dao.KnPersisterTxn;
 import com.kodiak.common.resources.KnConstants;
+import com.kodiak.common.resources.KnGDPRTemplate;
 import com.kodiak.dbmgr.KnDBConst;
 import com.kodiak.logger.KnLogger;
 import com.kodiak.xdms.notificationmgr.beans.KnXcapDiffDirChgNotifyDTO;
 import com.kodiak.xdms.notificationmgr.beans.KnXcapDiffDocDTO;
+import com.kodiak.xdms.notificationmgr.beans.KnXcapDiffNotifyDTO;
 import com.kodiak.xdms.notificationmgr.impl.KnXcapDiffNotifier;
 import com.kodiak.xdms.server.common.business.helper.KnGenInfoUtil;
 import com.kodiak.xdms.server.common.dto.common.KnNotificationKeyDTO;
@@ -89,6 +91,9 @@ public class KnWatcherDebulkSendNotification implements Runnable {
      */
     private final List<KnXcapDiffDirChgNotifyDTO> notifications;
 
+    /** Document diffs for the same watcher. They leave in the same single notification. */
+    private final List<KnXcapDiffNotifyDTO> documentNotifications;
+
     /** Subscriber profile map keyed by MDN; used by the notifier during send. */
     private final Map<String, KnXDMSubsProvDTO> mdnSubsInfoMap;
 
@@ -117,12 +122,14 @@ public class KnWatcherDebulkSendNotification implements Runnable {
     public KnWatcherDebulkSendNotification(KnNotificationKeyDTO seqId,
                                            List<KnNotificationKeyDTO> seqIds,
                                            List<KnXcapDiffDirChgNotifyDTO> notifications,
+                                           List<KnXcapDiffNotifyDTO> documentNotifications,
                                            Map<String, KnXDMSubsProvDTO> mdnSubsInfoMap,
                                            Map<String, Set<String>> baseMdnsMap,
                                            KnXcapDiffNotifier xcapDiffNotifier) {
         this.seqId = seqId;
         this.seqIds = seqIds;
-        this.notifications = notifications;
+        this.notifications = notifications == null ? Collections.emptyList() : notifications;
+        this.documentNotifications = documentNotifications == null ? Collections.emptyList() : documentNotifications;
         this.mdnSubsInfoMap = mdnSubsInfoMap;
         this.baseMdnsMap = baseMdnsMap;
         this.xcapDiffNotifier = xcapDiffNotifier;
@@ -149,17 +156,24 @@ public class KnWatcherDebulkSendNotification implements Runnable {
         String methodName = "run()";
 
         // ── Guard: nothing to send ────────────────────────────────────────────────────
-        if (notifications == null || notifications.isEmpty()) {
+        boolean hasDirectory = !notifications.isEmpty();
+        boolean hasDocument = !documentNotifications.isEmpty();
+        if (!hasDirectory && !hasDocument) {
             knLogger.warn(methodName,
                     FLOW_TAG + " STEP-8 Empty notification bundle; nothing to send. watcher="
-                            + safeValue(seqId != null ? seqId.getDestId() : null));
+                            + KnGDPRTemplate.mdn(seqId != null ? seqId.getDestId() : null));
             return;
         }
-
+        int bundledCount = notifications.size() + documentNotifications.size();
+        knLogger.info(methodName,
+                FLOW_TAG + " STEP-DELAY Sending held bundle. watcher="
+                        + KnGDPRTemplate.mdn(seqId != null ? seqId.getDestId() : null)
+                        + " bundledCount=" + bundledCount
+                        + " " + describeBundleHoldAge());
         knLogger.info(methodName,
                 FLOW_TAG + " STEP-8 Worker started. cid=" + safeValue(seqId != null ? seqId.getCid() : null)
-                        + " watcher=" + safeValue(seqId != null ? seqId.getDestId() : null)
-                        + " bundledCount=" + notifications.size()
+                        + " watcher=" + KnGDPRTemplate.mdn(seqId != null ? seqId.getDestId() : null)
+                        + " bundledCount=" + bundledCount
                         + " seqKeyCount=" + (seqIds != null ? seqIds.size() : 0)
                         + " subscriberProfileCount=" + (mdnSubsInfoMap != null ? mdnSubsInfoMap.size() : 0)
                         + " baseMdnGroupCount=" + (baseMdnsMap != null ? baseMdnsMap.size() : 0)
@@ -171,15 +185,23 @@ public class KnWatcherDebulkSendNotification implements Runnable {
             knLogger.info(methodName, FLOW_TAG + " STEP-9 Resolved payload threshold. maxPayloadBytes=" + maxPayloadBytes);
 
             // ── Step 2: Measure the serialized bundle size ────────────────────────────
-            long serialisedPayloadBytes = computeSerializedSize(notifications);
+            long serialisedPayloadBytes = hasDirectory
+                    ? computeSerializedSize(notifications)
+                    : computeSerializedSize(documentNotifications);
             knLogger.info(methodName,
                     FLOW_TAG + " STEP-10 Bundle size measured. serialisedPayloadBytes=" + serialisedPayloadBytes
                             + " maxPayloadBytes=" + maxPayloadBytes
-                            + " bundledCount=" + notifications.size());
+                            + " bundledCount=" + bundledCount);
 
             // ── Step 3: Count distinct documents in the bundle ────────────────────────
-            long distinctDocCount = countDistinctDocuments(notifications);
-            boolean coreDirectoryOnly = isCoreDirectoryOnlyBundle(notifications);
+            long distinctDocCount = hasDirectory ? countDistinctDocuments(notifications) : countDistinctDocumentDiffs(documentNotifications);
+            boolean coreDirectoryOnly = hasDirectory
+                    ? isCoreDirectoryOnlyBundle(notifications)
+                    : documentNotifications.stream().allMatch(dto -> dto.getDocDiffObj() == null || dto.getDocDiffObj().isEmpty());
+            if (hasDirectory && hasDocument) {
+                distinctDocCount = Math.max(distinctDocCount, 2);
+                coreDirectoryOnly = false;
+            }
             int inlineDocPayloadCount = countInlineDocPayloads(notifications);
             LinkedHashSet<String> docSelectors = collectDocumentSelectors(notifications);
             knLogger.info(methodName,
@@ -189,7 +211,12 @@ public class KnWatcherDebulkSendNotification implements Runnable {
                             + " sampleDocSelectors=" + docSelectors.stream().limit(5).collect(Collectors.toList()));
 
             // ── Step 4: Decide the send strategy ──────────────────────────────────────
-            String appliedRule = determineRule(notifications, serialisedPayloadBytes, maxPayloadBytes);
+            String appliedRule = hasDirectory && !hasDocument
+                    ? determineRule(notifications, serialisedPayloadBytes, maxPayloadBytes)
+                    : determineDocumentRule(coreDirectoryOnly, distinctDocCount, serialisedPayloadBytes, maxPayloadBytes);
+            if (hasDirectory && hasDocument) {
+                appliedRule = "RULE-II-MULTI-DOC";
+            }
             if (coreDirectoryOnly) {
                 knLogger.info(methodName,
                         FLOW_TAG + " STEP-11A Rule III selected. inlineDocPayloadCount=" + inlineDocPayloadCount
@@ -216,13 +243,28 @@ public class KnWatcherDebulkSendNotification implements Runnable {
             //   RULE-I-CONSOLIDATED   → inline consolidated diff notification
             //   All other rules       → directory-etag notification (no inline payload)
             boolean isSuccess;
-            if ("RULE-I-CONSOLIDATED".equals(appliedRule)) {
+            if ("RULE-I-CONSOLIDATED".equals(appliedRule) && hasDirectory) {
+                List<KnXcapDiffDirChgNotifyDTO> consolidated = consolidateSingleDocument(notifications);
+                knLogger.info(methodName, FLOW_TAG + " STEP-11B Single directory document consolidated. sourceRows="
+                        + notifications.size());
                 isSuccess = xcapDiffNotifier.sendXcapDiffNotifications(
-                        notifications, mdnSubsInfoMap, null, baseMdnsMap);
-            } else {
-                // RULE-I-OVERSIZE-FALLBACK / RULE-II-MULTI-DOC / RULE-III-CORE-DIRECTORY
+                        consolidated, mdnSubsInfoMap, null, baseMdnsMap);
+            } else if ("RULE-I-CONSOLIDATED".equals(appliedRule)) {
+                KnXcapDiffNotifyDTO consolidated = consolidateDocumentDiffs(documentNotifications);
+                knLogger.info(methodName, FLOW_TAG + " STEP-11B Single document diff consolidated. sourceRows="
+                        + documentNotifications.size());
+                isSuccess = xcapDiffNotifier.generateDirNotification(consolidated, mdnSubsInfoMap, baseMdnsMap);
+            } else if (hasDirectory) {
+                // Rule I oversize, Rule II, and Rule III: one Directory Etag for this watcher.
                 xcapDiffNotifier.sendXcapDiffDirMicroserviceNotificationforEtagNotify(notifications);
-                isSuccess = true; // etag path does not return a boolean; treat as success
+                isSuccess = true;
+            } else {
+                LinkedHashSet<String> watcher = new LinkedHashSet<>();
+                if (seqId != null && seqId.getDestId() != null) {
+                    watcher.add(seqId.getDestId().trim());
+                }
+                xcapDiffNotifier.sendMicroserviceNotificationforEtagNotify(watcher);
+                isSuccess = true;
             }
 
             // ── Step 6: Log outcome ─────────────���────────────────────────────────────
@@ -286,11 +328,96 @@ public class KnWatcherDebulkSendNotification implements Runnable {
         }
         long now = System.currentTimeMillis();
         LongSummaryStatistics stats = seqIds.stream()
-                .mapToLong(seq -> Math.max(0L, now - seq.getInsertionTime()))
+                .mapToLong(seq -> Math.max(0L, now - insertionEpochMillis(seq.getInsertionTime())))
                 .summaryStatistics();
-        return "oldestMs=" + stats.getMax()
-                + ",newestMs=" + stats.getMin()
-                + ",avgMs=" + Math.round(stats.getAverage());
+        return "oldestHoldSeconds=" + (stats.getMax() / 1000L)
+                + " newestHoldSeconds=" + (stats.getMin() / 1000L);
+    }
+
+    /** INSERTION_TIME is stored as epoch nanoseconds. */
+    private long insertionEpochMillis(long insertionTime) {
+        if (insertionTime > 10_000_000_000_000L) {
+            return insertionTime / 1_000_000L;
+        }
+        return insertionTime;
+    }
+
+    private List<KnXcapDiffDirChgNotifyDTO> consolidateSingleDocument(List<KnXcapDiffDirChgNotifyDTO> source) {
+        if (source.size() == 1) {
+            return source;
+        }
+        KnXcapDiffDirChgNotifyDTO earliest = source.get(0);
+        KnXcapDiffDirChgNotifyDTO latest = source.get(source.size() - 1);
+        List<KnXcapDiffDocDTO> mergedChanges = new ArrayList<>();
+        for (KnXcapDiffDirChgNotifyDTO change : source) {
+            if (change.getDocDiffObj() != null) {
+                mergedChanges.addAll(change.getDocDiffObj());
+            }
+        }
+        latest.setDocDiffObj(mergedChanges);
+        if (earliest.getDirPrevEtag() != null) {
+            latest.setDirPrevEtag(earliest.getDirPrevEtag());
+        }
+        knLogger.info("consolidateSingleDocument", FLOW_TAG + " STEP-11B Merged directory changes. sourceRows="
+                + source.size() + " changeCount=" + mergedChanges.size()
+                + " previousEtag=" + earliest.getDirPrevEtag() + " newEtag=" + latest.getDirNewEtag());
+        return Collections.singletonList(latest);
+    }
+
+    private KnXcapDiffNotifyDTO consolidateDocumentDiffs(List<KnXcapDiffNotifyDTO> source) {
+        KnXcapDiffNotifyDTO earliest = source.get(0);
+        KnXcapDiffNotifyDTO latest = source.get(source.size() - 1);
+        if (source.size() == 1) {
+            return latest;
+        }
+        List<KnXcapDiffDocDTO> mergedChanges = new ArrayList<>();
+        for (KnXcapDiffNotifyDTO change : source) {
+            if (change.getDocDiffObj() != null) {
+                mergedChanges.addAll(change.getDocDiffObj());
+            }
+        }
+        latest.setDocDiffObj(mergedChanges);
+        if (earliest.getDirPrevEtag() != null) {
+            latest.setDirPrevEtag(earliest.getDirPrevEtag());
+        }
+        return latest;
+    }
+
+    private static String determineDocumentRule(boolean coreDirectoryOnly, long distinctDocCount,
+                                                long serialisedBytes, int maxPayloadBytes) {
+        if (coreDirectoryOnly) {
+            return "RULE-III-CORE-DIRECTORY";
+        }
+        if (distinctDocCount > 1) {
+            return "RULE-II-MULTI-DOC";
+        }
+        if (serialisedBytes > maxPayloadBytes) {
+            return "RULE-I-OVERSIZE-FALLBACK";
+        }
+        return "RULE-I-CONSOLIDATED";
+    }
+
+    private long countDistinctDocumentDiffs(List<KnXcapDiffNotifyDTO> changes) {
+        return changes.stream()
+                .filter(dto -> dto.getDocDiffObj() != null)
+                .flatMap(dto -> dto.getDocDiffObj().stream())
+                .map(KnXcapDiffDocDTO::getDocumentSelector)
+                .filter(selector -> selector != null && !selector.trim().isEmpty())
+                .distinct()
+                .count();
+    }
+
+    private long computeSerializedSize(Object payload) {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
+             ObjectOutputStream oos = new ObjectOutputStream(baos)) {
+            oos.writeObject(payload);
+            oos.flush();
+            return baos.size();
+        } catch (IOException e) {
+            knLogger.warn("computeSerializedSize",
+                    FLOW_TAG + " Serialization failed; returning MAX_VALUE to trigger the etag fallback", e);
+            return Long.MAX_VALUE;
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────────────

@@ -51,6 +51,7 @@ import com.kodiak.xdms.server.common.resources.KnConstants;
 import com.kodiak.xdms.server.common.resources.KnErrorCodes;
 
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 
@@ -211,7 +212,8 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
                                 }
                                 return false;
                             }
-                            xcapDiffNotifier.sendXcapDiffDirMicroserviceNotificationforEtagNotify(initialList);
+                            dispatchSavedNotifications(methodName, initialList, notificationParamDTO, list ->
+                                    xcapDiffNotifier.sendXcapDiffDirMicroserviceNotificationforEtagNotify(list));
                         } else if (isSaveSuppressNotification()) {
                             knLogger.debug(methodName, "inside notification suppressed ");
                             LinkedHashSet<String> docSelAll = new LinkedHashSet<String>();
@@ -366,7 +368,8 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
 
                     if (isSaveNotification(notificationParamDTO, notificationCount, watcherCount)) {
                         xcapDiffNotifier.saveNotification(initialList, notificationParamDTO, null);
-                        xcapDiffNotifier.sendXcapDiffMicroserviceNotificationforEtagNotify(initialList);
+                        dispatchSavedNotifications(methodName, initialList, notificationParamDTO, list ->
+                                xcapDiffNotifier.sendXcapDiffMicroserviceNotificationforEtagNotify(list));
                     } else if (isSaveSuppressNotification()) {
                         knLogger.info(methodName, "inside notification suppressed ");
                         LinkedHashSet<String> docSelAll = new LinkedHashSet<String>();
@@ -467,7 +470,8 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
                     }
                     if (isSaveNotification(notificationParamDTO, notificationCount, watcherCount)) {
                         xcapDiffNotifier.saveNotification(initialList, notificationParamDTO, persisterTxn);
-                        xcapDiffNotifier.sendXcapDiffMicroserviceNotificationforEtagNotify(initialList);
+                        dispatchSavedNotifications(methodName, initialList, notificationParamDTO, list ->
+                                xcapDiffNotifier.sendXcapDiffMicroserviceNotificationforEtagNotify(list));
                     } else if (isSaveSuppressNotification()) {
                         knLogger.info(methodName, "inside notification suppressed ");
                         LinkedHashSet<String> docSelAll = new LinkedHashSet<String>();
@@ -521,6 +525,41 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
         return null;
     }
 
+
+    /**
+     * Flag off sends every saved notification now. Flag on sends the account that
+     * changed now, and holds a different account's watcher until XCAP_NOTIFICATION_PERIOD.
+     */
+    private <T> void dispatchSavedNotifications(String methodName, List<T> notifications,
+                                                KnNotificationParamDTO notificationParamDTO,
+                                                Consumer<List<T>> immediateSender) {
+        if (notifications == null || notifications.isEmpty()) {
+            return;
+        }
+        if (!xcapDiffNotifier.isXcapNotificationOptimized()) {
+            immediateSender.accept(notifications);
+            return;
+        }
+        int opsCode = notificationParamDTO == null ? 0 : notificationParamDTO.getOpsCode();
+        List<T> ownAccount = new ArrayList<>();
+        int held = 0;
+        for (T notification : notifications) {
+            if (KnXcapDiffNotifier.holdsForConfiguredDelay(notification, opsCode)) {
+                held++;
+            } else {
+                ownAccount.add(notification);
+            }
+        }
+        if (!ownAccount.isEmpty()) {
+            knLogger.info(methodName, "[XCAP-DEBULK-FLOW] STEP-DELAY Own-account notification sent now. "
+                    + "This recipient changed their own details and is not held. count=" + ownAccount.size());
+            immediateSender.accept(ownAccount);
+        }
+        if (held > 0) {
+            knLogger.info(methodName, "[XCAP-DEBULK-FLOW] STEP-DELAY Watcher notification held. "
+                    + "The other account receives one notification after XCAP_NOTIFICATION_PERIOD. count=" + held);
+        }
+    }
 
     private boolean isSaveNotification(KnNotificationParamDTO notificationParamDTO, int notificationCount, int watcherCount) {
         String methodName = "isSaveNotification";

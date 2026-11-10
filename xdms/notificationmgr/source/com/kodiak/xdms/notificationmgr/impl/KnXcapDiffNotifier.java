@@ -137,6 +137,8 @@ public class KnXcapDiffNotifier {
     private final static String NOTIFICATION_QUE_NAME="XCAPNOTIFYQ";
     private final static String FEATURE_ID="FeatureId";
     private KnMCSXCAPNotifier knMCSXCAPNotifier;
+    /** Holds watcher notifications for XCAP_NOTIFICATION_PERIOD when the optimized flag is on. */
+    private final KnXcapNotificationBatchEngine notificationBatchEngine = new KnXcapNotificationBatchEngine();
     private final static String FROM="from";
     private final static String TO="to";
     private final static String REQUESTID="reqID";
@@ -2452,6 +2454,107 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
         return sb.toString();
     }
 
+    /**
+     * Own-account changes are sent immediately. A watcher is held for
+     * XCAP_NOTIFICATION_PERIOD when the recipient is a different account, or when
+     * the operation code is a watcher or dispatcher notification.
+     */
+    public static boolean holdsForConfiguredDelay(Object payload, int opsCode) {
+        return isWatcherOpsCode(opsCode) || isWatcherOfAnotherAccount(payload);
+    }
+
+    public static boolean isWatcherOpsCode(int opsCode) {
+        if (opsCode <= 0) {
+            return false;
+        }
+        for (KnConstants.OPS_CODE code : KnConstants.OPS_CODE.values()) {
+            if (code.value() != null && code.value() == opsCode) {
+                String name = code.name();
+                return name.contains("WATCHER") || name.contains("DISPATCHER");
+            }
+        }
+        return false;
+    }
+
+    /**
+     * True when this payload notifies one account about a different account.
+     * The recipient is the directory MDN. A modified contact, modified group member,
+     * profile MDN, or document MDN other than that recipient is the other account.
+     * The recipient's own profile, contact-list edit, and group edit stay immediate.
+     */
+    public static boolean isWatcherOfAnotherAccount(Object payload) {
+        if (payload instanceof KnXcapDiffDirChgNotifyDTO) {
+            KnXcapDiffDirChgNotifyDTO dto = (KnXcapDiffDirChgNotifyDTO) payload;
+            return referencesAnotherAccount(dto.getDirURI(), dto.getMdn(), null, dto.getDocDiffObj());
+        }
+        if (payload instanceof KnXcapDiffNotifyDTO) {
+            KnXcapDiffNotifyDTO dto = (KnXcapDiffNotifyDTO) payload;
+            String profileMdn = dto.getProfileNotifyDTO() == null ? null : dto.getProfileNotifyDTO().getMdn();
+            return referencesAnotherAccount(dto.getDirURI(), dto.getMdn(), profileMdn, dto.getDocDiffObj());
+        }
+        return false;
+    }
+
+    private static boolean referencesAnotherAccount(String dirUri, String dtoMdn, String profileMdn,
+                                                    Collection<KnXcapDiffDocDTO> documents) {
+        String recipient = normalizeMdn(dirUri);
+        if (recipient == null) {
+            return false;
+        }
+        if (isOtherAccount(recipient, dtoMdn) || isOtherAccount(recipient, profileMdn)) {
+            return true;
+        }
+        if (documents == null) {
+            return false;
+        }
+        for (KnXcapDiffDocDTO document : documents) {
+            if (document == null) {
+                continue;
+            }
+            if (isOtherAccount(recipient, document.getDocumentSelector())
+                    || isOtherAccount(recipient, document.getDocUri())) {
+                return true;
+            }
+            if (subscribersContainOther(recipient, document.getModifiedContactList())
+                    || subscribersContainOther(recipient, document.getModifiedGrpMembers())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean subscribersContainOther(String recipient, Collection<KnSubscriberDTO> subscribers) {
+        if (subscribers == null) {
+            return false;
+        }
+        for (KnSubscriberDTO subscriber : subscribers) {
+            if (subscriber != null && isOtherAccount(recipient, subscriber.getMdn())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isOtherAccount(String recipient, String candidate) {
+        String other = normalizeMdn(candidate);
+        return other != null && !other.equals(recipient);
+    }
+
+    private static String normalizeMdn(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        int tel = trimmed.indexOf("tel:+");
+        if (tel >= 0) {
+            String rest = trimmed.substring(tel + 5);
+            int slash = rest.indexOf('/');
+            trimmed = slash >= 0 ? rest.substring(0, slash) : rest;
+        }
+        trimmed = trimmed.trim();
+        return trimmed.matches("\\d{1,15}") ? trimmed : null;
+    }
+
     public static String getMDNFromURI(String xcapDirURI) {
     	String methodName="getMDNFromURI(String xcapDirURI)";
     	knLogger.info(methodName, "Entry",KnGDPRTemplate.mdnUriTemplate(xcapDirURI));
@@ -3189,11 +3292,13 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                 connection = persisterTxn.getDBConnection(localPttId, false);
                 pStmt = connection.prepareStatement(NOTIFICATION_INSERT_QUERY);
                 long startTime = System.currentTimeMillis();
+                LinkedHashSet<String> watcherMdns = new LinkedHashSet<>();
                 for (KnXcapDiffDirChgNotifyDTO knXcapDiffDirChgNotifyDTO : knXcapDiffDirChgNotifyDTOs) {
                     Instant instant = Instant.now();
                     long timeInNanoSecond = instant.getNano() + instant.getEpochSecond() * 1000000000L;
                     pStmt.setLong(1, timeInNanoSecond);
-                    pStmt.setString(2, getMDNFromURI(knXcapDiffDirChgNotifyDTO.getDirURI()));
+                    String watcherMdn = getMDNFromURI(knXcapDiffDirChgNotifyDTO.getDirURI());
+                    pStmt.setString(2, watcherMdn);
                     pStmt.setInt(3, KnXcapNotifyConstants.DESTTYPE.MDN.value());
                     byte[] data = KnGeneralUtil.toByteArray(knXcapDiffDirChgNotifyDTO);
                     knLogger.debug(methodName, "data length", data.length);
@@ -3211,6 +3316,10 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                     pStmt.setInt(12,notificationParamDTO.getProtocol());
                     pStmt.setInt(13,notificationParamDTO.getMsgType());
                     pStmt.addBatch();
+                    if (watcherMdn != null && !watcherMdn.trim().isEmpty()
+                            && holdsForConfiguredDelay(knXcapDiffDirChgNotifyDTO, notificationParamDTO.getOpsCode())) {
+                        watcherMdns.add(watcherMdn.trim());
+                    }
                     count++;
                     if (count % batchSize == 0) {
                         knLogger.debug(methodName, "Executing batch of 100");
@@ -3218,6 +3327,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                     }
                 }
                 pStmt.executeBatch();
+                notificationBatchEngine.recordWatchers(watcherMdns);
                 if(ownedTxn) {
                     persisterTxn.save();
                 }
@@ -3289,11 +3399,13 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                 connection = persisterTxn.getDBConnection(localPttId, false);
                 pStmt = connection.prepareStatement(NOTIFICATION_INSERT_QUERY);
                 long start = System.currentTimeMillis();
+                LinkedHashSet<String> watcherMdns = new LinkedHashSet<>();
                 for (KnXcapDiffNotifyDTO knXcapDiffNotifyDTO : knXcapDiffNotifyDTOs) {
                     Instant instant = Instant.now();
                     long timeInNanoSecond = instant.getNano() + instant.getEpochSecond() * 1000000000L;
                     pStmt.setLong(1, timeInNanoSecond);
-                    pStmt.setString(2, getMDNFromURI(knXcapDiffNotifyDTO.getDirURI()));
+                    String watcherMdn = getMDNFromURI(knXcapDiffNotifyDTO.getDirURI());
+                    pStmt.setString(2, watcherMdn);
                     pStmt.setInt(3, KnXcapNotifyConstants.DESTTYPE.MDN.value());
                     byte[] data = KnGeneralUtil.toByteArray(knXcapDiffNotifyDTO);
                     knLogger.debug(methodName, "data length", data.length);
@@ -3311,6 +3423,10 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                     pStmt.setInt(12,notificationParamDTO.getProtocol());
                     pStmt.setInt(13,notificationParamDTO.getMsgType());
                     pStmt.addBatch();
+                    if (watcherMdn != null && !watcherMdn.trim().isEmpty()
+                            && holdsForConfiguredDelay(knXcapDiffNotifyDTO, notificationParamDTO.getOpsCode())) {
+                        watcherMdns.add(watcherMdn.trim());
+                    }
                     count++;
                     if (count % batchSize == 0) {
                         knLogger.debug(methodName, "Executing batch of 100");
@@ -3318,6 +3434,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                     }
                 }
                 pStmt.executeBatch();
+                notificationBatchEngine.recordWatchers(watcherMdns);
                 if(ownedTxn) {
                     persisterTxn.save();
                 }
@@ -3418,7 +3535,31 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
         }
     }
 
+    public boolean isXcapNotificationOptimized() {
+        return notificationBatchEngine.isOptimized();
+    }
+
+    /** Drops the watcher row after a bundled send so the next edit opens a new window. */
+    public void cleanupTrackerForMdn(List<String> mdns) {
+        notificationBatchEngine.removeTrackers(mdns);
+    }
+
+    /** Makes a failed bundle eligible on the next poll instead of waiting a new period. */
+    public void resetMdnNotifyTrackerEpochForRetry(List<String> mdns, long periodMillis) {
+        notificationBatchEngine.reopenWindowForRetry(mdns, periodMillis);
+    }
+
+    /** Returns claimed queue rows to pending when the worker could not send them. */
+    public void revertRecordsToPending(List<KnNotificationKeyDTO> seqIds) {
+        notificationBatchEngine.revertToPending(seqIds);
+    }
+
     public Map<KnNotificationKeyDTO, Object> pollRecord() {
+        if (notificationBatchEngine.isOptimized()) {
+            knLogger.debug("pollRecord()", KnXcapNotificationBatchEngine.FLOW_TAG
+                    + " STEP-SCH1 Optimized poll. XCAP_NOTIFICATION_OPTIMIZED=1");
+            return notificationBatchEngine.pollAndClaim();
+        }
         KnPersisterTxn persisterTxn = null;
         String methodName = "pollRecord()";
         String selectQry = null;

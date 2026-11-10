@@ -31,6 +31,7 @@ import com.kodiak.xdms.server.common.dto.common.KnNotificationKeyDTO;
 import java.util.List;
 import java.util.Set;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Objects;
@@ -81,6 +82,7 @@ public class KnXcapNotifyProcessor implements Runnable, IStatusMgrNotifyIntf {
         Map<KnNotificationKeyDTO, Object> record = null;
         try {
             if (getCurrentRedundancyStatus() != KnStatusMgrConstants.CARD_STATES.ACTIVE) {
+                knLogger.debug(methodName, "[XCAP-DEBULK-FLOW] STEP-SCH0 Poll skipped. Card is not active.");
                 return;
             }
             if (startUp) {
@@ -122,6 +124,13 @@ public class KnXcapNotifyProcessor implements Runnable, IStatusMgrNotifyIntf {
             knLogger.error(methodName, "Exception : ", e);
             throw new RuntimeException(e);
         }
+        // Optimized mode sends one notification per watcher after the hold.
+        // The worker deletes those queue rows after a successful send.
+        if (xcapDiffNotifier.isXcapNotificationOptimized()) {
+            dispatchBundledNotifications(record, mdnSubsInfoMap, baseMdnMap);
+            knLogger.exit(methodName);
+            return;
+        }
         for (Map.Entry<KnNotificationKeyDTO, Object> itr : record.entrySet()) {
                 Object payload = itr.getValue();
                 if (payload instanceof KnXcapDiffDirChgNotifyDTO knXcapDiffDirChgNotifyDTO) {
@@ -137,6 +146,87 @@ public class KnXcapNotifyProcessor implements Runnable, IStatusMgrNotifyIntf {
         }
         xcapDiffNotifier.cleanUpRecord(record.entrySet().stream().map(Map.Entry::getKey).collect(Collectors.toList()));
         knLogger.exit(methodName);
+    }
+
+    /**
+     * One task per watcher. Directory changes and document diffs for that watcher
+     * stay together. Suppressed and other payloads stay on the existing per-row sender.
+     */
+    private void dispatchBundledNotifications(Map<KnNotificationKeyDTO, Object> record,
+                                              Map<String, KnXDMSubsProvDTO> mdnSubsInfoMap,
+                                              Map<String, Set<String>> baseMdnMap) {
+        String methodName = "dispatchBundledNotifications";
+        Map<String, List<Map.Entry<KnNotificationKeyDTO, Object>>> directoryByWatcher = new HashMap<>();
+        Map<String, List<Map.Entry<KnNotificationKeyDTO, Object>>> documentByWatcher = new HashMap<>();
+        List<Map.Entry<KnNotificationKeyDTO, Object>> legacyRows = new ArrayList<>();
+        for (Map.Entry<KnNotificationKeyDTO, Object> entry : record.entrySet()) {
+            KnNotificationKeyDTO key = entry.getKey();
+            boolean suppressed = key.getDestType() == KnXcapNotifyConstants.DESTTYPE.SUPPRESSMDN.value();
+            if (!suppressed && key.getDestId() != null && entry.getValue() instanceof KnXcapDiffDirChgNotifyDTO) {
+                directoryByWatcher.computeIfAbsent(key.getDestId().trim(), ignored -> new ArrayList<>()).add(entry);
+            } else if (!suppressed && key.getDestId() != null && entry.getValue() instanceof KnXcapDiffNotifyDTO) {
+                documentByWatcher.computeIfAbsent(key.getDestId().trim(), ignored -> new ArrayList<>()).add(entry);
+            } else {
+                legacyRows.add(entry);
+            }
+        }
+        Set<String> watchers = new LinkedHashSet<>();
+        watchers.addAll(directoryByWatcher.keySet());
+        watchers.addAll(documentByWatcher.keySet());
+        knLogger.info(methodName, "[XCAP-DEBULK-FLOW] STEP-7 Bundling watcher notifications. watchers="
+                + watchers.size() + " legacyRows=" + legacyRows.size());
+        for (String watcher : watchers) {
+            List<KnNotificationKeyDTO> keys = new ArrayList<>();
+            List<KnXcapDiffDirChgNotifyDTO> directoryChanges = new ArrayList<>();
+            List<KnXcapDiffNotifyDTO> documentChanges = new ArrayList<>();
+            for (Map.Entry<KnNotificationKeyDTO, Object> row : directoryByWatcher.getOrDefault(watcher, List.of())) {
+                keys.add(row.getKey());
+                directoryChanges.add((KnXcapDiffDirChgNotifyDTO) row.getValue());
+            }
+            for (Map.Entry<KnNotificationKeyDTO, Object> row : documentByWatcher.getOrDefault(watcher, List.of())) {
+                keys.add(row.getKey());
+                documentChanges.add((KnXcapDiffNotifyDTO) row.getValue());
+            }
+            knLogger.info(methodName, "[XCAP-DEBULK-FLOW] STEP-7A Submitting one watcher bundle. watcher="
+                    + com.kodiak.common.resources.KnGDPRTemplate.mdn(watcher)
+                    + " directoryChanges=" + directoryChanges.size()
+                    + " documentChanges=" + documentChanges.size());
+            executor.submit(new KnWatcherDebulkSendNotification(keys.get(0), keys, directoryChanges, documentChanges,
+                    mdnSubsInfoMap, baseMdnMap, xcapDiffNotifier));
+        }
+        List<KnNotificationKeyDTO> legacyKeys = new ArrayList<>();
+        for (Map.Entry<KnNotificationKeyDTO, Object> row : legacyRows) {
+            if (submitLegacyNotification(row, mdnSubsInfoMap, baseMdnMap)) {
+                legacyKeys.add(row.getKey());
+            }
+        }
+        if (!legacyKeys.isEmpty()) {
+            xcapDiffNotifier.cleanUpRecord(legacyKeys);
+            knLogger.info(methodName, "[XCAP-DEBULK-FLOW] STEP-7B Legacy rows removed after submit. rows=" + legacyKeys.size());
+        }
+    }
+
+    private boolean submitLegacyNotification(Map.Entry<KnNotificationKeyDTO, Object> row,
+                                             Map<String, KnXDMSubsProvDTO> mdnSubsInfoMap,
+                                             Map<String, Set<String>> baseMdnMap) {
+        Object payload = row.getValue();
+        if (payload instanceof KnXcapDiffDirChgNotifyDTO directoryChange) {
+            executor.submit(new KnXcapSendNotification(row.getKey(), directoryChange, mdnSubsInfoMap, baseMdnMap));
+            return true;
+        }
+        if (payload instanceof KnXcapDiffNotifyDTO diffNotify) {
+            executor.submit(new KnSendNotification(row.getKey(), diffNotify, mdnSubsInfoMap, baseMdnMap));
+            return true;
+        }
+        if (payload instanceof KnMCSNotifyDTO mcsNotify) {
+            executor.submit(new KnSendMCSNotify(row.getKey(), mcsNotify));
+            return true;
+        }
+        knLogger.error("submitLegacyNotification", "[XCAP-DEBULK-FLOW] STEP-ERR Unrecognized payload returned to pending. destType="
+                + row.getKey().getDestType() + " watcher="
+                + com.kodiak.common.resources.KnGDPRTemplate.mdn(row.getKey().getDestId()));
+        xcapDiffNotifier.revertRecordsToPending(java.util.Collections.singletonList(row.getKey()));
+        return false;
     }
 
     @Override
