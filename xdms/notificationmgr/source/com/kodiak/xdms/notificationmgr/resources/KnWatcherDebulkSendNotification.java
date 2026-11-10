@@ -472,7 +472,7 @@ public class KnWatcherDebulkSendNotification implements Runnable {
             int clusterId = Integer.parseInt(clusterIdEnv);
             Map<String, String> configMap =
                     KnGenInfoUtil.getInstance().retrieveMSSvcsCommonConfig(clusterId);
-            String raw = configMap.get(KnConstants.XCAP_DIFF_PAYLOAD_SIZE);
+            String raw = configMap.get("XCAP_DIFF_PAYLOAD_SIZE");
             int effectiveValue = (raw != null) ? Integer.parseInt(raw) : 2048;
             knLogger.info(methodName,
                     FLOW_TAG + " STEP-9A Payload threshold config resolved. clusterId=" + clusterIdEnv
@@ -492,7 +492,7 @@ public class KnWatcherDebulkSendNotification implements Runnable {
             int clusterId = Integer.parseInt(clusterIdEnv);
             Map<String, String> configMap =
                     KnGenInfoUtil.getInstance().retrieveMSSvcsCommonConfig(clusterId);
-            String raw = configMap.get(KnConstants.XCAP_NOTIFICATION_PERIOD);
+            String raw = configMap.get("XCAP_NOTIFICATION_PERIOD");
             int periodSeconds = (raw != null) ? Integer.parseInt(raw) : 120;
             return (long) periodSeconds * 1000L;
         } catch (Exception e) {

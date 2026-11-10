@@ -50,9 +50,6 @@ import java.util.Map;
 import java.util.Set;
 
 import static com.kodiak.common.resources.KnConstants.CLUSTERID_ENV_NAME;
-import static com.kodiak.common.resources.KnConstants.XCAP_DIFF_PAYLOAD_SIZE;
-import static com.kodiak.common.resources.KnConstants.XCAP_NOTIFICATION_OPTIMIZED;
-import static com.kodiak.common.resources.KnConstants.XCAP_NOTIFICATION_PERIOD;
 import static com.kodiak.common.resources.KnConstants.XCAP_NOTIFY_SUPPRESS_MDN_BATCH;
 
 public class KnXcapNotificationBatchEngine {
@@ -62,6 +59,10 @@ public class KnXcapNotificationBatchEngine {
 
     static final int DEFAULT_PERIOD_SECONDS = 120;
     static final int DEFAULT_PAYLOAD_BYTES = 2048;
+    /** Config keys read from retrieveMSSvcsCommonConfig. Kept here so this class does not depend on newer KnConstants fields. */
+    private static final String XCAP_NOTIFICATION_OPTIMIZED = "XCAP_NOTIFICATION_OPTIMIZED";
+    private static final String XCAP_NOTIFICATION_PERIOD = "XCAP_NOTIFICATION_PERIOD";
+    private static final String XCAP_DIFF_PAYLOAD_SIZE = "XCAP_DIFF_PAYLOAD_SIZE";
     static final int MAX_MDNS_PER_POLL = 100;
     /** Live secondary column DG.MDN_NOTIFY_TRACKER.MDN is CHAR(15). */
     static final int TRACKER_MDN_LENGTH = 15;
@@ -327,15 +328,37 @@ public class KnXcapNotificationBatchEngine {
     }
 
     /**
-     * Own-account rows are released on this poll. Watcher rows wait until the tracker
-     * time is old enough. A watcher row with no tracker row is claimed so a failed
-     * tracker insert is not stuck. delayedWatchers receives only the held recipients.
+     * Due watchers come from the tracker first: LAST_NOTIFIED_TIME is old enough and
+     * the primary queue still has a pending row. Their queue rows are loaded by MDN,
+     * up to 100 MDNs. Own-account rows are released on this poll and do not move the
+     * tracker. A watcher row with no tracker row is claimed so a failed insert is not stuck.
      */
     private Map<KnNotificationKeyDTO, Object> claimByRecipient(Connection primary, Connection secondary, long cutoff,
                                                                LinkedHashSet<String> delayedWatchers) throws Exception {
         Map<KnNotificationKeyDTO, Object> claimed = new LinkedHashMap<>();
-        Set<String> aged = new HashSet<>(querySingleColumn(secondary, SELECT_AGED_TRACKER,
-                statement -> statement.setLong(1, cutoff)));
+        Set<String> claimedKeys = new HashSet<>();
+        List<String> aged = querySingleColumn(secondary, SELECT_AGED_TRACKER, statement -> statement.setLong(1, cutoff));
+        Set<String> agedWithQueue = queueDestIds(primary, aged, true);
+        for (String mdn : aged) {
+            if (delayedWatchers.size() >= MAX_MDNS_PER_POLL) {
+                break;
+            }
+            if (agedWithQueue.contains(mdn)) {
+                delayedWatchers.add(mdn);
+            }
+        }
+        if (!delayedWatchers.isEmpty()) {
+            Map<KnNotificationKeyDTO, Object> dueRows = loadPendingRows(primary, delayedWatchers);
+            claimed.putAll(dueRows);
+            Set<String> loadedDestinations = new HashSet<>();
+            for (KnNotificationKeyDTO key : dueRows.keySet()) {
+                claimedKeys.add(rowKey(key));
+                if (key.getDestId() != null) {
+                    loadedDestinations.add(key.getDestId().trim());
+                }
+            }
+            delayedWatchers.retainAll(loadedDestinations);
+        }
         PreparedStatement statement = null;
         ResultSet result = null;
         List<Object[]> rows = new ArrayList<>();
@@ -381,20 +404,23 @@ public class KnXcapNotificationBatchEngine {
             boolean hold = (Boolean) row[6];
             KnNotificationKeyDTO key = new KnNotificationKeyDTO((Long) row[0], (String) row[1],
                     (Integer) row[2], (Integer) row[3], (String) row[4]);
+            if (claimedKeys.contains(rowKey(key))) {
+                continue;
+            }
             if (!hold) {
                 if (ownAccounts.size() >= MAX_MDNS_PER_POLL && !ownAccounts.contains(destId)) {
                     continue;
                 }
                 claimed.put(key, row[5]);
+                claimedKeys.add(rowKey(key));
                 ownAccounts.add(destId);
-            } else if (aged.contains(destId) || !tracked.contains(destId)) {
+            } else if (!tracked.contains(destId)) {
                 if (delayedWatchers.size() >= MAX_MDNS_PER_POLL && !delayedWatchers.contains(destId)) {
                     continue;
                 }
-                if (!tracked.contains(destId)) {
-                    orphanWatchers++;
-                }
+                orphanWatchers++;
                 claimed.put(key, row[5]);
+                claimedKeys.add(rowKey(key));
                 delayedWatchers.add(destId);
             }
         }
@@ -413,6 +439,10 @@ public class KnXcapNotificationBatchEngine {
                     + orphanWatchers);
         }
         return claimed;
+    }
+
+    private static String rowKey(KnNotificationKeyDTO key) {
+        return key.getInsertionTime() + "|" + key.getDestId() + "|" + key.getDestType();
     }
 
     /**
