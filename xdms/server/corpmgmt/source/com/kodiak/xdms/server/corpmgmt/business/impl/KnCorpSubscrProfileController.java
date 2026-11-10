@@ -4380,15 +4380,41 @@ public class KnCorpSubscrProfileController implements ICorpSubscrProfileControll
             }
         });
         bulkGroupCloningDTO.getBroadCastGrpList().forEach(groupEtag::remove);
-        //removing the existing group member , As existing member getting directory notify
+        // Existing members are the watcher clients for group copy-paste (30026).
+        // They are still removed from etagMap below so the target (self, 30025) notify is unchanged.
+        // The target MDN is not included in the watcher map.
         List<String> exisitngGroupMembers = new ArrayList<>();
         for (Collection<String> grpMembers : bulkGroupCloningDTO.getGroupDistList().values()) {
             exisitngGroupMembers.addAll(grpMembers);
         }
+        String copyPasteTargetMdn = bulkGroupCloningDTO.getToMdn();
+        Map<String, KnOPDirChgDTO> watcherEtagMap = new HashMap<>();
+        Map<Integer, Collection<String>> watcherMembersByGroup = new HashMap<>();
+        for (Map.Entry<Integer, Collection<String>> groupMembers : bulkGroupCloningDTO.getGroupDistList().entrySet()) {
+            if (groupMembers.getValue() == null || !groupEtag.containsKey(groupMembers.getKey())) {
+                continue;
+            }
+            Collection<String> watcherMdns = new ArrayList<>();
+            for (String memberMdn : groupMembers.getValue()) {
+                if (memberMdn != null && !memberMdn.equals(copyPasteTargetMdn) && etagMap.containsKey(memberMdn)) {
+                    watcherMdns.add(memberMdn);
+                    watcherEtagMap.putIfAbsent(memberMdn, etagMap.get(memberMdn));
+                }
+            }
+            if (!watcherMdns.isEmpty()) {
+                watcherMembersByGroup.put(groupMembers.getKey(), watcherMdns);
+            }
+        }
         etagMap.keySet().removeIf(exisitngGroupMembers::contains);
-
-        //etagMap = commonInfoUtil.formSubscriberNotification(bulkGroupCloningDTO.getToMdn(), groupEtag, DOC_CHANGE_TYPE.REPLACE.value(), etagMap);
-        //respDTO.setChangeLogMap(etagMap);
+        if (!watcherMembersByGroup.isEmpty()) {
+            watcherEtagMap = commonInfoUtil.formSubscriberNotification(watcherMembersByGroup, groupEtag,
+                    DOC_CHANGE_TYPE.REPLACE.value(), watcherEtagMap, bulkGroupCloningDTO.getGroupDetailsMap(), null);
+            respDTO.setChangeLogMap(watcherEtagMap);
+            knLogger.info(methodName, "30026 watcher directories=", watcherEtagMap == null ? 0 : watcherEtagMap.size(),
+                    " groups=", watcherMembersByGroup.size());
+        } else {
+            knLogger.info(methodName, "30026 watcher directories=0: no existing member directory change for group copy-paste");
+        }
         respDTO.setMdnCorpId(bulkGroupCloningDTO.getToMdnSubsProfile().getCorpId());
         respDTO.setGroupIds(groupEtag.keySet()/*.stream().filter(integer -> !mdnExistenceInGroup.containsKey(String.valueOf(integer))).collect(Collectors.toList())*/);
         populate(respDTO);
@@ -6063,6 +6089,19 @@ public class KnCorpSubscrProfileController implements ICorpSubscrProfileControll
                 authMdnsProfileMdns.forEach(profileMdn -> targetMdnForDeleteMap.put(profileMdn, targetMdnForDeleteForProfileMdns));
             }
             knLogger.debug(methodName, "--->privacyEnabledMdns - ", KnGDPRTemplate.mdnList(privacyEnabledMdns));
+            // UPM profile modify reads these later and stamps them on the 40014 authorization diff.
+            // Other callers of setBulkTargetPermissions do not read the fields.
+            if (isUpmCall) {
+                respDTO.setAddedMcpttTargetMap(insertTargetMdnListMap);
+                respDTO.setModifiedMcpttTargetMap(updateToMcpttInfoMap);
+                respDTO.setRemovedMcpttTargetMap(targetMdnForDeleteMap);
+                respDTO.setPermissionResourceListUpdate(targetForResourceListUpdate);
+                respDTO.setPermissionSubsEntitiesMap(corpSubsEntitiesDTOMap);
+                knLogger.info(methodName, "40014 UPM target delta stored. added=",
+                        countMcpttTargets(insertTargetMdnListMap),
+                        " modified=", countMcpttTargets(updateToMcpttInfoMap),
+                        " removed=", countRemovedTargets(targetMdnForDeleteMap));
+            }
 
             populate(respDTO);
 
@@ -6078,6 +6117,32 @@ public class KnCorpSubscrProfileController implements ICorpSubscrProfileControll
                     new KnException(com.kodiak.xdms.server.corpmgmt.resources.KnErrorCodes.BOEntity.INTERNAL_ERROR, e.getMessage(), e));
         }
         return respDTO;
+    }
+
+    private static int countMcpttTargets(Map<String, Collection<KnMcpttPermissionDTO>> targetMap) {
+        int count = 0;
+        if (targetMap == null) {
+            return 0;
+        }
+        for (Collection<KnMcpttPermissionDTO> targets : targetMap.values()) {
+            if (targets != null) {
+                count += targets.size();
+            }
+        }
+        return count;
+    }
+
+    private static int countRemovedTargets(Map<String, Collection<String>> targetMap) {
+        int count = 0;
+        if (targetMap == null) {
+            return 0;
+        }
+        for (Collection<String> targets : targetMap.values()) {
+            if (targets != null) {
+                count += targets.size();
+            }
+        }
+        return count;
     }
 
     /**
@@ -6586,9 +6651,10 @@ public class KnCorpSubscrProfileController implements ICorpSubscrProfileControll
                 provXDMServerDAO.deleteTGSSDoc(mdn, persisterTxn);
                 knLogger.debug(methodName, "Deleted TGSS Doc and SSChannel Info for MDN - ", KnGDPRTemplate.mdn(mdn));
 
-                // Delete Talk Group Scan Mode (TGSC_MODE) from DG.XDMS_TGSC table
-                groupInfoUtil.deleteSubsCampedGrps(mdn, xdmsHomePttId, persisterTxn);
-                knLogger.debug(methodName, "Deleted Talk Group Scan Mode (TGSC_MODE) for MDN - ", KnGDPRTemplate.mdn(mdn));
+                // Delete camped groups (DG.CAMPEDGROUPINFO), channel groups and Talk Group Scan Mode (DG.XDMS_TGSC)
+                boolean tgscCleanUp = groupInfoUtil.cleanUpSubsCampedGrps(mdn, xdmsHomePttId, persisterTxn);
+                knLogger.debug(methodName, "Deleted camped groups and Talk Group Scan Mode (TGSC_MODE) for MDN - ", KnGDPRTemplate.mdn(mdn),
+                        " tgscCleanUp - ", tgscCleanUp);
 
                 /*// Delete from SubscrAddlInfo for hierarchy
                 if (hierarchyType == HIERARCHY_TYPE.HIERARCHY) {
@@ -6794,6 +6860,10 @@ public class KnCorpSubscrProfileController implements ICorpSubscrProfileControll
 
                 // Update additional talk group notification
                 etagMap = commonInfoUtil.formMdnAddlTGListDeleteNotification(mdn, etagMap);
+
+                if (tgscCleanUp) {
+                    etagMap = commonInfoUtil.formMdnTGSCDeleteNotification(mdn, etagMap, xdmsHomePttId, persisterTxn);
+                }
 
                 // Update resource list etags for contacts
                 if (!contactMDNs.isEmpty()) {

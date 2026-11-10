@@ -134,22 +134,15 @@ public class KnModifyEmergencyAttributesTask extends KnAbstractTask {
                 userProfile.setCorpId(corpId);
                 knLogger.debug(methodName, "userProfile :", userProfile);
                 KnCorpResponseDTO libRespDto = corpMediator.setUserProfileEmergencyAttributes(userProfile, emergencyAttrTxn);
-                KnNotificationParamDTO notificationParamDTO = new KnNotificationParamDTO();
-                notificationParamDTO.setPriority(KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
+                // 40012 and 40013 are queued in KnUPMJob after updateEtag, once changeLogMap exists.
+                // Sending here would run before the diff is built and would not land in XCAP_PENDING_NOTIFYQ.
+                knLogger.info(methodName, "Emergency attributes updated for profileMdn=", KnGDPRTemplate.mdn(profileMdn),
+                        ". 40012 and 40013 are sent from KnUPMJob after updateEtag");
                        /* if (libRespDto.isProfileChanged()) {
                             KnOPProvDTO provRespDTO = provClientIntf.sendConfigDocNotification(xdmRequestDTO.getEmergencyAttributes().getMdn(), emergencyAttrTxn);
                             commonMediator.sendXcapNotification(provRespDTO.getDirChgDTO(), null);
                         }*/
                         KnStatisticsManagerImpl.getInstance().increment(KnOMConstants.NUM_SET_EMERGENCY_ATTRIBUTES_REQ_SUCC);
-                //MINT-20079 Change in emergency attributes check is added. If no emergency attributes are changed then suppressing kn-emergency-config notification.
-                /*if (libRespDto.isEmergencyAttributesChanged()) {
-                    Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList = commonMediator.prepareNotification(libRespDto);
-                    boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, emergencyAttrTxn, notificationParamDTO);
-                    knLogger.info(methodName, "Emergency attribute change notification sent - ", isNotified);
-                }
-                taskResult.setEmergencyEtagToBeUpdated(true);
-                knLogger.debug(methodName, "libRespDto: ", libRespDto);
-                }*/
                 taskResult.setEmergencyEtagToBeUpdated(true);
                 knLogger.debug(methodName, "libRespDto: ", libRespDto);
             }

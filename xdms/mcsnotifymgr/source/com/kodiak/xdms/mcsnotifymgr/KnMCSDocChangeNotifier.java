@@ -175,6 +175,13 @@ public class KnMCSDocChangeNotifier {
 
     private boolean isSaveNotification(KnNotificationParamDTO notificationParamDTO, int notificationCount, KnPersisterTxn persisterTxn) {
         String methodName = "isSaveNotification";
+        if (notificationParamDTO.getPriority() == 0) {
+            knLogger.info(methodName, "CRITICAL_NOTIFICATION_SUPPRESSION_BYPASS: path=MCS, cid=",
+                    notificationParamDTO.getCid(), ", opsCode=", notificationParamDTO.getOpsCode(),
+                    ", priority=", notificationParamDTO.getPriority(), ", notificationCount=", notificationCount,
+                    ", bypassed=suppress-watermark/max-notification-count, queue=XCAP_PENDING_NOTIFYQ",
+                    ", queueBypassed=false; proceeding to queue-save path");
+        }
         boolean isSaveNotification = notificationParamDTO.getPriority() == 0 ||
                 (!genInfoUtil.isSuppressWaterMark(notificationCount, recordCount(persisterTxn))
                         & notificationCount < genInfoUtil.getXdmMaxNotificationCount());
@@ -496,4 +503,3 @@ public class KnMCSDocChangeNotifier {
         return count;
     }
 }
-

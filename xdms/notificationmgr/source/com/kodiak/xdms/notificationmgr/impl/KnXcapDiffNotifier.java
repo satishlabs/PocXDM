@@ -122,6 +122,7 @@ import com.kodiak.xdms.server.common.dto.common.KnSubscriberDTO;
 import com.kodiak.xdms.server.common.dto.common.KnTargetPermsInfoDTO;
 import com.kodiak.xdms.server.common.resources.KnCacheKeys;
 import com.kodiak.xdms.server.common.resources.KnConstants;
+import com.kodiak.xdms.notificationmgr.beans.KnNotifPriorityConfigDTO;
 
 import net.minidev.json.JSONObject;
 import net.minidev.json.parser.JSONParser;
@@ -3152,8 +3153,19 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
         knLogger.exit(methodName, "save the list of mdn as payload into db ends- ");
     }
 
-    void saveNotification(KnPersisterTxn persisterTxn, List<KnXcapDiffDirChgNotifyDTO> knXcapDiffDirChgNotifyDTOs, KnNotificationParamDTO notificationParamDTO) {
+    boolean saveNotification(KnPersisterTxn persisterTxn, List<KnXcapDiffDirChgNotifyDTO> knXcapDiffDirChgNotifyDTOs, KnNotificationParamDTO notificationParamDTO) {
         String methodName = "saveNotification(KnPersisterTxn, List<KnXcapDiffDirChgNotifyDTO>, KnNotificationParamDTO)";
+        if (notificationParamDTO != null && notificationParamDTO.getOpsCode() > 0) {
+            KnNotifPriorityConfigDTO config = KnNotificationPriorityService.getInstance()
+                    .getPriorityConfig(notificationParamDTO.getOpsCode());
+            if (config != null && config.getPriorityLevel().equalsIgnoreCase(KnXcapNotifyConstants.PRIORITY_LEVEL_LOW)) {
+                knLogger.info(methodName, "DB layer: Skipping DB insert into XCAP_PENDING_NOTIFYQ - LOW priority (PRIORITY_LEVEL=0) opsCode=",
+                        notificationParamDTO.getOpsCode(), " recordCount=",
+                        (knXcapDiffDirChgNotifyDTOs != null ? knXcapDiffDirChgNotifyDTOs.size() : 0),
+                        " — changes will surface via client 30-min periodic refresh");
+                return false;
+            }
+        }
         knXcapDiffDirChgNotifyDTOs.forEach(obj -> {
             knLogger.debug("saving now ..................................................................");
             knLogger.debug(methodName, "knXcapDiffDirChgNotifyDTOs ", obj);
@@ -3211,7 +3223,7 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                 }
                 long endTime = System.currentTimeMillis();
                 knLogger.debug(methodName, "total time taken for insert : ", endTime - startTime);
-                break;
+                return true;
             } catch (KnPersistenceException e) {
                 if(ownedTxn) {
                     rollback(persisterTxn);
@@ -3236,10 +3248,23 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                 KnDbUtil.closeStatement(pStmt);
             }
         }
+        return false;
     }
 
     void saveNotification(List<KnXcapDiffNotifyDTO> knXcapDiffNotifyDTOs, KnNotificationParamDTO notificationParamDTO,KnPersisterTxn persisterTxn) {
         String methodName = "saveNotification(List<KnXcapDiffNotifyDTO>, notificationParamDTO)";
+        knLogger.info(methodName,"KnNotificationParamDTO:", notificationParamDTO);
+        if (notificationParamDTO != null && notificationParamDTO.getOpsCode() > 0) {
+            KnNotifPriorityConfigDTO config = KnNotificationPriorityService.getInstance()
+                    .getPriorityConfig(notificationParamDTO.getOpsCode());
+            if (config != null && config.getPriorityLevel().equalsIgnoreCase(KnXcapNotifyConstants.PRIORITY_LEVEL_LOW)) {
+                knLogger.info(methodName, "DB layer: Skipping DB insert into XCAP_PENDING_NOTIFYQ - LOW priority (PRIORITY_LEVEL=0) opsCode=",
+                        notificationParamDTO.getOpsCode(), " recordCount=",
+                        (knXcapDiffNotifyDTOs != null ? knXcapDiffNotifyDTOs.size() : 0),
+                        " — changes will surface via client 30-min periodic refresh");
+                return;
+            }
+        }
         knXcapDiffNotifyDTOs.forEach(obj -> {
             knLogger.debug("saving now..................................................................");
             knLogger.debug(methodName, "knXcapDiffDirChgNotifyDTOs ", obj);

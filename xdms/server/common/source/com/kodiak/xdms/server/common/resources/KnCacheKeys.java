@@ -66,4 +66,7 @@ public class KnCacheKeys {
     public static final String QPP_PCRF_PROFILE = "commonlib.qpppcrfprofile";
     public static final String POC_SVC_CONFIG = "commonlib.pocsvcconfig";
     public static final String CLUSTER_ID_MAP = "commonlib.clusterIdMap";
+
+    /** Cache key for XCAP notification suppression priority config (NOTIFICATION_PRIORITY_CONFIG table) */
+    public static final String XCAP_NOTIFY_PRIORITY_CONFIG = "commonlib.xcapnotifypriority";
 }

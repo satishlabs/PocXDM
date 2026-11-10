@@ -36,6 +36,7 @@ import com.kodiak.common.commdto.common.KnNotificationParamDTO;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 
 public interface IXcapDiffNotifierIntf {
 
@@ -77,6 +78,10 @@ public interface IXcapDiffNotifierIntf {
     public boolean sendXcapDiffNotifications(KnXcapDiffNotifyDTO xcapDiffNotifyDTO, KnNotificationParamDTO notificationParamDTO);
 
     boolean sendXcapDiffNotifications(Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList, KnPersisterTxn persisterTxn, KnNotificationParamDTO notificationParamDTO);
+
+    boolean sendXcapDiffNotifications(Collection<KnXcapDiffDirChgNotifyDTO> xcapDiffList,
+                                      KnPersisterTxn persisterTxn, KnNotificationParamDTO notificationParamDTO,
+                                      Map<String, KnNotificationParamDTO> recipientParameters);
 
     public boolean sendXcapDiffNotifications(List<KnXcapDiffNotifyDTO> xcapDiffNotifyDTOs, KnNotificationParamDTO notificationParamDTO);
 

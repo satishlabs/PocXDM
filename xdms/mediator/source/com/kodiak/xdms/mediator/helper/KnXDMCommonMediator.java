@@ -522,6 +522,23 @@ public class KnXDMCommonMediator {
         return sendNotification(profileNotifyDTO, dirChgDTO, pv);
     }
 
+    /**
+     * method to send the notification with an explicit opsCode
+     *
+     * @param dirChgDTO KnOPDirChgDTO
+     * @param notificationParamDTO carries the opsCode to tag this notification with; when omitted the
+     *                             notification is sent with opsCode DEFAULT(0)
+     * @return status of Notification
+     */
+    public boolean sendProfileNotification(KnProfileNotifyDTO profileNotifyDTO, KnOPDirChgDTO dirChgDTO, String pv,
+                                            KnNotificationParamDTO notificationParamDTO) {
+        String methodName = "sendProfileNotification(KnProfileNotifyDTO,KnOPProvDTO,String,KnNotificationParamDTO)";
+
+        knLogger.debug(methodName, "profileNotifyDTO -", profileNotifyDTO, "dir Change DTO - ", dirChgDTO,
+                " ProtocolVersion :", pv, " notificationParamDTO :", notificationParamDTO);
+        return sendNotification(profileNotifyDTO, dirChgDTO, pv, notificationParamDTO);
+    }
+
     private boolean sendNotification(KnProfileNotifyDTO profileNotifyDTO, KnOPDirChgDTO dirChgDTO, String pv) {
         return sendNotification(profileNotifyDTO, dirChgDTO, pv, null);
     }
@@ -860,7 +877,9 @@ public class KnXDMCommonMediator {
         knLogger.debug(methodName, "Getting the Notifier Instance:");
         KnXcapDiffNotifier xcapDiffNotifier = KnXcapDiffNotifier.getInstance();
         knLogger.debug(methodName, "Sending the Notificaton: Diff DTO : ", xcapDiffNotifyDTO);
-        boolean notificationStatus = notifier.sendXcapDiffNotifications(xcapDiffNotifyDTO);
+        KnNotificationParamDTO xcapUpdatedClientOnActiveFsChangeNotificationParamDTO = new KnNotificationParamDTO();
+        xcapUpdatedClientOnActiveFsChangeNotificationParamDTO.setOpsCode(com.kodiak.xdms.server.common.resources.KnConstants.OPS_CODE.XCAP_UPDATED_CLIENT_ON_ACTIVE_FS_CHANGE.value());
+        boolean notificationStatus = notifier.sendXcapDiffNotifications(xcapDiffNotifyDTO, xcapUpdatedClientOnActiveFsChangeNotificationParamDTO);
         knLogger.debug(methodName, "Notificaton Status :", notificationStatus);
 
         return notificationStatus;

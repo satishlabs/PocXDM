@@ -22,6 +22,7 @@ import com.kodiak.xdms.server.subsmgmt.dto.clientdat.KnIPSubsProvInfoDTO;
 import com.kodiak.xdms.server.subsmgmt.dto.clientdat.KnOPUpdateSubsInfoDTO;
 import com.kodiak.xdms.server.subsmgmt.dto.common.KnSubscrEXDMSNotifyDto;
 import com.kodiak.xdms.server.subsmgmt.dto.common.KnUserProfileFSProvDTO;
+import com.kodiak.common.commdto.common.KnNotificationParamDTO;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -100,6 +101,11 @@ public class KnModifyUserProfileFsTask extends KnAbstractTask {
                 knLogger.debug(methodName,"provResp ",provResp);
                 Integer pv = provResp.getClientPvMajorVersion();
                     //notification
+                // Only send the MCSXCAP_ON_PROFILE_MODIFY_UPDATE_PROPERTY (40010) notification when the
+                // request actually carried a User Profile FS block. Without this guard, this task (and its
+                // notification) fired unconditionally for every "modify user profile" request - including
+                // ones that only updated emergency attributes - producing a wrong 40010 notification.
+                if (userProfileFs != null) {
                 if (provResp.isActiveFSChanged()) {
                     KnProfileNotifyDTO profileNotifyDTO = new KnProfileNotifyDTO();
                     if (provResp.isActiveFSChanged()) {
@@ -109,7 +115,12 @@ public class KnModifyUserProfileFsTask extends KnAbstractTask {
                     profileNotifyDTO.setPocHome(provResp.getDirChgDTO().getPocHome());
                     profileNotifyDTO.setPresenceHome(provResp.getDirChgDTO().getPresenceHome());
                     profileNotifyDTO.setAction(KnConstants.MESSAGE_TYPE.SUBSCR_PROFILE_CHANGE.value());
-                    commonMediator.sendProfileNotification(profileNotifyDTO, provResp.getDirChgDTO(), String.valueOf(pv));
+                    // User Profile FS property update - tag with MCSXCAP_ON_PROFILE_MODIFY_UPDATE_PROPERTY (40010)
+                    // instead of leaving opsCode unset (which silently defaulted to DEFAULT(0)).
+                    KnNotificationParamDTO mcsxcapOnProfileModifyUpdatePropertyNotificationParamDTO = new KnNotificationParamDTO();
+                    mcsxcapOnProfileModifyUpdatePropertyNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_PROPERTY.value());
+                    commonMediator.sendProfileNotification(profileNotifyDTO, provResp.getDirChgDTO(), String.valueOf(pv),
+                            mcsxcapOnProfileModifyUpdatePropertyNotificationParamDTO);
                     //Get the xcap mobile sync flag
                     boolean xcapMobileSync = commonMediator.getXcapMobileSyncFlag(UPMFsTxn);
                     boolean xcapCouchClientBit = KnGeneralUtil.getFeatureBitValue(provResp.getActiveFS2(),
@@ -120,8 +131,14 @@ public class KnModifyUserProfileFsTask extends KnAbstractTask {
                         sendMCSEvent(provResp);
                     }
                 } else {
-                        commonMediator.sendXcapNotification(provResp.getDirChgDTO(), String.valueOf(pv));
+                    // No active FS change - still a User Profile property update, so keep the same
+                    // MCSXCAP_ON_PROFILE_MODIFY_UPDATE_PROPERTY (40010) opsCode rather than the
+                    // subscriber-level XCAP_UPDATED_CLIENT_ON_ACTIVE_FS_CHANGE (10011), which does not apply here.
+                    KnNotificationParamDTO mcsxcapOnProfileModifyUpdatePropertyNotificationParamDTO = new KnNotificationParamDTO();
+                    mcsxcapOnProfileModifyUpdatePropertyNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.MCSXCAP_ON_PROFILE_MODIFY_UPDATE_PROPERTY.value());
+                    commonMediator.sendXcapNotification(provResp.getDirChgDTO(), String.valueOf(pv), mcsxcapOnProfileModifyUpdatePropertyNotificationParamDTO);
 
+                }
                 }
             }
             taskResult.setTaskStatus(STATUS_SUCCESS);

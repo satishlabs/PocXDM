@@ -747,7 +747,7 @@ public class KnBulkOpsUpdateSubscProcessor {
             if (!xcapDiffList.isEmpty()) {
                 knLogger.info(methodName, "Sending XCAP Diff notifications for ", xcapDiffList.size(), " MDNs");
                 KnNotificationParamDTO knNotificationParamDTO = new KnNotificationParamDTO();
-                knNotificationParamDTO.setPriority(com.kodiak.xdms.server.common.resources.KnConstants.NOTIFICATION_PRIORITY.HIGH.value());
+                knNotificationParamDTO.setPriority(com.kodiak.xdms.server.common.resources.KnConstants.NOTIFICATION_PRIORITY.CRITICAL.value());
                 boolean isNotified = notifier.sendXcapDiffNotifications(xcapDiffList, knNotificationParamDTO);
                 knLogger.debug(methodName, "XCAP Diff notification status: ", isNotified);
             }

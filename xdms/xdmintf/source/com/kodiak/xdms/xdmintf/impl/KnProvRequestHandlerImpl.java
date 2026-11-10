@@ -50,7 +50,7 @@ import java.util.Map;
  * Retrieve the Pay load from the message
  * Based the operation ID process the request Operation
  */
-public class KnProvRequestHandlerImpl implements IRequestHandlerIntf {
+public class    KnProvRequestHandlerImpl implements IRequestHandlerIntf {
     private static final KnLogger knLogger = KnLogger.getLogger(KnProvRequestHandlerImpl.class);
 
     private IResponseHandler respHandler;

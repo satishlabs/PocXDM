@@ -29,6 +29,16 @@
 package com.kodiak.xdms.notificationmgr.resources;
 
 public class KnXcapNotifyConstants {
+    // Dynamic notification priority level strings — used for tier comparisons in KnXcapDiffNotifierImpl
+    public static final String PRIORITY_LEVEL_CRITICAL = "CRITICAL";
+    public static final String PRIORITY_LEVEL_HIGH = "HIGH";
+    public static final String PRIORITY_LEVEL_LOW = "LOW";
+    public static final String PRIORITY_LEVEL_DEFAULT = "DEFAULT";
+
+    // INT tier values stored in NOTIFICATION_PRIORITY_CONFIG.PRIORITY_LEVEL — higher = higher urgency
+    public static final int PRIORITY_LEVEL_INT_CRITICAL = 10;
+    public static final int PRIORITY_LEVEL_INT_HIGH = 5;
+    public static final int PRIORITY_LEVEL_INT_LOW = 0;
     public static final int DIRECTORY_CHANGE_TYPE_ADD = 1;
     public static final int DIRECTORY_CHANGE_TYPE_REPLACE = 2;
     public static final int DIRECTORY_CHANGE_TYPE_REMOVE = 3;

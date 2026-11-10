@@ -52,7 +52,7 @@ import com.kodiak.xdms.server.corpmgmt.resources.KnErrorCodes;
 import com.kodiak.xdms.server.subsmgmt.clientIntf.IProvClientIntf;
 import com.kodiak.xdms.server.subsmgmt.clientIntf.impl.KnProvClientImpl;
 import com.kodiak.xdms.server.subsmgmt.dto.clientdat.KnOPBulkRespDTO;
-
+import com.kodiak.common.commdto.common.KnNotificationParamDTO;
 import java.util.*;
 
 import static com.kodiak.common.resources.KnConstants.FEATURE_SET.ONDEMLOCATION;
@@ -138,7 +138,9 @@ public class KnPAMDispGrpMemChecker extends KnAbstractJob {
             }
             if (mdnDispatchChgDTOMap != null) {
                 notifier.setMaxNotfnsPerJob(DEFAULT_NOTIFY_SIZE);
-                boolean isNotified = notifier.sendXcapDiffNotifications(prepareNotification(mdnDispatchChgDTOMap, provRespDTO));
+                KnNotificationParamDTO xcapDispatcherClientsOnAreaBasedGroupMemberAddNotificationParamDTO = new KnNotificationParamDTO();
+                xcapDispatcherClientsOnAreaBasedGroupMemberAddNotificationParamDTO.setOpsCode(KnConstants.OPS_CODE.XCAP_DISPATCHER_CLIENTS_ON_AREA_BASED_GROUP_MEMBER_ADD.value());
+                boolean isNotified = notifier.sendXcapDiffNotifications(prepareNotification(mdnDispatchChgDTOMap, provRespDTO), xcapDispatcherClientsOnAreaBasedGroupMemberAddNotificationParamDTO);
                 knLogger.debug(methodName, "Notification status - ", isNotified);
             }
             persisterTxn.save();
