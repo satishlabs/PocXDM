@@ -537,10 +537,15 @@ public class KnXcapDiffNotifierImpl implements IXcapDiffNotifierIntf {
             return;
         }
         if (!xcapDiffNotifier.isXcapNotificationOptimized()) {
+            // Existing path: every saved recipient gets the Directory Etag at save time.
+            knLogger.info(methodName, "[XCAP-DEBULK-FLOW] STEP-LEGACY Flag off. Existing immediate notification for every recipient. count="
+                    + notifications.size());
             immediateSender.accept(notifications);
             return;
         }
         int opsCode = notificationParamDTO == null ? 0 : notificationParamDTO.getOpsCode();
+        knLogger.info(methodName, "[XCAP-DEBULK-FLOW] STEP-DELAY Flag on. Splitting this save. opsCode=" + opsCode
+                + " recipients=" + notifications.size());
         List<T> ownAccount = new ArrayList<>();
         int held = 0;
         for (T notification : notifications) {

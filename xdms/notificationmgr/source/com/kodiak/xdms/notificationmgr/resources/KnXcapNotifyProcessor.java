@@ -14,6 +14,7 @@ package com.kodiak.xdms.notificationmgr.resources;
 
 import com.kodiak.common.commdto.common.KnXDMSubsProvDTO;
 import com.kodiak.common.commdto.response.KnXDMSubsProfileRespDTO;
+import com.kodiak.common.resources.KnConstants;
 import com.kodiak.common.resources.KnThreadExecutors;
 import com.kodiak.logger.KnLogger;
 import com.kodiak.utilities.statusmgr.IStatusMgrNotifyIntf;
@@ -51,6 +52,8 @@ public class KnXcapNotifyProcessor implements Runnable, IStatusMgrNotifyIntf {
     private KnGenInfoUtil genInfoUtil = KnGenInfoUtil.getInstance();
 
     private boolean startUp = true;
+    /** Last time the flag-off poll ran. The 1-second thread must not speed up that existing audit. */
+    private long lastLegacyPollMillis;
 
 
     private KnStatusMgrConstants.CARD_STATES currentRedState = KnStatusMgrConstants.CARD_STATES.UNKNOWN;
@@ -82,15 +85,22 @@ public class KnXcapNotifyProcessor implements Runnable, IStatusMgrNotifyIntf {
         Map<KnNotificationKeyDTO, Object> record = null;
         try {
             if (getCurrentRedundancyStatus() != KnStatusMgrConstants.CARD_STATES.ACTIVE) {
-                knLogger.debug(methodName, "[XCAP-DEBULK-FLOW] STEP-SCH0 Poll skipped. Card is not active.");
+                // Info, not debug: VM checks have no debug session. A standby card must show why nothing was sent.
+                knLogger.info(methodName, "[XCAP-DEBULK-FLOW] STEP-SCH0 Poll skipped. Card is not active. state="
+                        + getCurrentRedundancyStatus());
                 return;
             }
             if (startUp) {
                 xcapDiffNotifier.updateRecord();
                 startUp = false;
             }
+            // Flag on polls every tick. Flag off keeps the existing NOTIFYJOB_AUDIT_INTRVAL.
+            if (!xcapDiffNotifier.isXcapNotificationOptimized() && !legacyAuditDue()) {
+                return;
+            }
             record = xcapDiffNotifier.pollRecord();
             if (record == null || record.isEmpty()) {
+                knLogger.info(methodName, "[XCAP-DEBULK-FLOW] STEP-SCH1 Poll finished. Nothing was claimed, so no notification was sent.");
                 return;
             }
             process(record);
@@ -99,6 +109,39 @@ public class KnXcapNotifyProcessor implements Runnable, IStatusMgrNotifyIntf {
         }
     }
 
+
+    /**
+     * Flag off stays on NOTIFYJOB_AUDIT_INTRVAL even though this thread wakes every second.
+     */
+    private boolean legacyAuditDue() {
+        int intervalSeconds = 1;
+        try {
+            String cluster = System.getenv(KnConstants.CLUSTERID_ENV_NAME);
+            if (cluster != null && !cluster.trim().isEmpty()) {
+                Map<String, String> config = genInfoUtil.retrieveMSSvcsCommonConfig(Integer.parseInt(cluster.trim()));
+                String raw = config == null ? null : config.get(KnConstants.NOTIFYJOB_AUDIT_INTRVAL);
+                if (raw != null && !raw.trim().isEmpty()) {
+                    intervalSeconds = Integer.parseInt(raw.trim());
+                }
+            }
+        } catch (Exception e) {
+            knLogger.warn("legacyAuditDue", "[XCAP-DEBULK-FLOW] STEP-LEGACY Audit interval unreadable. Using 1 second. "
+                    + e.getMessage());
+        }
+        if (intervalSeconds < 1) {
+            intervalSeconds = 1;
+        }
+        long now = System.currentTimeMillis();
+        if (now - lastLegacyPollMillis < intervalSeconds * 1000L) {
+            knLogger.info("legacyAuditDue", "[XCAP-DEBULK-FLOW] STEP-LEGACY Flag off. Existing poll waits for NOTIFYJOB_AUDIT_INTRVAL. intervalSeconds="
+                    + intervalSeconds);
+            return false;
+        }
+        lastLegacyPollMillis = now;
+        knLogger.info("legacyAuditDue", "[XCAP-DEBULK-FLOW] STEP-LEGACY Flag off. Existing poll is due. intervalSeconds="
+                + intervalSeconds);
+        return true;
+    }
 
     public void process(Map<KnNotificationKeyDTO, Object> record) {
         String methodName = "process(Map<KnNotificationKeyDTO, Object> record)";
@@ -124,13 +167,15 @@ public class KnXcapNotifyProcessor implements Runnable, IStatusMgrNotifyIntf {
             knLogger.error(methodName, "Exception : ", e);
             throw new RuntimeException(e);
         }
-        // Optimized mode sends one notification per watcher after the hold.
-        // The worker deletes those queue rows after a successful send.
+        // Flag on: one bundled task per recipient, deleted by the worker after a successful send.
+        // Flag off: the existing one-row sender below, then the existing queue delete.
         if (xcapDiffNotifier.isXcapNotificationOptimized()) {
+            knLogger.info(methodName, "[XCAP-DEBULK-FLOW] STEP-7 Flag on. Bundled send. rows=" + record.size());
             dispatchBundledNotifications(record, mdnSubsInfoMap, baseMdnMap);
             knLogger.exit(methodName);
             return;
         }
+        knLogger.info(methodName, "[XCAP-DEBULK-FLOW] STEP-LEGACY Flag off. Existing one-row sender. rows=" + record.size());
         for (Map.Entry<KnNotificationKeyDTO, Object> itr : record.entrySet()) {
                 Object payload = itr.getValue();
                 if (payload instanceof KnXcapDiffDirChgNotifyDTO knXcapDiffDirChgNotifyDTO) {

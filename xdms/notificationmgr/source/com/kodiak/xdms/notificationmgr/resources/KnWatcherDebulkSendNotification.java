@@ -289,8 +289,9 @@ public class KnWatcherDebulkSendNotification implements Runnable {
                 if (seqId != null && seqId.getDestId() != null) {
                     xcapDiffNotifier.cleanupTrackerForMdn(
                             Collections.singletonList(seqId.getDestId().trim()));
-                    knLogger.info(methodName, FLOW_TAG + " STEP-12B Tracker row removed for watcher="
-                            + seqId.getDestId());
+                    knLogger.info(methodName, FLOW_TAG + " STEP-12B Secondary tracker cleanup requested for watcher="
+                            + seqId.getDestId()
+                            + ". The row is removed only when DG.XCAP_PENDING_NOTIFYQ has no rows left for this watcher.");
                 }
             } else if (!isSuccess) {
                 handleRetryOnSendFailure(methodName);

@@ -370,15 +370,14 @@ public class KnXDMSLoader {
         String optimizedFlag = microServicesParamNameValueMap.get("XCAP_NOTIFICATION_OPTIMIZED");
         boolean notificationOptimized = optimizedFlag != null
                 && ("1".equals(optimizedFlag.trim()) || "true".equalsIgnoreCase(optimizedFlag.trim()));
-        // The collection window is XCAP_NOTIFICATION_PERIOD. The poll itself runs every
-        // second while bundling is on, so a closed window is claimed on the next tick.
-        int pollIntervalSeconds = notificationOptimized ? 1 : notifyJobAuditInterval;
-        knLogger.info("notificationPoller", notificationOptimized
-                ? "[XCAP-DEBULK-FLOW] STEP-CONF1 XCAP_NOTIFICATION_OPTIMIZED=1 -> poll interval 1 second"
-                : "[XCAP-DEBULK-FLOW] STEP-CONF1 XCAP_NOTIFICATION_OPTIMIZED=0 -> poll interval " + notifyJobAuditInterval);
+        // The thread always wakes every second so a flag turned on after startup is picked up
+        // on the next tick. Flag off still polls at NOTIFYJOB_AUDIT_INTRVAL inside the processor.
+        knLogger.info("notificationPoller", "[XCAP-DEBULK-FLOW] STEP-CONF1 Poll thread every 1 second. "
+                + "XCAP_NOTIFICATION_OPTIMIZED=" + (notificationOptimized ? "1" : "0")
+                + " legacyAuditIntervalSeconds=" + notifyJobAuditInterval);
         KnXcapNotifyProcessor xcapNotifyProcessor = KnXcapNotifyProcessor.getInstance();
         ScheduledExecutorService notifyProcessorService = KnThreadExecutors.newScheduledThreadPool(1, "XcapNotifyProcessor");
-        notifyProcessorService.scheduleAtFixedRate(xcapNotifyProcessor, 30, pollIntervalSeconds, TimeUnit.SECONDS);
+        notifyProcessorService.scheduleAtFixedRate(xcapNotifyProcessor, 30, 1, TimeUnit.SECONDS);
     }
 
 

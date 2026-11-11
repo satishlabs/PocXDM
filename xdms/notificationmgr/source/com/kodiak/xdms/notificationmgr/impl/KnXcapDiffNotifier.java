@@ -3316,6 +3316,9 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                     pStmt.setInt(12,notificationParamDTO.getProtocol());
                     pStmt.setInt(13,notificationParamDTO.getMsgType());
                     pStmt.addBatch();
+                    // Queue insert above is the existing primary-database save for every recipient.
+                    // The tracker set is used only when XCAP_NOTIFICATION_OPTIMIZED is 1, and only
+                    // for a watcher of a different account. Flag off never reads this set.
                     if (watcherMdn != null && !watcherMdn.trim().isEmpty()
                             && holdsForConfiguredDelay(knXcapDiffDirChgNotifyDTO, notificationParamDTO.getOpsCode())) {
                         watcherMdns.add(watcherMdn.trim());
@@ -3327,6 +3330,16 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                     }
                 }
                 pStmt.executeBatch();
+                // Flag off: recordWatchers returns before any secondary-database work.
+                if (!notificationBatchEngine.isOptimized()) {
+                    knLogger.info(methodName, KnXcapNotificationBatchEngine.FLOW_TAG
+                            + " STEP-LEGACY Flag off. Existing queue insert only. Tracker is not written. queuedRows="
+                            + count);
+                } else {
+                    knLogger.info(methodName, KnXcapNotificationBatchEngine.FLOW_TAG
+                            + " STEP-TRK1 Flag on. Other-account watchers held=" + watcherMdns.size()
+                            + " queuedRows=" + count);
+                }
                 notificationBatchEngine.recordWatchers(watcherMdns);
                 if(ownedTxn) {
                     persisterTxn.save();
@@ -3423,6 +3436,9 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                     pStmt.setInt(12,notificationParamDTO.getProtocol());
                     pStmt.setInt(13,notificationParamDTO.getMsgType());
                     pStmt.addBatch();
+                    // Queue insert above is the existing primary-database save for every recipient.
+                    // The tracker set is used only when XCAP_NOTIFICATION_OPTIMIZED is 1, and only
+                    // for a watcher of a different account. Flag off never reads this set.
                     if (watcherMdn != null && !watcherMdn.trim().isEmpty()
                             && holdsForConfiguredDelay(knXcapDiffNotifyDTO, notificationParamDTO.getOpsCode())) {
                         watcherMdns.add(watcherMdn.trim());
@@ -3434,6 +3450,16 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                     }
                 }
                 pStmt.executeBatch();
+                // Flag off: recordWatchers returns before any secondary-database work.
+                if (!notificationBatchEngine.isOptimized()) {
+                    knLogger.info(methodName, KnXcapNotificationBatchEngine.FLOW_TAG
+                            + " STEP-LEGACY Flag off. Existing queue insert only. Tracker is not written. queuedRows="
+                            + count);
+                } else {
+                    knLogger.info(methodName, KnXcapNotificationBatchEngine.FLOW_TAG
+                            + " STEP-TRK1 Flag on. Other-account watchers held=" + watcherMdns.size()
+                            + " queuedRows=" + count);
+                }
                 notificationBatchEngine.recordWatchers(watcherMdns);
                 if(ownedTxn) {
                     persisterTxn.save();
@@ -3485,8 +3511,10 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
             pStmt.setString(2, seqId.getDestId());
             pStmt.setInt(3, seqId.getDestType());
             int count = pStmt.executeUpdate();
-            knLogger.debug(methodName, " record cleaned ", count);
             persisterTxn.save();
+            knLogger.info(methodName, KnXcapNotificationBatchEngine.FLOW_TAG
+                    + " STEP-12A Primary queue row deleted from DG.XCAP_PENDING_NOTIFYQ. deletedRows=" + count
+                    + " destId=" + seqId.getDestId() + " insertionTime=" + seqId.getInsertionTime());
             knLogger.exit(methodName);
         } catch (KnPersistenceException e) {
             rollback(persisterTxn);
@@ -3521,8 +3549,18 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
                 pStmt.addBatch();
             }
             int[] count = pStmt.executeBatch();
-            knLogger.debug(methodName, "All record cleaned ", count);
             persisterTxn.save();
+            int deleted = 0;
+            if (count != null) {
+                for (int rowCount : count) {
+                    if (rowCount > 0) {
+                        deleted += rowCount;
+                    }
+                }
+            }
+            knLogger.info(methodName, KnXcapNotificationBatchEngine.FLOW_TAG
+                    + " STEP-12A Primary queue rows deleted from DG.XCAP_PENDING_NOTIFYQ. requested="
+                    + seqIds.size() + " deletedRows=" + deleted);
             knLogger.exit(methodName);
         } catch (KnPersistenceException e) {
             rollback(persisterTxn);
@@ -3555,11 +3593,14 @@ private void populateSystemProfileMdnsForDocChange(LinkedHashSet<KnMcsxcapMdnDTO
     }
 
     public Map<KnNotificationKeyDTO, Object> pollRecord() {
+        // Flag on uses the wait-and-bundle claim. Flag off keeps the existing priority poll below.
         if (notificationBatchEngine.isOptimized()) {
-            knLogger.debug("pollRecord()", KnXcapNotificationBatchEngine.FLOW_TAG
-                    + " STEP-SCH1 Optimized poll. XCAP_NOTIFICATION_OPTIMIZED=1");
+            knLogger.info("pollRecord()", KnXcapNotificationBatchEngine.FLOW_TAG
+                    + " STEP-SCH1 Optimized poll started. XCAP_NOTIFICATION_OPTIMIZED=1. Watchers are claimed only after the period.");
             return notificationBatchEngine.pollAndClaim();
         }
+        knLogger.info("pollRecord()", KnXcapNotificationBatchEngine.FLOW_TAG
+                + " STEP-LEGACY Flag off. Existing pending-queue poll. Tracker is not used.");
         KnPersisterTxn persisterTxn = null;
         String methodName = "pollRecord()";
         String selectQry = null;

@@ -69,11 +69,14 @@ public class KnXcapNotificationBatchEngine {
 
     private static final String PROBE_TRACKER =
             "SELECT FIRST 1 MDN FROM DG.MDN_NOTIFY_TRACKER";
-    /** Insert the watcher only when absent. An existing row keeps LAST_NOTIFIED_TIME. */
+    /**
+     * Insert the watcher only when absent. MDN is CHAR(15), so match with TRIM.
+     * An existing row keeps LAST_NOTIFIED_TIME.
+     */
     private static final String INSERT_IF_ABSENT =
             "INSERT INTO DG.MDN_NOTIFY_TRACKER (MDN, LAST_NOTIFIED_TIME) "
                     + "SELECT ?, ? FROM DUAL WHERE NOT EXISTS ("
-                    + "SELECT 1 FROM DG.MDN_NOTIFY_TRACKER WHERE MDN = ?)";
+                    + "SELECT 1 FROM DG.MDN_NOTIFY_TRACKER WHERE TRIM(MDN) = ?)";
     private static final String SELECT_AGED_TRACKER =
             "SELECT FIRST 500 MDN FROM DG.MDN_NOTIFY_TRACKER "
                     + "WHERE LAST_NOTIFIED_TIME <= ? ORDER BY LAST_NOTIFIED_TIME";
@@ -89,11 +92,11 @@ public class KnXcapNotificationBatchEngine {
     private static final String SELECT_EXPIRED_TRACKER =
             "SELECT FIRST 500 MDN FROM DG.MDN_NOTIFY_TRACKER WHERE LAST_NOTIFIED_TIME <= ?";
     private static final String TOUCH_TRACKER =
-            "UPDATE DG.MDN_NOTIFY_TRACKER SET LAST_NOTIFIED_TIME = ? WHERE MDN = ?";
+            "UPDATE DG.MDN_NOTIFY_TRACKER SET LAST_NOTIFIED_TIME = ? WHERE TRIM(MDN) = ?";
     private static final String RESET_TRACKER =
-            "UPDATE DG.MDN_NOTIFY_TRACKER SET LAST_NOTIFIED_TIME = ? WHERE MDN = ?";
+            "UPDATE DG.MDN_NOTIFY_TRACKER SET LAST_NOTIFIED_TIME = ? WHERE TRIM(MDN) = ?";
     private static final String DELETE_TRACKER =
-            "DELETE FROM DG.MDN_NOTIFY_TRACKER WHERE MDN = ?";
+            "DELETE FROM DG.MDN_NOTIFY_TRACKER WHERE TRIM(MDN) = ?";
     private static final String MARK_IN_PROGRESS =
             "UPDATE DG.XCAP_PENDING_NOTIFYQ SET NOTIFY_STATUS = ? "
                     + "WHERE DEST_ID = ? AND INSERTION_TIME = ? AND DEST_TYPE = ? AND NOTIFY_STATUS = ?";
@@ -142,7 +145,12 @@ public class KnXcapNotificationBatchEngine {
      */
     public void recordWatchers(Collection<String> mdns) {
         String methodName = "recordWatchers";
-        if (!isOptimized() || mdns == null || mdns.isEmpty()) {
+        boolean optimized = isOptimized();
+        if (!optimized || mdns == null || mdns.isEmpty()) {
+            // Flag off, or no other-account watcher: leave the existing queue flow unchanged.
+            knLogger.info(methodName, FLOW_TAG + " STEP-LEGACY Tracker insert skipped. optimized="
+                    + optimized + " watcherCount=" + (mdns == null ? 0 : mdns.size())
+                    + (optimized ? " reason=no other-account watcher" : " reason=flag off"));
             return;
         }
         LinkedHashSet<String> distinct = new LinkedHashSet<>();
@@ -238,11 +246,11 @@ public class KnXcapNotificationBatchEngine {
             }
             int removed = housekeepTracker(primary, secondary, cutoff);
             txn.save();
-            if (!claimed.isEmpty() || removed > 0) {
-                knLogger.info(methodName, FLOW_TAG + " STEP-SCH5 Poll cycle committed. claimedRows="
-                        + claimed.size() + " delayedWatcherCount=" + delayedWatchers.size()
-                        + " suppressedRows=" + suppressed + " trackerRowsRemoved=" + removed);
-            }
+            knLogger.info(methodName, FLOW_TAG + " STEP-SCH5 Poll cycle committed. claimedRows="
+                    + claimed.size() + " delayedWatcherCount=" + delayedWatchers.size()
+                    + " delayedWatchers=" + maskMdns(delayedWatchers)
+                    + " suppressedRows=" + suppressed + " trackerRowsRemoved=" + removed
+                    + " periodSeconds=" + periodSeconds + " cutoffEpochMillis=" + cutoff);
         } catch (Exception e) {
             rollback(txn);
             claimed.clear();
@@ -432,7 +440,8 @@ public class KnXcapNotificationBatchEngine {
             knLogger.info("claimByRecipient", FLOW_TAG + " STEP-SCH2 Watchers due after the configured period. count="
                     + delayedWatchers.size() + " watchers=" + maskMdns(delayedWatchers));
         } else if (ownAccounts.isEmpty()) {
-            knLogger.debug("claimByRecipient", FLOW_TAG + " STEP-SCH2 No own-account rows and no watchers are due. cutoff=" + cutoff);
+            knLogger.info("claimByRecipient", FLOW_TAG + " STEP-SCH2 No notification is due. Watchers still inside the period stay pending. cutoffEpochMillis="
+                    + cutoff);
         }
         if (orphanWatchers > 0) {
             knLogger.warn("claimByRecipient", FLOW_TAG + " STEP-SCH2A Watcher rows had no tracker entry and were claimed. count="
@@ -636,20 +645,29 @@ public class KnXcapNotificationBatchEngine {
         try {
             delete = secondary.prepareStatement(DELETE_TRACKER);
             int batched = 0;
+            List<String> removedMdns = new ArrayList<>();
+            List<String> keptMdns = new ArrayList<>();
             for (String mdn : expired) {
                 if (stillQueued.contains(mdn)) {
+                    keptMdns.add(mdn);
                     continue;
                 }
                 delete.setString(1, mdn);
                 delete.addBatch();
+                removedMdns.add(mdn);
                 batched++;
+            }
+            if (!keptMdns.isEmpty()) {
+                knLogger.info("housekeepTracker", FLOW_TAG + " STEP-SCH5A Tracker kept. Queue rows are still open. watchers="
+                        + maskMdns(keptMdns));
             }
             if (batched == 0) {
                 return 0;
             }
             delete.executeBatch();
             knLogger.info("housekeepTracker",
-                    FLOW_TAG + " STEP-SCH5A Closed tracker windows removed. cutoff=" + cutoff + " removed=" + batched);
+                    FLOW_TAG + " STEP-SCH5A Closed tracker windows removed from DG.MDN_NOTIFY_TRACKER. cutoffEpochMillis="
+                            + cutoff + " removed=" + batched + " watchers=" + maskMdns(removedMdns));
             return batched;
         } finally {
             KnDbUtil.closeStatement(delete);
@@ -810,7 +828,7 @@ public class KnXcapNotificationBatchEngine {
         ResultSet result = null;
         try {
             statement = secondary.prepareStatement(
-                    "SELECT MDN FROM DG.MDN_NOTIFY_TRACKER WHERE MDN IN (" + placeholders(values.size()) + ")");
+                    "SELECT MDN FROM DG.MDN_NOTIFY_TRACKER WHERE TRIM(MDN) IN (" + placeholders(values.size()) + ")");
             for (int i = 0; i < values.size(); i++) {
                 statement.setString(i + 1, values.get(i));
             }
@@ -888,7 +906,7 @@ public class KnXcapNotificationBatchEngine {
         ResultSet result = null;
         try {
             statement = connection.prepareStatement(
-                    "SELECT MDN, LAST_NOTIFIED_TIME FROM DG.MDN_NOTIFY_TRACKER WHERE MDN IN ("
+                    "SELECT MDN, LAST_NOTIFIED_TIME FROM DG.MDN_NOTIFY_TRACKER WHERE TRIM(MDN) IN ("
                             + placeholders(values.size()) + ")");
             for (int i = 0; i < values.size(); i++) {
                 statement.setString(i + 1, values.get(i));
